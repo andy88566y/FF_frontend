@@ -21,9 +21,9 @@ def gap(size: int) -> None:
 
 
 @st.cache_data(ttl='10s')
-def generate_defect_list(output_dir: str, lot_id: str, confidence_threshold: float) -> list[str]:
+def generate_defect_list(inference_result: pd.DataFrame, confidence_threshold: float) -> list[str]:
     '''
-    From the inference result, filter images with probability lower than confidence threshold.
+    From the inference result, filter images with probability higher than confidence threshold.
     These images are considered to be defects.
 
     Args:
@@ -33,11 +33,21 @@ def generate_defect_list(output_dir: str, lot_id: str, confidence_threshold: flo
 
     Returns a list of ID numbers of the defect images.
     '''
-    # TODO: Remember to also change input params
-    # inference_result = DBManager.ReadFromDB(output_dir, lot_id)
-    # results = DBManager.FilterThreshold(inference_result, confidence_threshold)
-    results = {}
-    filtered_df = pd.DataFrame(results)
+    inference_result_dict = inference_result.to_dict()
+
+    results = requests.post(API_ROOT+'filter_threshold', json={
+                        "inference_result": inference_result_dict,
+                        "confidence_threshold": confidence_threshold,
+                    }, timeout=600)
+
+    status = results.json()['status']
+
+    if status == 'started':
+        logger.info("Threshold filter successfully started!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {results.json()['message']}")
+
+    filtered_df = pd.DataFrame(results.json()['results'])
     filtered_df = filtered_df.reset_index()
     filtered_df['index'] = filtered_df['index'] + 1
     defect_list = filtered_df.loc[filtered_df["probabilities"] > confidence_threshold]
@@ -46,9 +56,7 @@ def generate_defect_list(output_dir: str, lot_id: str, confidence_threshold: flo
 
 
 @st.cache_data(ttl='5s')
-def request_lrf(image_dir:str,
-                lot_id: str,
-                lrf_path: str,
+def request_lrf(lot_id: str,
                 output_dir: str,
                 confidence_threshold: float) -> requests.Response:
     '''
@@ -61,26 +69,20 @@ def request_lrf(image_dir:str,
 
     Returns the reponse of the API request.
     '''
-    r = requests.post(API_ROOT+'inference', json={
-                        "root_dir": image_dir,
-                        "output_dir": output_dir,
-                        "lrf_path": lrf_path,
+    r = requests.post(API_ROOT+'generate_lrf', json={
                         "lot_id": lot_id,
+                        "output_dir": output_dir,
                         "threshold": confidence_threshold,
-                        "batch_size": 4,
-                        "overwrite": True,
-                        "use_cache": True
                     }, timeout=600)
 
     status = r.json()['status']
 
     if status == 'started':
-        logger.info("Inference started running successfully!")
+        logger.info(".lrf generation requested successfully!")
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
 
     return r
-
 
 @st.cache_data(ttl='10s')
 def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
@@ -97,7 +99,7 @@ def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: st
     Returns the reponse of the API request.
     '''
     r = requests.post(API_ROOT+'inference', json={
-                        "root_dir": image_dir,
+                        "image_dir": image_dir,
                         "output_dir": output_dir,
                         "lrf_path": lrf_path,
                         "lot_id": lot_id,
@@ -117,16 +119,16 @@ def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: st
     return r
 
 
-def get_files_by_format(fformat: str) -> list[str]:
+def get_files_by_format(format: str) -> list[str]:
     '''
     Search for all file names that end with the input format.
 
     Args:
-        fformat: File extension (e.g. .db, .txt)
+        format: File extension (e.g. .db, .txt)
 
     Returns a list of absolute paths to the files that match the format.
     '''
-    return glob.glob(f"{st.session_state.global_output_dir}/**/*{fformat}", recursive=True)
+    return glob.glob(f"{st.session_state.global_output_dir}/**/*{format}", recursive=True)
 
 
 def get_all_lots() -> list[str]:
@@ -152,8 +154,54 @@ def request_inference_status(inference_id: str) -> requests.Response:
 
     # TODO: The check is NOT working as intended...
     if status == 'starting':
-        logger.info("Inference status request was successful!")
+        logger.info(f"Inference status request for {inference_id} was successful!")
+    elif status == 'running':
+        logger.info(f"Inference status request for {inference_id} is ongoing...")
+    elif status == 'completed':
+        logger.info(f"Inference status request for {inference_id} is completed.")
+    else:
+        logger.error(f"Unknown status for {inference_id}: {r.json()['message']}")
+
+    return r
+
+@st.cache_data(ttl='1s')
+def request_all_statuses() -> str:
+    '''
+    Gets inference status for all inference jobs by calling FalseFilter API
+
+    Returns the a list of statuses for all inference jobs.
+    '''
+    r = requests.get(f"{API_ROOT}inference/get_all_status", timeout=1000)
+
+    all_statuses = r.json()
+    for status in all_statuses:
+        logger.info(f'Status of inference request for {status["inference_id"]}: {status["status"]}')
+
+    return r.json()
+
+@st.cache_data(ttl='10s')
+def read_database(db_dir: str, lot_id: str) -> requests.Response:
+    '''
+    Calls DB API to read a database file.
+
+    Args:
+        db_dir: Directory where the .db file is stored.
+        lot_id: The name of the lot of images.
+
+    Returns the reponse of the API request, including the data read from the database,
+    as a pandas dataframe.
+    '''
+
+    r = requests.post(API_ROOT+'read_database', json={
+                        "db_dir": db_dir,
+                        "lot_id": lot_id,
+                    }, timeout=600)
+
+    status = r.json()['status']
+
+    if status == 'started':
+        logger.info("DB read started running successfully!")
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
 
-    return r
+    return pd.DataFrame.from_dict(r.json()['results'])

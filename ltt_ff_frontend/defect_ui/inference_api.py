@@ -72,3 +72,8 @@ def app() -> None:
         if st.button("Check status"):
             status = helper.request_inference_status(infer_id)
             st.json(status.json())
+
+    if st.button('Check all inference jobs'):
+        all_statuses = helper.request_all_statuses()
+        for status in all_statuses:
+            st.json(status)
