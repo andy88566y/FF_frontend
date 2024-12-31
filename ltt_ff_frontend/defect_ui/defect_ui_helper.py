@@ -38,7 +38,7 @@ def generate_defect_list(inference_result: pd.DataFrame, confidence_threshold: f
     results = requests.post(API_ROOT+'filter_threshold', json={
                         "inference_result": inference_result_dict,
                         "confidence_threshold": confidence_threshold,
-                    }, timeout=600)
+                    }, timeout=10)
 
     status = results.json()['status']
 
@@ -73,7 +73,7 @@ def request_lrf(lot_id: str,
                         "lot_id": lot_id,
                         "output_dir": output_dir,
                         "threshold": confidence_threshold,
-                    }, timeout=600)
+                    }, timeout=10)
 
     status = r.json()['status']
 
@@ -107,7 +107,7 @@ def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: st
                         "batch_size": inference_batch_size,
                         "overwrite": overwrite,
                         "use_cache": False
-                    }, timeout=600)
+                    }, timeout=10)
 
     status = r.json()['status']
 
@@ -148,7 +148,7 @@ def request_inference_status(inference_id: str) -> requests.Response:
 
     Returns the response of the API request
     '''
-    r = requests.get(f"{API_ROOT}inference/status/{inference_id}", timeout=1000)
+    r = requests.get(f"{API_ROOT}inference/status/{inference_id}", timeout=10)
 
     status = r.json()['status']
 
@@ -171,7 +171,7 @@ def request_all_statuses() -> str:
 
     Returns the a list of statuses for all inference jobs.
     '''
-    r = requests.get(f"{API_ROOT}inference/get_all_status", timeout=1000)
+    r = requests.get(f"{API_ROOT}inference/get_all_status", timeout=10)
 
     all_statuses = r.json()
     for status in all_statuses:
@@ -195,7 +195,7 @@ def read_database(db_dir: str, lot_id: str) -> requests.Response:
     r = requests.post(API_ROOT+'read_database', json={
                         "db_dir": db_dir,
                         "lot_id": lot_id,
-                    }, timeout=600)
+                    }, timeout=10)
 
     status = r.json()['status']
 
