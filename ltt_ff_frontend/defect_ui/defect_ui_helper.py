@@ -2,6 +2,8 @@ import glob
 import os
 
 import pandas as pd
+import numpy as np
+import json
 import requests
 import streamlit as st
 from loguru import logger
@@ -205,3 +207,103 @@ def read_database(db_dir: str, lot_id: str) -> requests.Response:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
 
     return pd.DataFrame.from_dict(r.json()['results'])
+
+@st.cache_data(ttl='1s')
+def get_prc_data(db_path: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    '''
+    Get the data needed to draw a PRC curve.
+
+    Args:
+        db_path: Absolute path to the .db file containing inference results for
+                desired lot of defect images.
+        return_curve: If false, just return the area under the curve (AUPRC)
+    '''
+    r = requests.get(API_ROOT+'get_prc_data', json={
+                        "db_path": db_path,
+                        "return_curve": return_curve,
+                    }, timeout=10)
+
+    prc_data_list = r.json()['prc_data']
+    prc_data_ndarray = tuple(np.array(data_list) for data_list in prc_data_list)
+
+    return prc_data_ndarray
+
+@st.cache_data(ttl='1s')
+def get_roc_data(db_path: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    '''
+    Get the data needed to draw a PRC curve.
+
+    Args:
+        db_path: Absolute path to the .db file containing inference results for
+                desired lot of defect images.
+        return_curve: If false, just return the area under the curve (AUPRC)
+    '''
+    r = requests.get(API_ROOT+'get_roc_data', json={
+                        "db_path": db_path,
+                        "return_curve": return_curve,
+                    }, timeout=10)
+
+    roc_data_list = r.json()['prc_data']
+    roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
+
+    return roc_data_ndarray
+
+@st.cache_data(ttl='1s')
+def get_defect_id(db_path: str) -> list[int]:
+    '''
+    Get list of defect IDs from a database.
+
+    Args:
+        db_path: Absolute path to the .db file containing inference results for
+            desired lot of defect images.
+
+        Returns:
+            A list of the defect IDs of a lot of images.
+    '''
+    r = requests.get(API_ROOT+'get_defect_id', json={
+                        "db_path": db_path,
+                    }, timeout=10)
+
+    return r.json()['defect_id_list']
+
+@st.cache_data(ttl='1s')
+def get_probability(db_path: str, defect_id: list[int]) -> list[float]:
+    """
+    Read a list of the defect probabilities from a database.
+
+    Args:
+        db_path: Absolute path to the .db file containing inference results for
+            desired lot of defect images.
+        defect_id: ID of the defect images
+
+    Returns:
+        A list of the defect probabilities of a lot of images.
+    """
+    defect_id_json = json.dumps(defect_id)
+    r = requests.get(API_ROOT+'get_probability', json={
+                        "db_path": db_path,
+                        "defect_id_list": defect_id_json,
+                    }, timeout=10)
+
+    return r.json()['probability_list']
+
+@st.cache_data(ttl='1s')
+def get_answer(db_path: str, defect_id: list[int]) -> list[float]:
+    """
+    Read a list of the ground truths from a database.
+
+    Args:
+        db_path: Absolute path to the .db file containing inference results for
+            desired lot of defect images.
+        defect_id: ID of the defect images
+
+    Returns:
+        A list of the ground truths of a lot of images.
+    """
+    defect_id_json = json.dumps(defect_id)
+    r = requests.get(API_ROOT+'get_answer', json={
+                        "db_path": db_path,
+                        "defect_id_list": defect_id_json,
+                    }, timeout=10)
+
+    return r.json()['answer_list']
