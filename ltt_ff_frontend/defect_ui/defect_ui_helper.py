@@ -243,7 +243,7 @@ def get_roc_data(db_path: str, return_curve: bool = True) -> tuple[np.ndarray, n
                         "return_curve": return_curve,
                     }, timeout=10)
 
-    roc_data_list = r.json()['prc_data']
+    roc_data_list = r.json()['roc_data']
     roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
 
     return roc_data_ndarray
@@ -279,10 +279,9 @@ def get_probability(db_path: str, defect_id: list[int]) -> list[float]:
     Returns:
         A list of the defect probabilities of a lot of images.
     """
-    defect_id_json = json.dumps(defect_id)
     r = requests.get(API_ROOT+'get_probability', json={
                         "db_path": db_path,
-                        "defect_id_list": defect_id_json,
+                        "defect_id_list": defect_id,
                     }, timeout=10)
 
     return r.json()['probability_list']
@@ -300,13 +299,13 @@ def get_answer(db_path: str, defect_id: list[int]) -> list[float]:
     Returns:
         A list of the ground truths of a lot of images.
     """
-    defect_id_json = json.dumps(defect_id)
     r = requests.get(API_ROOT+'get_answer', json={
                         "db_path": db_path,
-                        "defect_id_list": defect_id_json,
+                        "defect_id_list": defect_id,
                     }, timeout=10)
 
     return r.json()['answer_list']
+
 @st.cache_data(ttl='10s')
 def request_finetune(batch_size: int, epochs: int, lr: float, output_dir: str,
                      overwrite: bool, train_dir: str, train_lrf_path: str,
