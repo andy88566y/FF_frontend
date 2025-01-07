@@ -14,10 +14,6 @@ from loguru import logger
 from ltt_ff_frontend.constant import API_ROOT
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
-from sklearn import metrics
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import roc_curve
-
 # Modified as of 01/07
 
 def model_data(db_path: str) -> dict:
@@ -29,8 +25,8 @@ def model_data(db_path: str) -> dict:
         defect_id_list[i] : {
             "db_path" : db_path,
             "defect_id" : defect_id_list[i],
-            "probability" : probability[defect_id_list[i]],
-            "answer" : answer[defect_id_list[i]],
+            "probability" : probability_list[i],
+            "answer" : answer_list[i],
         }
         for i in range(len(defect_id_list))
     }
@@ -359,11 +355,14 @@ def app() -> None:
                 slider_threshold = slider_threshold_2
 
 
+            fig_1d = generate_1D_plot(model, slider_threshold)
+            st.plotly_chart(fig_1d)
             # Precision-Recall Curve
             prc_data_ndarray = helper.get_prc_data(db_path = dir_model, return_curve = True)
             fig_prc = plot_init_prc(prc_data_ndarray, slider_threshold)
             st.plotly_chart(fig_prc)
 
             roc_data_ndarray = helper.get_roc_data(db_path = dir_model, return_curve = True)
+            st.dataframe(roc_data_ndarray)
             fig_roc = plot_init_roc(roc_data_ndarray, slider_threshold)
             st.plotly_chart(fig_roc)
