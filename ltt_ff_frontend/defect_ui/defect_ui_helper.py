@@ -167,7 +167,7 @@ def request_inference_status(inference_id: str) -> requests.Response:
     return r
 
 @st.cache_data(ttl='1s')
-def request_all_statuses() -> str:
+def request_all_inference_statuses() -> str:
     '''
     Gets inference status for all inference jobs by calling FalseFilter API
 
@@ -243,7 +243,7 @@ def get_roc_data(db_path: str, return_curve: bool = True) -> tuple[np.ndarray, n
                         "return_curve": return_curve,
                     }, timeout=10)
 
-    roc_data_list = r.json()['prc_data']
+    roc_data_list = r.json()['roc_data']
     roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
 
     return roc_data_ndarray
@@ -279,10 +279,9 @@ def get_probability(db_path: str, defect_id: list[int]) -> list[float]:
     Returns:
         A list of the defect probabilities of a lot of images.
     """
-    defect_id_json = json.dumps(defect_id)
     r = requests.get(API_ROOT+'get_probability', json={
                         "db_path": db_path,
-                        "defect_id_list": defect_id_json,
+                        "defect_id_list": defect_id,
                     }, timeout=10)
 
     return r.json()['probability_list']
@@ -300,10 +299,63 @@ def get_answer(db_path: str, defect_id: list[int]) -> list[float]:
     Returns:
         A list of the ground truths of a lot of images.
     """
-    defect_id_json = json.dumps(defect_id)
     r = requests.get(API_ROOT+'get_answer', json={
                         "db_path": db_path,
-                        "defect_id_list": defect_id_json,
+                        "defect_id_list": defect_id,
                     }, timeout=10)
 
     return r.json()['answer_list']
+
+@st.cache_data(ttl='10s')
+def request_finetune(batch_size: int, epochs: int, lr: float, output_dir: str,
+                     overwrite: bool, train_dir: str, train_lrf_path: str,
+                     val_dir: str, val_lrf_path: str) -> requests.Response:
+    '''
+    Calls FFA model fine-tuning.
+
+    Args:
+        batch_size: Training batch size.
+        epochs: Number of training epochs.
+        lr: Learning rate.
+        output_dir: Directory to save the fine-tuned model.
+        overwrite: Whether to overwrite the existing output directory.
+        train_dir: Directory containing the training data.
+        val_dir: Directory containing the validation data.
+
+    Returns the reponse of the API request.
+    '''
+    r = requests.post(API_ROOT+'train', json={
+                        "batch_size": batch_size,
+                        "epochs": epochs,
+                        "lr": lr,
+                        "output_dir": output_dir,
+                        "overwrite": overwrite,
+                        "train_dir": train_dir,
+                        "train_lrf_path": train_lrf_path,
+                        "val_dir": val_dir,
+                        "val_lrf_path": val_lrf_path
+                    }, timeout=10)
+
+    status = r.json()['status']
+
+    if status == 'started':
+        logger.info("Model fine-tuning started running successfully!")
+    else:
+        logger.error(f"Error occurred when calling fine-tuning API: {r.json()['message']}")
+
+    return r
+
+@st.cache_data(ttl='1s')
+def request_all_finetuning_statuses() -> str:
+    '''
+    Gets finetuning status for all finetuning jobs by calling FalseFilter API
+
+    Returns the a list of statuses for all finetuning jobs.
+    '''
+    r = requests.get(f"{API_ROOT}train/get_all_status", timeout=10)
+
+    all_statuses = r.json()
+    for status in all_statuses:
+        logger.info(f'Status of finetuning request for {status["training_id"]}: {status["status"]}')
+
+    return r.json()
