@@ -88,15 +88,28 @@ def app() -> None:
         detail_status_df = pd.DataFrame()
         brief = ['inference_id', 'status', 'processed_images', 'total_images']
 
-        reorder = ['start_time_ymd','inference_id', 'status', 'processed_images', 'total_images', 'progress',
+        reorder = ['start_time','inference_id', 'status', 'processed_images', 'total_images', 'progress',
         'estimated_time_remaining', 'lot_id', 'output_dir', 'error_message' ]
 
         for status in all_statuses:
             new_row = pd.DataFrame([status])
             detail_status_df = pd.concat([detail_status_df, new_row], ignore_index=True)
 
-        detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'])
-        detail_status_df['start_time_ymd'] = detail_status_df['start_time'].dt.time
+
+        for column in detail_status_df.columns:
+            if detail_status_df[column].dtype == 'object':
+                detail_status_df[column] = detail_status_df[column].astype(str)
+
+        # Convert 'start_time' to datetime
+        detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'], unit='s')
+        detail_status_df['start_time'] = detail_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+
+        # detail_status_df['start_time'] = detail_status_df['start_time'].astype(float)
+        # pd.to_datetime(detail_status_df['start_time'], unit='s')
+
+        # logger.debug(type(detail_status_df['start_time']))
+        # detail_status_df['start_time_ymd'] = detail_status_df['start_time']
         detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
         status_df = detail_status_df[brief]
 
@@ -106,7 +119,7 @@ def app() -> None:
     if "status_df" not in st.session_state:
         st.session_state.status_df = pd.DataFrame(columns=['inference_id', 'status', 'processed_images', 'total_images'])
     if "detail" not in st.session_state:
-        st.session_state.detail = pd.DataFrame(columns = ['start_time_ymd','inference_id', 'status', 'processed_images', 'total_images', 'progress',
+        st.session_state.detail = pd.DataFrame(columns = ['start_time','inference_id', 'status', 'processed_images', 'total_images', 'progress',
         'estimated_time_remaining', 'lot_id', 'output_dir', 'error_message'])
 
 
@@ -115,6 +128,7 @@ def app() -> None:
         key = "statuses",
         on_select = "rerun",
         selection_mode = "multi-row",
+        use_container_width=True,
     )
     if event and event.selection:
         # Check if the "row" value's list is not empty
