@@ -1,8 +1,12 @@
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
+import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
 
+from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 def app() -> None:
     logger.debug("Opening Inference API page")
@@ -11,16 +15,18 @@ def app() -> None:
     st.caption("API for running inference and fine-tuning False Filtering models.")
 
     st.header("Inference")
+
+
     with st.expander("Run inference on images"):
 
         st.markdown(":violet[Runs inference on images in the specified directory.]")
 
         st.header("Parameters")
 
-        image_dir = st.text_input('Image directory', value='', help='The directory that contains the Images folder.')
-        lrf_path = st.text_input('.lrf path', value='', help='Absolute path to the selected .lrf file.')
-        lot_id = st.text_input('Lot ID', value='', help='Name of the lot of images to run inference on.')
-        output_dir = st.text_input('Output directory', value='', help='The directory to store generated .lrf and .db')
+        image_dir = st.text_input('Image directory', value='/mnt/fs0/x9u_detection_result/N3_M2-6_20240923_000532/N3_M2-6_20240923_000532', help='The directory that contains the Images folder.')
+        lrf_path = st.text_input('.lrf path', value='/mnt/fs0/x9u_detection_result/N3_M2-6_20240923_000532/N3_M2-6_20240923_000532_classified.lrf', help='Absolute path to the selected .lrf file.')
+        lot_id = st.text_input('Lot ID', value='N3_M2-6_20240923_000532', help='Name of the lot of images to run inference on.')
+        output_dir = st.text_input('Output directory', value='/mnt/fs0/shawn', help='The directory to store generated .lrf and .db')
         inference_batch_size = st.select_slider("Inference batch size", [4, 8, 16, 32])
 
         # selected_lot = st.selectbox(
@@ -68,12 +74,28 @@ def app() -> None:
             # progress_bar = st.progress(0.0, text=progress_text)
 
     with st.expander("Current jobs"):
-        infer_id = st.text_input("Inference ID", help="The unique number generated after click Generate .lrf")
+        infer_id = st.text_input("Inference ID", help="The unique number generated after click Generate .lrf", value = '')
         if st.button("Check status"):
             status = helper.request_inference_status(infer_id)
             st.json(status.json())
 
     if st.button('Check all inference jobs'):
         all_statuses = helper.request_all_inference_statuses()
+        status_df = pd.DataFrame()
+        brief = ['inference_id','status', 'estimated_time_remaining','processed_images', 'total_images']
+
         for status in all_statuses:
-            st.json(status)
+            # st.json(status)
+            new_row = pd.DataFrame([status])
+            status_df = pd.concat([status_df, new_row], ignore_index = True)
+
+        status_df = status_df.iloc[::-1].reset_index(drop=True)
+        status_df = status_df[brief]
+        st.dataframe(status_df)
+
+        # event = st.dataframe(
+        #     st.session_state.status_df,
+        #     key = "data",
+        #     on_select = "ignore",
+        #     selection_mode = "multi-row",
+        # )
