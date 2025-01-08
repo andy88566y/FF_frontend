@@ -87,7 +87,7 @@ def request_lrf(lot_id: str,
     return r
 
 @st.cache_data(ttl='10s')
-def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
+def request_inference(model_path: str, model_key_path: str, image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
                       inference_batch_size: int, confidence_threshold: float, overwrite: bool) -> requests.Response:
     '''
     Calls FalseFilter API with use_cache=False.
@@ -101,6 +101,8 @@ def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: st
     Returns the reponse of the API request.
     '''
     r = requests.post(API_ROOT+'inference', json={
+                        "model_path": model_path,
+                        "model_key_path": model_key_path,
                         "image_dir": image_dir,
                         "output_dir": output_dir,
                         "lrf_path": lrf_path,
@@ -182,7 +184,7 @@ def request_all_inference_statuses() -> str:
     return r.json()
 
 @st.cache_data(ttl='10s')
-def read_database(db_dir: str, lot_id: str) -> requests.Response:
+def read_database(db_path: str) -> requests.Response:
     '''
     Calls DB API to read a database file.
 
@@ -195,8 +197,7 @@ def read_database(db_dir: str, lot_id: str) -> requests.Response:
     '''
 
     r = requests.post(API_ROOT+'read_database', json={
-                        "db_dir": db_dir,
-                        "lot_id": lot_id,
+                        "db_path": db_path,
                     }, timeout=10)
 
     status = r.json()['status']

@@ -17,11 +17,13 @@ def app() -> None:
 
         st.header("Parameters")
 
-        image_dir = st.text_input('Image directory', value='', help='The directory that contains the Images folder.')
-        lrf_path = st.text_input('.lrf path', value='', help='Absolute path to the selected .lrf file.')
-        lot_id = st.text_input('Lot ID', value='', help='Name of the lot of images to run inference on.')
-        output_dir = st.text_input('Output directory', value='', help='The directory to store generated .lrf and .db')
-        inference_batch_size = st.select_slider("Inference batch size", [4, 8, 16, 32])
+        model_path = st.text_input(label='Model path', value='', help='Absolute path to the inference model you want to use.')
+        model_key_path = st.text_input(label='Model key path', value='')
+        image_dir = st.text_input(label='Image directory', value='', help='The directory that contains the Images folder.')
+        lrf_path = st.text_input(label='.lrf path', value='', help='Absolute path to the selected .lrf file.')
+        lot_id = st.text_input(label='Lot ID', value='')
+        output_dir = st.text_input(label='Output directory', value='', help='The directory to store generated .lrf and .db')
+        inference_batch_size = st.select_slider(label='Inference batch size', options=[4, 8, 16, 32])
 
         # selected_lot = st.selectbox(
         #     "Which lot do you want to run inference on?",
@@ -46,13 +48,15 @@ def app() -> None:
         helper.gap(2)
 
         if st.button("Run inference", type='primary'):
-            request = helper.request_inference(image_dir,
-                                           lrf_path,
-                                           lot_id,
-                                           output_dir,
-                                           inference_batch_size,
-                                           slider_threshold,
-                                           overwrite)
+            request = helper.request_inference(model_path,
+                                               model_key_path,
+                                               image_dir,
+                                               lrf_path,
+                                               lot_id,
+                                               output_dir,
+                                               inference_batch_size,
+                                               slider_threshold,
+                                               overwrite)
             if request.json().get('status') == 'error':
                 code = request.json().get('code')
                 message = request.json().get('message')
