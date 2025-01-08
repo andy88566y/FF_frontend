@@ -8,6 +8,10 @@ import numpy as np
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
+
+
+
+
 def app() -> None:
     logger.debug("Opening Inference API page")
 
@@ -81,21 +85,41 @@ def app() -> None:
 
     if st.button('Check all inference jobs'):
         all_statuses = helper.request_all_inference_statuses()
-        status_df = pd.DataFrame()
-        brief = ['inference_id','status', 'estimated_time_remaining','processed_images', 'total_images']
+        detail_status_df = pd.DataFrame()
+        brief = ['inference_id', 'status', 'processed_images', 'total_images']
+
+        reorder = ['start_time_ymd','inference_id', 'status', 'processed_images', 'total_images', 'progress',
+        'estimated_time_remaining', 'lot_id', 'output_dir', 'error_message' ]
 
         for status in all_statuses:
-            # st.json(status)
             new_row = pd.DataFrame([status])
-            status_df = pd.concat([status_df, new_row], ignore_index = True)
+            detail_status_df = pd.concat([detail_status_df, new_row], ignore_index=True)
 
-        status_df = status_df.iloc[::-1].reset_index(drop=True)
-        status_df = status_df[brief]
-        st.dataframe(status_df)
+        detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'])
+        detail_status_df['start_time_ymd'] = detail_status_df['start_time'].dt.time
+        detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
+        status_df = detail_status_df[brief]
 
-        # event = st.dataframe(
-        #     st.session_state.status_df,
-        #     key = "data",
-        #     on_select = "ignore",
-        #     selection_mode = "multi-row",
-        # )
+        st.session_state.status_df = status_df
+        st.session_state.detail = detail_status_df[reorder]
+
+    if "status_df" not in st.session_state:
+        st.session_state.status_df = pd.DataFrame(columns=['inference_id', 'status', 'processed_images', 'total_images'])
+    if "detail" not in st.session_state:
+        st.session_state.detail = pd.DataFrame(columns = ['start_time_ymd','inference_id', 'status', 'processed_images', 'total_images', 'progress',
+        'estimated_time_remaining', 'lot_id', 'output_dir', 'error_message'])
+
+
+    event = st.dataframe(
+        st.session_state.status_df,
+        key = "statuses",
+        on_select = "rerun",
+        selection_mode = "multi-row",
+    )
+    if event and event.selection:
+        # Check if the "row" value's list is not empty
+        if event.selection["rows"]:
+            # Extract the selected rows based on the indices
+            selected_rows = st.session_state.detail.iloc[event.selection["rows"]]
+            transposed_detail = selected_rows.T
+            st.write(transposed_detail)
