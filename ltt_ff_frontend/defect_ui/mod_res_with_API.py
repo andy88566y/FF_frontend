@@ -252,17 +252,15 @@ def update_prc(org_fig, prc_data_ndarray, slith: float):
 
 def plot_init_roc(roc_data_ndarray, slith: float):
     fpr, tpr, threshold = roc_data_ndarray
-    fnr = 1-tpr
-
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x= fpr, y=fnr, mode='lines', name='Model 1'))
-    fig.add_trace(go.Scatter(x=[0, 1], y=[1, 0], mode='lines', name='Random Classifier', line=dict(dash='dash')))
+    fig.add_trace(go.Scatter(x= fpr, y= tpr, mode='lines', name='Model 1'))
+    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random Classifier', line=dict(dash='dash')))
 
     if slith is not None:
         idx = (np.abs(threshold - slith)).argmin()
         threshold_trace = go.Scatter(
         x=[fpr[idx]],
-        y=[fnr[idx]],
+        y=[tpr[idx]],
         mode='markers',
         marker=dict(color='red', size=10),
         name=f'Threshold = {threshold[idx]:.2f}'
@@ -276,22 +274,21 @@ def plot_init_roc(roc_data_ndarray, slith: float):
         xaxis_title='False Positive Rate',
         yaxis_title='True Positive Rate',
         legend_title='Models',
-        template='plotly_white'
+        template='plotly_white',
+        xaxis=dict(range=[-0.05, 0.25]),
+        yaxis=dict(range=[0.8, 1.05]),
     )
     return fig
 
 def update_roc(org_fig, prc_data_ndarray, slith: float):
     fig = org_fig
     fpr, tpr, threshold = roc_data_ndarray
-    fnr = 1-tpr
-
-    fig.add_trace(go.Scatter(x= fpr, y=fnr, mode='lines', name='Model 2'))
-
+    fig.add_trace(go.Scatter(x= fpr, y=tpr, mode='lines', name='Model 2'))
     if slith is not None:
         idx = (np.abs(threshold - slith)).argmin()
         threshold_trace = go.Scatter(
         x=[fpr[idx]],
-        y=[fnr[idx]],
+        y=[tpr[idx]],
         mode='markers',
         marker=dict(color='red', size=10),
         name=f'Threshold = {threshold[idx]:.2f}'
@@ -341,9 +338,6 @@ def app() -> None:
             update_roc(fig_roc, roc_data_ndarray_2, slider_threshold_2)
             st.plotly_chart(fig_roc)
 
-
-
-
         else:
             if dir_model_1 and not dir_model_2:
                 dir_model = dir_model_1
@@ -363,6 +357,5 @@ def app() -> None:
             st.plotly_chart(fig_prc)
 
             roc_data_ndarray = helper.get_roc_data(db_path = dir_model, return_curve = True)
-            st.dataframe(roc_data_ndarray)
             fig_roc = plot_init_roc(roc_data_ndarray, slider_threshold)
             st.plotly_chart(fig_roc)
