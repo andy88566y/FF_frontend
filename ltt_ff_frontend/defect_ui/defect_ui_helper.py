@@ -48,7 +48,6 @@ def generate_defect_list(db_path: str, confidence_threshold: float) -> list[str]
     else:
         logger.error(f"Error occurred when calling inference API: {results.json()['message']}")
 
-
     return results.json()['defect_list']
 
 
@@ -176,6 +175,7 @@ def request_all_inference_statuses() -> str:
 
     if r.json()['status'] == 'error':
         logger.error(r.json()['message'])
+        return {}
     else:
         all_statuses = r.json()['result']
 
@@ -358,6 +358,7 @@ def request_all_finetuning_statuses():
 
     if r.json()['status'] == 'error':
         logger.error(r.json()['message'])
+        return {}
     else:
         all_statuses = r.json()['result']
 
