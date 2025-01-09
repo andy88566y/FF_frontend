@@ -120,35 +120,32 @@ def generate_2D_plot(model_1: dict, model_2: dict, slith1: float, slith2: float)
             xbins=dict(start=0.00, end=1.00, size=0.01)
         ))
 
-    seed_1 = [entry['seed'] for entry in model_1.values()][0]
-    seed_2 = [entry['seed'] for entry in model_2.values()][0]
-
     fig.update_layout(
         autosize = False,
         xaxis = dict(
             zeroline = False,
             domain = [0,0.85],
             showgrid = False,
-            title = f'Model:{seed_1}'
+            title = f'Model:1'
         ),
         yaxis = dict(
             zeroline = False,
             domain = [0,0.85],
             showgrid = False,
-            title = f'Model:{seed_2}'
+            title = f'Model:2'
 
         ),
         xaxis2 = dict(
             zeroline = False,
             domain = [0.85,1],
             showgrid = False,
-            title = f'Model:{seed_1}'
+            title = f'Model:1'
         ),
         yaxis2 = dict(
             zeroline = False,
             domain = [0.85,1],
             showgrid = False,
-            title = f'Model:{seed_2}'
+            title = f'Model:2'
         ),
         height = 600,
         width = 600,
@@ -218,7 +215,14 @@ def plot_init_prc(prc_data_ndarray, slith: float):
         marker=dict(color='red', size=10),
         name=f'Threshold = {threshold[idx]:.2f}'
         )
-    fig.add_trace(threshold_trace)
+        fig.add_trace(threshold_trace)
+        fig.add_annotation(
+            x = recall[idx],
+            y = precision[idx],
+            text = f"Model 1 Threshold = {threshold[idx]:.2f} <br> Recall: {recall[idx]:.4f} <br> Precision: {precision[idx]:.4f}",
+            showarrow = True,
+            arrowhead = 2
+        )
 
     fig.update_layout(
     title='Precision-Recall Curve',
@@ -226,8 +230,11 @@ def plot_init_prc(prc_data_ndarray, slith: float):
     yaxis_title='Precision',
     legend_title='Models',
     template='plotly_white',
-    showlegend = True
+    showlegend = True,
+    xaxis=dict(range=[0.8, 1.05]),
+    yaxis=dict(range=[0.8, 1.05]),
     )
+
     return fig
 
 def update_prc(org_fig, prc_data_ndarray, slith: float):
@@ -245,58 +252,79 @@ def update_prc(org_fig, prc_data_ndarray, slith: float):
         marker=dict(color='red', size=10),
         name=f'Threshold = {threshold[idx]:.2f}'
         )
-    fig.add_trace(threshold_trace)
+        fig.add_trace(threshold_trace)
+
+        fig.add_annotation(
+            x = recall[idx],
+            y = precision[idx],
+            text = f"Model 2 Threshold = {threshold[idx]:.2f} <br> Recall: {recall[idx]:.4f} <br> Precision: {precision[idx]:.4f}",
+            showarrow = True,
+            arrowhead = 2
+        )
 
     return fig
 
 
 def plot_init_roc(roc_data_ndarray, slith: float):
     fpr, tpr, threshold = roc_data_ndarray
-    fnr = 1-tpr
-
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x= fpr, y=fnr, mode='lines', name='Model 1'))
-    fig.add_trace(go.Scatter(x=[0, 1], y=[1, 0], mode='lines', name='Random Classifier', line=dict(dash='dash')))
+    fig.add_trace(go.Scatter(x= fpr, y= tpr, mode='lines', name='Model 1'))
+    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random Classifier', line=dict(dash='dash')))
 
     if slith is not None:
         idx = (np.abs(threshold - slith)).argmin()
         threshold_trace = go.Scatter(
         x=[fpr[idx]],
-        y=[fnr[idx]],
+        y=[tpr[idx]],
         mode='markers',
         marker=dict(color='red', size=10),
         name=f'Threshold = {threshold[idx]:.2f}'
         )
-    fig.add_trace(threshold_trace)
+        fig.add_trace(threshold_trace)
+
+        fig.add_annotation(
+            x = fpr[idx],
+            y = tpr[idx],
+            text = f"Model 1 Threshold = {threshold[idx]:.2f} <br> Sensitivity: {fpr[idx]:.4f} <br> 1-Specificity: {tpr[idx]:.4f}",
+            showarrow = True,
+            arrowhead = 2
+        )
 
 
     # Update layoutff
     fig.update_layout(
         title='ROC Curve',
-        xaxis_title='False Positive Rate',
-        yaxis_title='True Positive Rate',
+        xaxis_title='1-Specificity',
+        yaxis_title='Sensitivity',
         legend_title='Models',
-        template='plotly_white'
+        template='plotly_white',
+        xaxis=dict(range=[-0.05, 0.25]),
+        yaxis=dict(range=[0.8, 1.05]),
     )
+
     return fig
 
-def update_roc(org_fig, prc_data_ndarray, slith: float):
+def update_roc(org_fig, roc_data_ndarray, slith: float):
     fig = org_fig
     fpr, tpr, threshold = roc_data_ndarray
-    fnr = 1-tpr
-
-    fig.add_trace(go.Scatter(x= fpr, y=fnr, mode='lines', name='Model 2'))
-
+    fig.add_trace(go.Scatter(x= fpr, y=tpr, mode='lines', name='Model 2'))
     if slith is not None:
         idx = (np.abs(threshold - slith)).argmin()
         threshold_trace = go.Scatter(
         x=[fpr[idx]],
-        y=[fnr[idx]],
+        y=[tpr[idx]],
         mode='markers',
         marker=dict(color='red', size=10),
         name=f'Threshold = {threshold[idx]:.2f}'
         )
-    fig.add_trace(threshold_trace)
+        fig.add_trace(threshold_trace)
+        fig.add_annotation(
+            x = fpr[idx],
+            y = tpr[idx],
+            text = f"Model 2 Threshold = {threshold[idx]:.2f} <br> Sensitivity: {fpr[idx]:.4f} <br> 1-Specificity: {tpr[idx]:.4f}",
+            showarrow = True,
+            arrowhead = 2
+        )
 
 
     return fig
@@ -341,9 +369,6 @@ def app() -> None:
             update_roc(fig_roc, roc_data_ndarray_2, slider_threshold_2)
             st.plotly_chart(fig_roc)
 
-
-
-
         else:
             if dir_model_1 and not dir_model_2:
                 dir_model = dir_model_1
@@ -363,6 +388,5 @@ def app() -> None:
             st.plotly_chart(fig_prc)
 
             roc_data_ndarray = helper.get_roc_data(db_path = dir_model, return_curve = True)
-            st.dataframe(roc_data_ndarray)
             fig_roc = plot_init_roc(roc_data_ndarray, slider_threshold)
             st.plotly_chart(fig_roc)
