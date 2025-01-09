@@ -45,5 +45,51 @@ def app() -> None:
 
     if st.button('Check all fine-tuning jobs'):
         all_statuses = helper.request_all_finetuning_statuses()
+        detail_status_df = pd.DataFrame()
+        reorder = ["status",
+            "progress",
+            "current_epoch",
+            "total_epochs",
+            "estimated_time_remaining",
+            "output_dir",
+            "train_dir",
+            "val_dir",
+            "epoch_loss",
+            "val_loss",
+            "best_model_path",
+            "message",
+            "error_message"]
+        brief = ["status","estimated_time_remaining","current_epoch","total_epochs","epoch_loss",
+            "val_loss"]
         for status in all_statuses:
-            st.json(status)
+            new_row = pd.DataFrame([status])
+            detail_status_df = pd.concat([detail_status_df, new_row], ignore_index=True)
+
+        for column in detail_status_df.columns:
+            if detail_status_df[column].dtype == 'object':
+                detail_status_df[column] = detail_status_df[column].astype(str)
+
+
+        detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
+        status_df = detail_status_df[brief]
+
+        st.session_state.status_df = status_df
+        st.session_state.detail = detail_status_df[reorder]
+
+    if "status_df" not in st.session_state:
+        st.session_state.status_df = pd.DataFrame(columns = brief)
+    if "detail" not in st.session_state:
+        st.session_state.detail = pd.DataFrame(columns = reorder)
+
+    event = st.dataframe(
+        st.session_state.status_df,
+        key = "statuses",
+        on_select = "rerun",
+        selection_mode = "multi-row",
+        use_container_width=True,
+    )
+    if event and event.selection:
+        if event.selection["rows"]:
+            selected_rows = st.session_state.detail.iloc[event.selection["rows"]]
+            transposed_detail = selected_rows.T
+            st.write(transposed_detail)
