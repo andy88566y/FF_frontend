@@ -174,11 +174,15 @@ def request_all_inference_statuses() -> str:
     '''
     r = requests.get(f"{API_ROOT}inference/get_all_status", timeout=10)
 
-    all_statuses = r.json()
-    for status in all_statuses:
-        logger.info(f'Status of inference request for {status["inference_id"]}: {status["status"]}')
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+    else:
+        all_statuses = r.json()['result']
 
-    return r.json()
+        for inference_job in all_statuses:
+            logger.info(f'Status of inference request for {inference_job}: {all_statuses[inference_job]}')
+
+        return all_statuses
 
 @st.cache_data(ttl='10s')
 def read_database(db_path: str) -> requests.Response:
@@ -344,7 +348,7 @@ def request_finetune(batch_size: int, epochs: int, lr: float, output_dir: str,
     return r
 
 @st.cache_data(ttl='1s')
-def request_all_finetuning_statuses() -> str:
+def request_all_finetuning_statuses():
     '''
     Gets finetuning status for all finetuning jobs by calling FalseFilter API
 
@@ -352,8 +356,12 @@ def request_all_finetuning_statuses() -> str:
     '''
     r = requests.get(f"{API_ROOT}train/get_all_status", timeout=10)
 
-    all_statuses = r.json()
-    for status in all_statuses:
-        logger.info(f'Status of finetuning request for {status["training_id"]}: {status["status"]}')
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+    else:
+        all_statuses = r.json()['result']
 
-    return r.json()
+        for training_job in all_statuses:
+            logger.info(f'Status of finetuning request for {training_job}: {all_statuses[training_job]["status"]}')
+
+        return all_statuses

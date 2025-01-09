@@ -16,13 +16,13 @@ def app() -> None:
         training_batch_size = st.select_slider("Inference batch size", [4, 8, 16, 32])
         epochs = st.number_input('Epochs', value=10)
         learning_rate = st.number_input('Learning rate', value=0.0001, step=0.0001, format="%0.4f")
-        output_dir = st.text_input('Output directory', value='/mnt/fs0/minye/falsefilter_api_study/inference_test_1', help='The directory to store the re-trained model.')
+        output_dir = st.text_input('Output directory', value='', help='The directory to store the re-trained model.')
         overwrite = st.toggle('Overwrite existing model', value=False, help='Overwrite the old model that has the same name as the re-trained model.')
         st.caption(f":red[If overwrite=True, everything in output_dir will be deleted. Will be fixed before V2.]")
-        train_dir = st.text_input('Training images directory', value='/mnt/fs0/x9u_detection_result/N5_M0-3_20241004_195835/N5_M0-3_20241004_195835', help='Directory containing training data.')
-        train_lrf_path = st.text_input('Training images .lrf path', value='/mnt/fs0/x9u_detection_result/N5_M0-3_20241004_195835/N5_M0-3_20241004_195835.lrf', help='Path to the .lrf file for training images.')
-        val_dir = st.text_input('Validation images directory', value='/mnt/fs0/x9u_detection_result/N3_M2-4_20240922_002058/N3_M2-4_20240922_002058', help='Directory containing validation data.')
-        val_lrf_path = st.text_input('Validation images .lrf path', value='/mnt/fs0/x9u_detection_result/N3_M2-4_20240922_002058/N3_M2-4_20240922_002058_classified.lrf', help='Path to the .lrf file for validation images.')
+        train_dir = st.text_input('Training images directory', value='', help='Directory containing training data.')
+        train_lrf_path = st.text_input('Training images .lrf path', value='', help='Path to the .lrf file for training images.')
+        val_dir = st.text_input('Validation images directory', value='', help='Directory containing validation data.')
+        val_lrf_path = st.text_input('Validation images .lrf path', value='', help='Path to the .lrf file for validation images.')
 
         if st.button('Start fine-tuning', type='primary'):
             request = helper.request_finetune(batch_size=training_batch_size,
@@ -45,5 +45,9 @@ def app() -> None:
 
     if st.button('Check all fine-tuning jobs'):
         all_statuses = helper.request_all_finetuning_statuses()
-        for status in all_statuses:
-            st.json(status)
+
+        if not all_statuses:
+            st.error('No ongoing training jobs!')
+        else:
+            for status in all_statuses:
+                st.json(all_statuses[status])

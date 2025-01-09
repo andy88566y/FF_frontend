@@ -79,5 +79,9 @@ def app() -> None:
 
     if st.button('Check all inference jobs'):
         all_statuses = helper.request_all_inference_statuses()
-        for status in all_statuses:
-            st.json(status)
+
+        if not all_statuses:
+            st.error('No ongoing inference jobs!')
+        else:
+            for status in all_statuses:
+                st.json(all_statuses[status])
