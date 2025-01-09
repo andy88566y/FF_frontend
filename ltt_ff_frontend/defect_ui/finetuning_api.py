@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
@@ -115,7 +116,6 @@ def app() -> None:
         start_index = (page_number - 1) * page_size
         end_index = page_number * page_size
 
-
     # Selection to find more detail
     event = st.dataframe(
         st.session_state.status_df.iloc[start_index:end_index],
@@ -125,7 +125,6 @@ def app() -> None:
         use_container_width=True,
         column_config={"progress_bar": progress_column}
     ) if not st.session_state.status_df.empty else st.write("")
-
 
     if event and event.selection:
         if event.selection["rows"]:
