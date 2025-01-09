@@ -162,17 +162,10 @@ def app() -> None:
 
 
     if event and event.selection:
-        # Check if the "row" value's list is not empty
+        # Check if the "row" value's list is not empty hi
         if event.selection["rows"]:
             # Extract the selected rows based on the indices
             selected_indices = [start_index + st.session_state.status_df.index[i] for i in event.selection["rows"]]
             selected_rows = st.session_state.detail.loc[selected_indices]
             transposed_detail = selected_rows.T
             st.dataframe(transposed_detail, use_container_width= True )
-
-'''
-  page_size = 10
-    page_number = st.number_input('Page number', min_value=1, value=1, step=1)  if not st.session_state.status_df.empty else st.write("")
-    start_index = (page_number-1) * page_size
-    end_index = page_number * page_size
-'''
