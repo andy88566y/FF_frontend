@@ -109,6 +109,10 @@ def app() -> None:
     if "detail" not in st.session_state:
         st.session_state.detail = pd.DataFrame(columns = reorder)
 
+    start_index = 0
+    end_index = 10
+    page_size = 10
+
     # Pagination settings
     if not st.session_state.status_df.empty:
         page_size = 10

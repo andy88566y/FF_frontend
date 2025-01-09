@@ -119,6 +119,10 @@ def app() -> None:
         st.session_state.detail = pd.DataFrame(columns =  ['start_time','inference_id', 'status', 'processed_images', 'total_images', 'progress',
         'estimated_time_remaining', 'lot_id', 'output_dir', 'error_message' ])
 
+    start_index = 0
+    end_index = 10
+    page_size = 10
+
     # Pagination settings
     if not st.session_state.status_df.empty:
         page_size = 10
