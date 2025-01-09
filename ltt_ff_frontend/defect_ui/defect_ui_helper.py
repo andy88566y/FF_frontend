@@ -23,22 +23,21 @@ def gap(size: int) -> None:
 
 
 @st.cache_data(ttl='10s')
-def generate_defect_list(inference_result: pd.DataFrame, confidence_threshold: float) -> list[str]:
+def generate_defect_list(db_path: str, confidence_threshold: float) -> list[str]:
     '''
     From the inference result, filter images with probability higher than confidence threshold.
     These images are considered to be defects.
 
     Args:
-        inference_result: A pd dataframe containing inference results
+        db_path: Absolute path to database containing inference results
         confidence_threshold: Images with defect probability lower than confidence threshold
                                 is considered defective.
 
     Returns a list of ID numbers of the defect images.
     '''
-    inference_result_dict = inference_result.to_dict()
 
     results = requests.post(API_ROOT+'filter_threshold', json={
-                        "inference_result": inference_result_dict,
+                        "db_path": db_path,
                         "confidence_threshold": confidence_threshold,
                     }, timeout=10)
 
@@ -49,16 +48,13 @@ def generate_defect_list(inference_result: pd.DataFrame, confidence_threshold: f
     else:
         logger.error(f"Error occurred when calling inference API: {results.json()['message']}")
 
-    filtered_df = pd.DataFrame(results.json()['results'])
-    filtered_df = filtered_df.reset_index()
-    filtered_df['index'] = filtered_df['index'] + 1
-    defect_list = filtered_df.loc[filtered_df["probabilities"] > confidence_threshold]
-    defect_list = defect_list['index'].tolist()
-    return defect_list
+
+    return results.json()['defect_list']
 
 
 @st.cache_data(ttl='5s')
-def request_lrf(lot_id: str,
+def request_lrf(db_path: str,
+                lot_id: str,
                 output_dir: str,
                 confidence_threshold: float) -> requests.Response:
     '''
@@ -72,6 +68,7 @@ def request_lrf(lot_id: str,
     Returns the reponse of the API request.
     '''
     r = requests.post(API_ROOT+'generate_lrf', json={
+                        "db_path": db_path,
                         "lot_id": lot_id,
                         "output_dir": output_dir,
                         "threshold": confidence_threshold,

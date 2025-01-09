@@ -49,20 +49,20 @@ def app() -> None:
 
     st.header("Visualize inference results")
 
-    lot_id = st.text_input("Lot ID", value='', help='Name of the lot of images to run inference on.')
-    output_dir = st.text_input("Output directory", value='', help='The directory to store the generated .lrf and .db files.')
+    lot_id = st.text_input("Lot ID", value='', help='Name of the lot of images to run inference on.', key='lot_id')
+    output_dir = st.text_input("Output directory", value='', help='The directory to store the generated .lrf and .db files.', key='output_dir')
+    db_path = st.text_input("DB path", value='', help='The directory to store the generated .lrf and .db files.', key='db_path')
 
-    if lot_id != '' and output_dir != '':
+    if lot_id and output_dir and db_path:
 
         st.subheader(lot_id)
 
         slider_threshold = st.slider("Select confidence threshold:", 0.0, 1.0, 0.5, key=lot_id+'threshold')
         st.text(f"Probabilities above {slider_threshold} will be considered defects.")
 
-        df = helper.read_database(output_dir, lot_id)
-
+        df = helper.read_database(db_path)
         if st.button("Show defect list", type="primary", key=lot_id+'filter'):
-            defect_list = helper.generate_defect_list(df, slider_threshold)
+            defect_list = helper.generate_defect_list(db_path, slider_threshold)
             defect_count = len(defect_list)
             st.markdown(f"Defect count: {defect_count}")
             st.markdown("IDs of defect images:")
@@ -70,7 +70,8 @@ def app() -> None:
 
         if st.button("Generate .lrf", type="primary", key=lot_id+'generate_lrf'):
 
-            request = helper.request_lrf(lot_id=lot_id,
+            request = helper.request_lrf(db_path=db_path,
+                                    lot_id=lot_id,
                                     output_dir=output_dir,
                                     confidence_threshold=slider_threshold)
 
