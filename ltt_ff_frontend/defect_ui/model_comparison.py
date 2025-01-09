@@ -307,13 +307,12 @@ def update_roc(org_fig, roc_data_ndarray, slith: float):
     return fig
 
 def app() -> None:
-    logger.debug("Opening Model Result Dashboard")
-    st.title("With API Model Result Dashboard")
-    st.caption("Pages that contain three dashboards, 2D model comparison chart")
+    logger.debug("Model Comparison Dashboard")
+    st.title("Model Comparison Dashboard")
 
     st.header("Import Models with Database Path")
-    dir_model_1 = st.text_input('Model 1', value='/mnt/fs0/minye/falsefilter_api_study/db_files/N3_M2-6_20240923_000532_m0.0.1.db', help='Model Database Directory.')
-    dir_model_2 = st.text_input('Model 2 (optional)', value='', help='Your Second Model Database Directory.')
+    dir_model_1 = st.text_input('Model 1', value='', help='First Model Database Directory')
+    dir_model_2 = st.text_input('Model 2 (optional)', value='', help='Second Model Database Directory')
 
     slider_threshold_1 = st.slider("Select confidence threshold for model 1:", 0.0, 1.0, 0.5)
     st.caption(f"Probabilities above :blue[{slider_threshold_1}] in Model 1 will be considered defects.")
@@ -353,10 +352,9 @@ def app() -> None:
                 model = model_data(dir_model_2)
                 slider_threshold = slider_threshold_2
 
-
             fig_1d = generate_1D_plot(model, slider_threshold)
             st.plotly_chart(fig_1d)
-            # Precision-Recall Curve
+
             prc_data_ndarray = helper.get_prc_data(db_path = dir_model, return_curve = True)
             fig_prc = plot_init_prc(prc_data_ndarray, slider_threshold)
             st.plotly_chart(fig_prc)
