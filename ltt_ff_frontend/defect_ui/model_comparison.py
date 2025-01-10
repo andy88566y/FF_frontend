@@ -316,8 +316,53 @@ def app() -> None:
 
     slider_threshold_1 = st.slider("Select confidence threshold for model 1:", 0.0, 1.0, 0.5)
     st.caption(f"Probabilities above :blue[{slider_threshold_1}] in Model 1 will be considered defects.")
+
     slider_threshold_2 = st.slider("Select confidence threshold for model 2:", 0.0, 1.0, 0.5)
     st.caption(f"Probabilities above :blue[{slider_threshold_2}] in Model 2 will be considered defects.")
+
+    with st.expander('Generate .lrf'):
+        st.subheader('Generate .lrf for lot 1:')
+        output_dir_one = st.text_input('Output directory for model 1 .lrf file', key='output_dir_one')
+        lot_id_one = st.text_input('Lot ID for model 1', key='lot_id_one')
+
+        if st.button("Generate .lrf", type="primary", key='gen_lrf_one'):
+
+            request = helper.request_lrf(db_path=dir_model_1,
+                                    lot_id=lot_id_one,
+                                    output_dir=output_dir_one,
+                                    confidence_threshold=slider_threshold_1)
+
+            status = request.json()['status']
+
+            # TODO: check file generated instead of just checking status == started
+            if status == 'started':
+                st.success(f'.lrf file generated at {output_dir_one}!')
+                logger.info(f'.lrf file generated at {output_dir_one}!')
+            else:
+                st.error(f".lrf file not generated! Error message: {request.json()['message']}")
+                logger.error(f".lrf file not generated! Error message: {request.json()['message']}")
+
+        st.subheader('Generate .lrf for lot 2:')
+        output_dir_two = st.text_input('Output directory for model 2 .lrf file', key='output_dir_two')
+        lot_id_two = st.text_input('Lot ID for model 2', key='lot_id_two')
+
+        if st.button("Generate .lrf", type="primary", key='gen_lrf_two'):
+
+            request = helper.request_lrf(db_path=dir_model_2,
+                                    lot_id=lot_id_two,
+                                    output_dir=output_dir_two,
+                                    confidence_threshold=slider_threshold_2)
+
+            status = request.json()['status']
+
+            # TODO: check file generated instead of just checking status == started
+            if status == 'started':
+                st.success(f'.lrf file generated at {output_dir_two}!')
+                logger.info(f'.lrf file generated at {output_dir_two}!')
+            else:
+                st.error(f".lrf file not generated! Error message: {request.json()['message']}")
+                logger.error(f".lrf file not generated! Error message: {request.json()['message']}")
+
 
     if st.button("Visualize model", type = 'primary'):
         if dir_model_1 and dir_model_2:
