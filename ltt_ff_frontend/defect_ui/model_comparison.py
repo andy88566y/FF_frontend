@@ -123,13 +123,13 @@ def generate_2D_plot(model_1: dict, model_2: dict, slith1: float, slith2: float)
         },
         xaxis2 = {
             "zeroline": False,
-            "domain": [0,0.85],
+            "domain": [0.85,1],
             "showgrid": False,
             "title": 'Model:1'
         },
         yaxis2 = {
             "zeroline": False,
-            "domain": [0,0.85],
+            "domain": [0.85,1],
             "showgrid": False,
             "title": 'Model:2'
         },

@@ -44,7 +44,6 @@ def app() -> None:
         train_lrf_path = st.text_input('Training images .lrf path', value='', help='Path to the .lrf file for training images.')
         val_dir = st.text_input('Validation images directory', value='', help='Directory containing validation data.')
         val_lrf_path = st.text_input('Validation images .lrf path', value='', help='Path to the .lrf file for validation images.')
-
         if st.button('Start fine-tuning', type='primary'):
             request = helper.request_finetune(batch_size=training_batch_size,
                                               epochs=epochs,
@@ -66,23 +65,14 @@ def app() -> None:
 
     if st.button('Check all fine-tuning jobs'):
         all_statuses = helper.request_all_finetuning_statuses()
-        detail_status_df = pd.DataFrame()
-        reorder = ["status",
-            "progress",
-            "current_epoch",
-            "total_epochs",
-            "estimated_time_remaining",
-            "output_dir",
-            "train_dir",
-            "val_dir",
-            "epoch_loss",
-            "val_loss",
-            "best_model_path",
-            "message",
-            "error_message"]
-        brief = ["status",'progress_bar',"estimated_time_remaining","current_epoch","total_epochs","epoch_loss",
-            "val_loss"]
-        for status in all_statuses:
+
+        brief = ["training_id", "status",'progress_bar',"estimated_time_remaining","current_epoch","total_epochs","epoch_loss","val_loss"]
+        reorder = ["training_id","start_time", "status", "progress", "current_epoch", "total_epochs", "estimated_time_remaining", "output_dir", "train_dir", "val_dir", "epoch_loss", "val_loss", "best_model_path", "message", "error_message"]
+
+        detail_status_df = pd.DataFrame(columns = reorder)
+
+        for training_id, status in all_statuses.items():
+            status['training_id'] = training_id
             new_row = pd.DataFrame([status])
             detail_status_df = pd.concat([detail_status_df, new_row], ignore_index=True)
 
@@ -90,13 +80,15 @@ def app() -> None:
             if detail_status_df[column].dtype == 'object':
                 detail_status_df[column] = detail_status_df[column].astype(str)
 
+        detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'], unit='s')
+        detail_status_df['start_time'] = detail_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
         detail_status_df['progress_bar'] = detail_status_df['status'].apply(dummy_get_progress)
         detail_status_df['color'] = detail_status_df['status'].apply(get_color)
         detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
         status_df = detail_status_df[brief]
 
-        st.session_state.status_df = status_df
-        st.session_state.detail = detail_status_df[reorder]
+        st.session_state.status_df_fin = status_df
+        st.session_state.detail_fin = detail_status_df[reorder]
 
     progress_column = st.column_config.ProgressColumn(
         label="progress_bar",
@@ -104,36 +96,36 @@ def app() -> None:
         max_value=100
     )
 
-    if "status_df" not in st.session_state:
-        st.session_state.status_df = pd.DataFrame(columns = brief)
-    if "detail" not in st.session_state:
-        st.session_state.detail = pd.DataFrame(columns = reorder)
+    if "status_df_fin" not in st.session_state:
+        st.session_state.status_df_fin = pd.DataFrame(columns = ["status",'progress_bar',"estimated_time_remaining","current_epoch","total_epochs","epoch_loss","val_loss"])
+    if "detail_fin" not in st.session_state:
+        st.session_state.detail_fin = pd.DataFrame(columns = ["status", "progress", "current_epoch", "total_epochs", "estimated_time_remaining", "output_dir", "train_dir", "val_dir", "epoch_loss", "val_loss", "best_model_path", "message", "error_message"])
 
     start_index = 0
     end_index = 10
     page_size = 10
 
     # Pagination settings
-    if not st.session_state.status_df.empty:
+    if not st.session_state.status_df_fin.empty:
         page_size = 10
         page_number = st.number_input('Page number', min_value=1, value=1, step=1)
         start_index = (page_number - 1) * page_size
         end_index = page_number * page_size
 
     # Selection to find more detail
-    event = st.dataframe(
-        st.session_state.status_df.iloc[start_index:end_index],
-        key = "statuses",
+    event_fin = st.dataframe(
+        st.session_state.status_df_fin.iloc[start_index:end_index],
+        key = "statuses_finetuning",
         on_select = "rerun",
         selection_mode = "multi-row",
         use_container_width=True,
         column_config={"progress_bar": progress_column}
-    ) if not st.session_state.status_df.empty else st.write("")
+    ) if not st.session_state.status_df_fin.empty else st.write("")
 
-    if event and event.selection:
-        if event.selection["rows"]:
-            selected_indices = [start_index + st.session_state.status_df.index[i] for i in event.selection["rows"]]
-            selected_rows = st.session_state.detail.loc[selected_indices]
+    if event_fin and event_fin.selection:
+        if event_fin.selection["rows"]:
+            selected_indices = [start_index + st.session_state.status_df_fin.index[i] for i in event_fin.selection["rows"]]
+            selected_rows = st.session_state.detail_fin.loc[selected_indices]
 
             transposed_detail = selected_rows.T
             st.dataframe(transposed_detail, use_container_width= True )
