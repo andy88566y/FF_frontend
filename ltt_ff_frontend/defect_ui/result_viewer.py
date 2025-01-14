@@ -1,0 +1,512 @@
+import numpy as np
+import plotly.graph_objects as go
+import streamlit as st
+from loguru import logger
+
+from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
+
+
+def model_data(db_path: str) -> dict:
+    defect_id_list = helper.get_defect_id(db_path)
+    probability_list = helper.get_probability(db_path, defect_id_list)
+    answer_list = helper.get_answer(db_path, defect_id_list)
+
+    data = {
+        defect_id_list[i] : {
+            'db_path' : db_path,
+            'defect_id' : defect_id_list[i],
+            'probability' : probability_list[i],
+            'answer' : answer_list[i],
+        }
+        for i in range(len(defect_id_list))
+    }
+    return data
+
+
+def generate_2D_plot(model_1: dict, model_2: dict, slith1: float, slith2: float):
+
+    probabilities_mod1 = [entry['probability'] for entry in model_1.values()]
+    yes_prob_mod1 = [entry['probability'] for entry in model_1.values() if entry['answer']]
+    no_prob_mod1 = [entry['probability'] for entry in model_1.values() if not entry['answer']]
+
+    probabilities_mod2 = [entry['probability'] for entry in model_2.values()]
+    yes_prob_mod2 = [entry['probability'] for entry in model_2.values() if entry['answer']]
+    no_prob_mod2 = [entry['probability'] for entry in model_2.values() if not entry['answer']]
+
+    # true / false to be determined
+
+    threshold_1, threshold_2 = slith1, slith2
+
+    answer_1 = [entry['answer'] for entry in model_1.values()]
+    answer_2 = [entry['answer'] for entry in model_2.values()]
+
+    indices = [entry['defect_id'] for entry in model_1.values()]
+
+    colors = ['rgba(0, 255, 0, 0.3)' if a1 and a2 else
+              'rgba(255, 0, 0, 0.3)' if not a1 and not a2 else
+              'blue' for a1, a2 in zip(answer_1, answer_2)]
+
+    # 2D scatter plot
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+            x = probabilities_mod1,
+            y = probabilities_mod2,
+            xaxis = 'x',
+            yaxis = 'y',
+            mode = 'markers',
+            marker = {
+                'color': colors,
+                'size': 5,
+            },
+            text=[f'Index: {index}' for index in indices],
+            hoverinfo='text',
+            hovertemplate='%{text}<br>Model 1 Pred: %{x}<br>Model 2 Pred: %{y}'
+        ))
+
+
+    # threshold plot
+    fig.add_shape(type='line', x0= threshold_1, x1=threshold_1, y0=0, y1=1, xref='x', yref='paper',
+                  line={'color': 'Red', 'width': 2, 'dash': 'dash'})
+
+    fig.add_shape(type='line', x0= 0, x1= 1, y0=threshold_2, y1=threshold_2, xref='paper', yref='y',
+                  line={'color': 'Red', 'width': 2, 'dash': 'dash'})
+
+    # histograms
+    fig.add_trace(go.Histogram(
+        y = yes_prob_mod2,
+        xaxis = 'x2',
+        marker = {
+            'color': 'olivedrab'
+        },
+        ybins={'start': 0.00, 'end': 1.00, 'size': 0.01}
+    ))
+    fig.add_trace(go.Histogram(
+        y = no_prob_mod2,
+        xaxis = 'x2',
+        marker = {
+            'color': 'darkred'
+        },
+        ybins={'start': 0.00, 'end': 1.00, 'size': 0.01}
+    ))
+
+    fig.add_trace(go.Histogram(
+        x = yes_prob_mod1,
+        yaxis = 'y2',
+        marker = {
+            'color': 'olivedrab'
+        },
+        xbins={'start': 0.00, 'end': 1.00, 'size': 0.01}
+    ))
+
+    fig.add_trace(go.Histogram(
+        x = no_prob_mod1,
+        yaxis = 'y2',
+        marker = {
+            'color': 'darkred'
+        },
+        xbins={'start': 0.00, 'end': 1.00, 'size': 0.01}
+    ))
+
+    fig.update_layout(
+        title='2D Comparision Chart',
+        autosize = False,
+        xaxis = {
+            'zeroline': False,
+            'domain': [0,0.85],
+            'showgrid': False,
+            'title': 'Model:1'
+        },
+        yaxis = {
+            'zeroline': False,
+            'domain': [0,0.85],
+            'showgrid': False,
+            'title': 'Model:2'
+        },
+        xaxis2 = {
+            'zeroline': False,
+            'domain': [0.85,1],
+            'showgrid': False,
+            'title': 'Model:1'
+        },
+        yaxis2 = {
+            'zeroline': False,
+            'domain': [0.85,1],
+            'showgrid': False,
+            'title': 'Model:2'
+        },
+        height = 600,
+        width = 600,
+        bargap = 0,
+        barmode = 'stack',
+        hovermode = 'closest',
+        showlegend = False
+    )
+
+    return fig
+
+
+def generate_1D_plot(model: dict, slith: float):
+    true_probs = [entry['probability'] for entry in model.values() if entry['answer']]
+    false_probs = [entry['probability'] for entry in model.values() if not entry['answer']]
+
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(
+        x = true_probs,
+        yaxis = 'y2',
+        marker = {
+            'color': 'olivedrab'
+        },
+        xbins={'start': 0.00, 'end': 1.00, 'size': 0.01}
+    ))
+
+    fig.add_trace(go.Histogram(
+        x = false_probs,
+        yaxis = 'y2',
+        marker = {
+            'color': 'darkred'
+        },
+        xbins={'start': 0.00, 'end': 1.00, 'size': 0.01}
+    ))
+
+    fig.add_shape(type='line', x0= slith, x1=slith, y0=0, y1=1, xref='x', yref='paper',
+                  line={'color': 'Red', 'width': 2, 'dash': 'dash'})
+
+    fig.update_layout(
+        barmode='stack',
+        xaxis_title='Probabilities',
+        yaxis_title='Frequency',
+        title='Stacked Histogram by Probabilities'
+    )
+
+    return fig
+
+
+def plot_init_prc(prc_data_ndarray, slith: float):
+
+    precision, recall, threshold = prc_data_ndarray
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x = recall, y = precision, mode = 'lines', name = 'Model 1'))
+
+    if slith is not None:
+        idx = (np.abs(threshold - slith)).argmin()
+        threshold_trace = go.Scatter(
+            x=[recall[idx]],
+            y=[precision[idx]],
+            mode='markers',
+            marker={'color': 'red', 'size': 10},
+            name=f'Threshold = {threshold[idx]:.2f}'
+        )
+        fig.add_trace(threshold_trace)
+        fig.add_annotation(
+            x = recall[idx],
+            y = precision[idx],
+            text = f'Model 1 Threshold = {threshold[idx]:.2f} <br> Recall: {recall[idx]:.4f} <br> Precision: {precision[idx]:.4f}',
+            showarrow = True,
+            arrowhead = 2
+        )
+
+    fig.update_layout(
+        title='Precision-Recall Curve',
+        xaxis_title='Recall',
+        yaxis_title='Precision',
+        legend_title='Models',
+        template='plotly_white',
+        showlegend = True,
+        xaxis={'range': [0.8, 1.05]},
+        yaxis={'range': [0.8, 1.05]},
+    )
+
+    return fig
+
+def update_prc(org_fig, prc_data_ndarray, slith: float):
+    fig = org_fig
+    precision, recall, threshold = prc_data_ndarray
+
+    fig.add_trace(go.Scatter(x=recall, y=precision, mode='lines', name='Model 2'))
+
+    if slith is not None:
+        idx = (np.abs(threshold - slith)).argmin()
+        threshold_trace = go.Scatter(
+            x=[recall[idx]],
+            y=[precision[idx]],
+            mode='markers',
+            marker={'color': 'red', 'size': 10},
+            name=f'Threshold = {threshold[idx]:.2f}'
+        )
+        fig.add_trace(threshold_trace)
+
+        fig.add_annotation(
+            x = recall[idx],
+            y = precision[idx],
+            text = f'Model 2 Threshold = {threshold[idx]:.2f} <br> Recall: {recall[idx]:.4f} <br> Precision: {precision[idx]:.4f}',
+            showarrow = True,
+            arrowhead = 2,
+        )
+
+    return fig
+
+
+def plot_init_roc(roc_data_ndarray, slith: float):
+    fpr, tpr, threshold = roc_data_ndarray
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x= fpr, y= tpr, mode='lines', name='Model 1'))
+    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random Classifier', line={'dash': 'dash'}))
+
+    # highest filter rate when capture rate = 100
+    capture_all_idx = np.where(tpr == 1.0)[0][0]
+    highest_dot = fpr[capture_all_idx]
+
+    threshold_trace = go.Scatter(
+        x=[highest_dot],  # Single point for x
+        y=[tpr[capture_all_idx]],  # Single point for y
+        mode='markers',
+        marker={'color': 'blue', 'size': 10},
+        name=f'Highest Filter Rate at Capture Rate=100%'
+    )
+    fig.add_trace(threshold_trace)
+
+
+    # default 0.5 threshold
+    default_dot = np.argmin(np.abs(threshold - 0.5))
+    threshold_trace = go.Scatter(
+            x=[fpr[default_dot]],
+            y=[tpr[default_dot]],
+            mode='markers',
+            marker={'color': 'black', 'size': 10},
+            name=f'Default = {threshold[default_dot]:.2f}'
+    )
+    fig.add_trace(threshold_trace)
+
+    if slith is not None:
+        idx = (np.abs(threshold - slith)).argmin()
+        threshold_trace = go.Scatter(
+            x=[fpr[idx]],
+            y=[tpr[idx]],
+            mode='markers',
+            marker={'color': 'red', 'size': 10},
+            name=f'Threshold = {threshold[idx]:.2f}'
+        )
+        fig.add_trace(threshold_trace)
+
+        fig.add_annotation(
+            x = fpr[idx],
+            y = tpr[idx],
+            text = f'Model 1 Threshold = {threshold[idx]:.2f} <br> Capture Rate: {fpr[idx]:.4f} <br> Filter Rate: {tpr[idx]:.4f}',
+            showarrow = True,
+            arrowhead = 2
+        )
+
+    # Update layout
+    fig.update_layout(
+        title='ROC Curve',
+        xaxis_title='Filter Rate',
+        yaxis_title='Capture Rate',
+        legend_title='Models',
+        template='plotly_white',
+        xaxis={'range': [-0.05, 0.25]},
+        yaxis={'range': [0.8, 1.05]},
+    )
+
+    return fig
+
+def update_roc(org_fig, roc_data_ndarray, slith: float):
+    fig = org_fig
+    fpr, tpr, threshold = roc_data_ndarray
+    fig.add_trace(go.Scatter(x= fpr, y=tpr, mode='lines', name='Model 2'))
+
+    # highest filter rate when capture rate = 100
+    capture_all_idx = np.where(tpr == 1.0)[0][0]
+    highest_dot = fpr[capture_all_idx]
+    threshold_trace = go.Scatter(
+        x=[highest_dot],  # Single point for x
+        y=[tpr[capture_all_idx]],  # Single point for y
+        mode='markers',
+        marker={'color': 'blue', 'size': 10},
+        name=f'Highest Filter Rate at Capture Rate=100%'
+    )
+    fig.add_trace(threshold_trace)
+
+    # default 0.5 threshold
+    default_dot = np.argmin(np.abs(threshold - 0.5))
+    threshold_trace = go.Scatter(
+            x=[fpr[default_dot]],
+            y=[tpr[default_dot]],
+            mode='markers',
+            marker={'color': 'black', 'size': 10},
+            name=f'Threshold = {threshold[default_dot]:.2f}'
+        )
+    fig.add_trace(threshold_trace)
+
+    if slith is not None:
+        idx = (np.abs(threshold - slith)).argmin()
+        threshold_trace = go.Scatter(
+            x=[fpr[idx]],
+            y=[tpr[idx]],
+            mode='markers',
+            marker={'color': 'red', 'size': 10},
+            name=f'Threshold = {threshold[idx]:.2f}'
+        )
+        fig.add_trace(threshold_trace)
+        fig.add_annotation(
+            x = fpr[idx],
+            y = tpr[idx],
+            text = f'Model 2 Threshold = {threshold[idx]:.2f} <br> Capture Rate: {fpr[idx]:.4f} <br> Filter Rate: {tpr[idx]:.4f}',
+            showarrow = True,
+            arrowhead = 2
+        )
+    return fig
+
+def app() -> None:
+    logger.debug('Model Comparison Dashboard')
+    st.title('Model Comparison Dashboard')
+
+
+    # TO BE REMOVED, for testing the comparison chart
+    # dir_model_1 = st.text_input('Model 1', value='', help='First Model Database Directory')
+    # dir_model_2 = st.text_input('Model 2 (optional)', value='', help='Second Model Database Directory')
+
+
+    # slider_col1, slider_col2 = st.columns(2)
+    # with slider_col1:
+    #     slider_threshold_1 = st.slider('Select confidence threshold for model 1:', 0.0, 1.0, 0.5)
+    #     st.caption(f'Probabilities above :blue[{slider_threshold_1}] in Model 1 will be considered defects.')
+
+    # with slider_col2:
+    #     slider_threshold_2 = st.slider('Select confidence threshold for model 2:', 0.0, 1.0, 0.5)
+    #     st.caption(f'Probabilities above :blue[{slider_threshold_2}] in Model 2 will be considered defects.')
+
+
+
+    col_m1_1, col_m1_2, col_m1_3, col_m1_4, col_m1_5 = st.columns([3,2,2,2,2])
+
+    st.caption('Model 1 inputs')
+    with col_m1_1:
+        output_dir_1 = st.text_input('Model 1 output_dir', value='')
+    with col_m1_2:
+        lot_id_1 = st.text_input('Model 1 lot_id', value='')
+    with col_m1_3:
+        model_name_1 = st.selectbox('Model 1 name', ('a', 'b', 'c', 'd') )
+    with col_m1_4:
+        new_slider_threshold_1 = st.slider('Model 1 Confidence Threshold:', 0.0, 1.0, 0.5, 0.01, help = 'Probabilities above threshold you choose will be considered defects.')
+    with col_m1_5:
+        if st.button('Generate .lrf', type='primary', key='gen_lrf_one'):
+            st.write('')
+
+    col_m2_1, col_m2_2, col_m2_3, col_m2_4, col_m2_5 = st.columns([3,2,2,2,2])
+    st.caption('Model 2 inputs')
+    with col_m2_1:
+        output_dir_2 = st.text_input('Model 2 output_dir', value='')
+    with col_m2_2:
+        lot_id_2 = st.text_input('Model 2 lot_id', value='')
+    with col_m2_3:
+        model_name_2 = st.selectbox('Model 2 name', ('a', 'b', 'c', 'd') )
+    with col_m2_4:
+        new_slider_threshold_2 = st.slider('Model 2 Confidence Threshold:', 0.0, 1.0, 0.5, 0.01, help = 'Probabilities above threshold you choose will be considered defects.')
+    with col_m2_5:
+        if st.button('Generate .lrf', type='primary', key='gen_lrf_two'):
+            st.write('')
+
+
+
+    '''
+        with st.expander('Generate .lrf'):
+            st.subheader('Generate .lrf for lot 1:')
+            output_dir_one = st.text_input('Output directory for model 1 .lrf file', key='output_dir_one')
+            lot_id_one = st.text_input('Lot ID for model 1', key='lot_id_one')
+
+            if st.button('Generate .lrf', type='primary', key='gen_lrf_one'):
+
+                request = helper.request_lrf(db_path=dir_model_1,
+                                        lot_id=lot_id_one,
+                                        output_dir=output_dir_one,
+                                        confidence_threshold=slider_threshold_1)
+
+                status = request.json()['status']
+
+                # TODO: check file generated instead of just checking status == started
+                if status == 'started':
+                    st.success(f'.lrf file generated at {output_dir_one}!')
+                    logger.info(f'.lrf file generated at {output_dir_one}!')
+                else:
+                    st.error(f'.lrf file not generated! Error message: {request.json()['message']}')
+                    logger.error(f'.lrf file not generated! Error message: {request.json()['message']}')
+
+            st.subheader('Generate .lrf for lot 2:')
+            output_dir_two = st.text_input('Output directory for model 2 .lrf file', key='output_dir_two')
+            lot_id_two = st.text_input('Lot ID for model 2', key='lot_id_two')
+
+            if st.button('Generate .lrf', type='primary', key='gen_lrf_two'):
+
+                request = helper.request_lrf(db_path=dir_model_2,
+                                        lot_id=lot_id_two,
+                                        output_dir=output_dir_two,
+                                        confidence_threshold=slider_threshold_2)
+
+                status = request.json()['status']
+
+                # TODO: check file generated instead of just checking status == started
+                if status == 'started':
+                    st.success(f'.lrf file generated at {output_dir_two}!')
+                    logger.info(f'.lrf file generated at {output_dir_two}!')
+                else:
+                    st.error(f'.lrf file not generated! Error message: {request.json()['message']}')
+                    logger.error(f'.lrf file not generated! Error message: {request.json()['message']}')
+
+    '''
+    if st.button('Visualize model', type = 'primary'):
+        if dir_model_1 and dir_model_2:
+            model_1 = model_data(dir_model_1)
+            model_2 = model_data(dir_model_2)
+
+            col1, col2, = st.columns(2)
+
+
+            fig_2d = generate_2D_plot(model_1, model_2, slider_threshold_1, slider_threshold_2)
+
+            with col1:
+                st.plotly_chart(fig_2d)
+            helper.gap(2)
+
+            prc_data_ndarray_1 = helper.get_prc_data(db_path = dir_model_1, return_curve = True)
+            prc_data_ndarray_2 = helper.get_prc_data(db_path = dir_model_2, return_curve = True)
+
+
+            # fig_prc = plot_init_prc(prc_data_ndarray_1, slider_threshold_1)
+            # update_prc(fig_prc, prc_data_ndarray_2, slider_threshold_2)
+            # st.plotly_chart(fig_prc)
+
+            roc_data_ndarray_1 = helper.get_roc_data(db_path = dir_model_1, return_curve = True)
+            roc_data_ndarray_2 = helper.get_roc_data(db_path = dir_model_2, return_curve = True)
+
+            fig_roc = plot_init_roc(roc_data_ndarray_1, slider_threshold_1)
+            update_roc(fig_roc, roc_data_ndarray_2, slider_threshold_2)
+
+            with col2:
+                st.plotly_chart(fig_roc)
+
+        else:
+            if dir_model_1 and not dir_model_2:
+                dir_model = dir_model_1
+                model = model_data(dir_model_1)
+                slider_threshold = slider_threshold_1
+            else:
+                dir_model = dir_model_2
+                model = model_data(dir_model_2)
+                slider_threshold = slider_threshold_2
+
+            col1, col2, = st.columns(2)
+
+            fig_1d = generate_1D_plot(model, slider_threshold)
+
+            with col1:
+                st.plotly_chart(fig_1d)
+
+            # prc_data_ndarray = helper.get_prc_data(db_path = dir_model, return_curve = True)
+            # fig_prc = plot_init_prc(prc_data_ndarray, slider_threshold)
+            # st.plotly_chart(fig_prc)
+
+            roc_data_ndarray = helper.get_roc_data(db_path = dir_model, return_curve = True)
+            fig_roc = plot_init_roc(roc_data_ndarray, slider_threshold)
+
+            with col2:
+                st.plotly_chart(fig_roc)
