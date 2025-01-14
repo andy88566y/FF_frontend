@@ -74,16 +74,16 @@ def app() -> None:
         brief = ["training_id", "status", "progress_bar", "estimated_time_remaining", "current_epoch", "total_epochs", "epoch_loss", "val_loss"]
         reorder = ["training_id", "start_time", "status", "progress", "current_epoch", "total_epochs", "estimated_time_remaining", "output_dir", "train_dir", "val_dir", "epoch_loss", "val_loss", "best_model_path", "message", "error_message"]
 
-        detail_status_df = pd.DataFrame(columns = reorder)
+            detail_status_df = pd.DataFrame(columns = reorder)
 
-        for training_id, status in all_statuses.items():
-            status['training_id'] = training_id
-            new_row = pd.DataFrame([status])
-            detail_status_df = pd.concat([detail_status_df, new_row], ignore_index=True)
+            for training_id, status in all_statuses.items():
+                status['training_id'] = training_id
+                new_row = pd.DataFrame([status])
+                detail_status_df = pd.concat([detail_status_df, new_row], ignore_index=True)
 
-        for column in detail_status_df.columns:
-            if detail_status_df[column].dtype == 'object':
-                detail_status_df[column] = detail_status_df[column].astype(str)
+            for column in detail_status_df.columns:
+                if detail_status_df[column].dtype == 'object':
+                    detail_status_df[column] = detail_status_df[column].astype(str)
 
         detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'], unit='s')
         detail_status_df['start_time'] = detail_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
@@ -92,19 +92,19 @@ def app() -> None:
         detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
         status_df = detail_status_df[brief]
 
-        st.session_state.status_df_fin = status_df
-        st.session_state.detail_fin = detail_status_df[reorder]
+            st.session_state.status_df_fin = status_df
+            st.session_state.detail_fin = detail_status_df[reorder]
 
     progress_column = st.column_config.ProgressColumn(
-        label="progress_bar",
+        label='progress_bar',
         min_value=0,
         max_value=100
     )
 
-    if "status_df_fin" not in st.session_state:
-        st.session_state.status_df_fin = pd.DataFrame(columns = ["status",'progress_bar',"estimated_time_remaining","current_epoch","total_epochs","epoch_loss","val_loss"])
-    if "detail_fin" not in st.session_state:
-        st.session_state.detail_fin = pd.DataFrame(columns = ["status", "progress", "current_epoch", "total_epochs", "estimated_time_remaining", "output_dir", "train_dir", "val_dir", "epoch_loss", "val_loss", "best_model_path", "message", "error_message"])
+    if 'status_df_fin' not in st.session_state:
+        st.session_state.status_df_fin = pd.DataFrame(columns = ['status','progress_bar','estimated_time_remaining','current_epoch','total_epochs','epoch_loss','val_loss'])
+    if 'detail_fin' not in st.session_state:
+        st.session_state.detail_fin = pd.DataFrame(columns = ['status', 'progress', 'current_epoch', 'total_epochs', 'estimated_time_remaining', 'output_dir', 'train_dir', 'val_dir', 'epoch_loss', 'val_loss', 'best_model_path', 'message', 'error_message'])
 
     start_index = 0
     end_index = 10
@@ -113,23 +113,25 @@ def app() -> None:
     # Pagination settings
     if not st.session_state.status_df_fin.empty:
         page_size = 10
-        page_number = st.number_input('Page number', min_value=1, value=1, step=1)
+        total_entries = len(st.session_state.status_df_inf)
+        total_pages = (total_entries + page_size - 1) // page_size
+        page_number = st.number_input('Page number', min_value=1, value=1, step=1, max_value=total_pages)
         start_index = (page_number - 1) * page_size
         end_index = page_number * page_size
 
     # Selection to find more detail
     event_fin = st.dataframe(
         st.session_state.status_df_fin.iloc[start_index:end_index],
-        key = "statuses_finetuning",
-        on_select = "rerun",
-        selection_mode = "multi-row",
+        key = 'statuses_finetuning',
+        on_select = 'rerun',
+        selection_mode = 'multi-row',
         use_container_width=True,
-        column_config={"progress_bar": progress_column}
-    ) if not st.session_state.status_df_fin.empty else st.write("")
+        column_config={'progress_bar': progress_column}
+    ) if not st.session_state.status_df_fin.empty else st.write('')
 
     if event_fin and event_fin.selection:
-        if event_fin.selection["rows"]:
-            selected_indices = [start_index + st.session_state.status_df_fin.index[i] for i in event_fin.selection["rows"]]
+        if event_fin.selection['rows']:
+            selected_indices = [start_index + st.session_state.status_df_fin.index[i] for i in event_fin.selection['rows']]
             selected_rows = st.session_state.detail_fin.loc[selected_indices]
 
             transposed_detail = selected_rows.T
