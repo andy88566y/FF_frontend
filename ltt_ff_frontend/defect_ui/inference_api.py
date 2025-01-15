@@ -64,23 +64,23 @@ def app() -> None:
             for inference_id, status in all_statuses.items():
                 status['inference_id'] = inference_id
                 new_row = pd.DataFrame([status])
-                detail_status_df = pd.concat([detail_status_df, new_row], ignore_index=True)
+                whitelist_status_df = pd.concat([whitelist_status_df, new_row], ignore_index=True)
 
             # convert start_time float to date time
-            for column in detail_status_df.columns:
-                if detail_status_df[column].dtype == 'object':
-                    detail_status_df[column] = detail_status_df[column].astype(str)
+            for column in whitelist_status_df.columns:
+                if whitelist_status_df[column].dtype == 'object':
+                    whitelist_status_df[column] = whitelist_status_df[column].astype(str)
 
         detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'], unit='s')
         detail_status_df['start_time'] = detail_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
         detail_status_df['progress_bar'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[1])
         detail_status_df['color'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[0])
 
-            detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
-            status_df = detail_status_df[brief]
+            whitelist_status_df = whitelist_status_df.iloc[::-1].reset_index(drop=True)
+            status_df = whitelist_status_df[brief]
 
             st.session_state.status_df_inf = status_df
-            st.session_state.detail_inf = detail_status_df[reorder]
+            st.session_state.whitelist_inf = whitelist_status_df[whitelist]
 
     progress_column = st.column_config.ProgressColumn(
         label='progress_bar',
@@ -90,8 +90,8 @@ def app() -> None:
 
     if 'status_df_inf' not in st.session_state:
         st.session_state.status_df_inf = pd.DataFrame(columns=  ['inference_id', 'status','progress_bar', 'processed_images', 'total_images'])
-    if 'detail_inf' not in st.session_state:
-        st.session_state.detail_inf = pd.DataFrame(columns =  ['inference_id', 'estimated_time_remaining', 'lot_id', 'output_dir', 'processed_images', 'progress', 'start_time', 'status', 'total_images'])
+    if 'whitelist_inf' not in st.session_state:
+        st.session_state.whitelist_inf = pd.DataFrame(columns =  ['inference_id', 'lot_id', 'output_dir', 'processed_images', 'progress', 'start_time', 'status', 'total_images'])
 
     start_index = 0
     end_index = 10
@@ -107,6 +107,7 @@ def app() -> None:
             start_index = (page_number - 1) * page_size
             end_index = page_number * page_size
 
+    st.header('All inference jobs') if not st.session_state.status_df_inf.empty else st.write('')
 
     # Selection to find more detail
     event_inf = st.dataframe(
@@ -123,6 +124,6 @@ def app() -> None:
         if event_inf.selection['rows']:
             # Extract the selected rows based on the indices
             selected_indices = [start_index + st.session_state.status_df_inf.index[i] for i in event_inf.selection['rows']]
-            selected_rows = st.session_state.detail_inf.loc[selected_indices]
+            selected_rows = st.session_state.whitelist_inf.loc[selected_indices]
             transposed_detail = selected_rows.T
             st.dataframe(transposed_detail, use_container_width= True )
