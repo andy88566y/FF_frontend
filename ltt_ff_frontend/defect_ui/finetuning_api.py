@@ -111,15 +111,17 @@ def app() -> None:
     page_size = 10
 
     # Pagination settings
-    if not st.session_state.status_df_fin.empty:
-        page_size = 10
-        total_entries = len(st.session_state.status_df_inf)
-        total_pages = (total_entries + page_size - 1) // page_size
-        page_number = st.number_input('Page number', min_value=1, value=1, step=1, max_value=total_pages)
-        start_index = (page_number - 1) * page_size
-        end_index = page_number * page_size
+    with col2:
+        if not st.session_state.status_df_fin.empty:
+            page_size = 10
+            total_entries = len(st.session_state.status_df_fin)
+            total_pages = (total_entries + page_size - 1) // page_size
+            page_number = st.number_input('Page number', min_value=1, value=1, step=1, max_value=total_pages)
+            start_index = (page_number - 1) * page_size
+            end_index = page_number * page_size
 
-    # Selection to find more detail
+    st.header('All fine-tuning jobs')
+        # Selection to find more detail
     event_fin = st.dataframe(
         st.session_state.status_df_fin.iloc[start_index:end_index],
         key = 'statuses_finetuning',
