@@ -248,13 +248,14 @@ def update_prc(org_fig, prc_data_ndarray, slith: float):
 
 def plot_init_roc(roc_data_ndarray, slith: float):
     fpr, tpr, threshold = roc_data_ndarray
+    tnr = 1 - fpr
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x= fpr, y= tpr, mode='lines', name='Model 1'))
-    fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random Classifier', line={'dash': 'dash'}))
+    fig.add_trace(go.Scatter(x= tnr, y= tpr, mode='lines', name='Model 1'))
+    fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode='lines', name='Random Classifier', line={'dash': 'dash'}))
 
     # highest filter rate when capture rate = 100
     capture_all_idx = np.where(tpr == 1.0)[0][0]
-    highest_dot = fpr[capture_all_idx]
+    highest_dot = tnr[capture_all_idx]
 
     threshold_trace = go.Scatter(
         x=[highest_dot],  # Single point for x
@@ -269,7 +270,7 @@ def plot_init_roc(roc_data_ndarray, slith: float):
     # default 0.5 threshold
     default_dot = np.argmin(np.abs(threshold - 0.5))
     threshold_trace = go.Scatter(
-            x=[fpr[default_dot]],
+            x=[tnr[default_dot]],
             y=[tpr[default_dot]],
             mode='markers',
             marker={'color': 'black', 'size': 10},
@@ -280,7 +281,7 @@ def plot_init_roc(roc_data_ndarray, slith: float):
     if slith is not None:
         idx = (np.abs(threshold - slith)).argmin()
         threshold_trace = go.Scatter(
-            x=[fpr[idx]],
+            x=[tnr[idx]],
             y=[tpr[idx]],
             mode='markers',
             marker={'color': 'red', 'size': 10},
@@ -289,9 +290,9 @@ def plot_init_roc(roc_data_ndarray, slith: float):
         fig.add_trace(threshold_trace)
 
         fig.add_annotation(
-            x = fpr[idx],
+            x = tnr[idx],
             y = tpr[idx],
-            text = f'Model 1 Threshold = {threshold[idx]:.2f} <br> Capture Rate: {fpr[idx]:.4f} <br> Filter Rate: {tpr[idx]:.4f}',
+            text = f'Model 1 Threshold = {threshold[idx]:.2f} <br> Capture Rate: {tnr[idx]:.4f} <br> Filter Rate: {tpr[idx]:.4f}',
             showarrow = True,
             arrowhead = 2
         )
@@ -303,7 +304,7 @@ def plot_init_roc(roc_data_ndarray, slith: float):
         yaxis_title='Capture Rate',
         legend_title='Models',
         template='plotly_white',
-        xaxis={'range': [-0.05, 0.25]},
+        xaxis={'range': [0.8, 1.05]},
         yaxis={'range': [0.8, 1.05]},
     )
 
@@ -312,11 +313,12 @@ def plot_init_roc(roc_data_ndarray, slith: float):
 def update_roc(org_fig, roc_data_ndarray, slith: float):
     fig = org_fig
     fpr, tpr, threshold = roc_data_ndarray
-    fig.add_trace(go.Scatter(x= fpr, y=tpr, mode='lines', name='Model 2'))
+    tnr = 1 - fpr
+    fig.add_trace(go.Scatter(x= tnr, y=tpr, mode='lines', name='Model 2'))
 
     # highest filter rate when capture rate = 100
     capture_all_idx = np.where(tpr == 1.0)[0][0]
-    highest_dot = fpr[capture_all_idx]
+    highest_dot = tnr[capture_all_idx]
     threshold_trace = go.Scatter(
         x=[highest_dot],  # Single point for x
         y=[tpr[capture_all_idx]],  # Single point for y
@@ -329,7 +331,7 @@ def update_roc(org_fig, roc_data_ndarray, slith: float):
     # default 0.5 threshold
     default_dot = np.argmin(np.abs(threshold - 0.5))
     threshold_trace = go.Scatter(
-            x=[fpr[default_dot]],
+            x=[tnr[default_dot]],
             y=[tpr[default_dot]],
             mode='markers',
             marker={'color': 'black', 'size': 10},
@@ -340,7 +342,7 @@ def update_roc(org_fig, roc_data_ndarray, slith: float):
     if slith is not None:
         idx = (np.abs(threshold - slith)).argmin()
         threshold_trace = go.Scatter(
-            x=[fpr[idx]],
+            x=[tnr[idx]],
             y=[tpr[idx]],
             mode='markers',
             marker={'color': 'red', 'size': 10},
@@ -348,9 +350,9 @@ def update_roc(org_fig, roc_data_ndarray, slith: float):
         )
         fig.add_trace(threshold_trace)
         fig.add_annotation(
-            x = fpr[idx],
+            x = tnr[idx],
             y = tpr[idx],
-            text = f'Model 2 Threshold = {threshold[idx]:.2f} <br> Capture Rate: {fpr[idx]:.4f} <br> Filter Rate: {tpr[idx]:.4f}',
+            text = f'Model 2 Threshold = {threshold[idx]:.2f} <br> Capture Rate: {tnr[idx]:.4f} <br> Filter Rate: {tpr[idx]:.4f}',
             showarrow = True,
             arrowhead = 2
         )
@@ -379,29 +381,27 @@ def app() -> None:
 
     col_m1_1, col_m1_2, col_m1_3, col_m1_4, col_m1_5 = st.columns([3,2,2,2,2])
 
-    st.caption('Model 1 inputs')
     with col_m1_1:
-        output_dir_1 = st.text_input('Model 1 output_dir', value='')
+        dir_model_1 = st.text_input('Model 1 output_dir', value='')
     with col_m1_2:
         lot_id_1 = st.text_input('Model 1 lot_id', value='')
     with col_m1_3:
         model_name_1 = st.selectbox('Model 1 name', ('a', 'b', 'c', 'd') )
     with col_m1_4:
-        new_slider_threshold_1 = st.slider('Model 1 Confidence Threshold:', 0.0, 1.0, 0.5, 0.01, help = 'Probabilities above threshold you choose will be considered defects.')
+        slider_threshold_1 = st.slider('Model 1 Confidence Threshold:', 0.0, 1.0, 0.5, 0.01, help = 'Probabilities above threshold you choose will be considered defects.')
     with col_m1_5:
         if st.button('Generate .lrf', type='primary', key='gen_lrf_one'):
             st.write('')
 
     col_m2_1, col_m2_2, col_m2_3, col_m2_4, col_m2_5 = st.columns([3,2,2,2,2])
-    st.caption('Model 2 inputs')
     with col_m2_1:
-        output_dir_2 = st.text_input('Model 2 output_dir', value='')
+        dir_model_2 = st.text_input('Model 2 output_dir', value='')
     with col_m2_2:
         lot_id_2 = st.text_input('Model 2 lot_id', value='')
     with col_m2_3:
         model_name_2 = st.selectbox('Model 2 name', ('a', 'b', 'c', 'd') )
     with col_m2_4:
-        new_slider_threshold_2 = st.slider('Model 2 Confidence Threshold:', 0.0, 1.0, 0.5, 0.01, help = 'Probabilities above threshold you choose will be considered defects.')
+        slider_threshold_2 = st.slider('Model 2 Confidence Threshold:', 0.0, 1.0, 0.5, 0.01, help = 'Probabilities above threshold you choose will be considered defects.')
     with col_m2_5:
         if st.button('Generate .lrf', type='primary', key='gen_lrf_two'):
             st.write('')
