@@ -1,5 +1,7 @@
 import pandas as pd
 import streamlit as st
+import yaml
+from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
@@ -16,6 +18,7 @@ def dummy_get_progress(status):
     else:
         return 0
 
+
 def get_color(status):
     if status in ["starting", "running", "completed"]:
         return "green"
@@ -24,44 +27,52 @@ def get_color(status):
     else:
         return "grey"
 
+
 def app() -> None:
-    st.title("BDDetector False Filtering API")
-    st.caption("API for running inference and fine-tuning False Filtering models.")
+    logger.debug("Loading Fine-Tuning Dashboard...")
+    st.title("False Filter Fine-Tuning")
+    st.caption("Train new model with selected lot data")
 
-    st.header("Fine-tuning")
-    with st.expander("Run model fine-tuning"):
-        st.markdown(":violet[Fine-tune a model by re-training it using images in the specified directory.]")
+    r1_col1, r1_col2 = st.columns([3, 2])
 
-        st.header("Parameters")
+    with r1_col1:
+        ft_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
+                                     format_func=lambda x: x.replace("#", " "))
+    with r1_col2:
+        ft_configfile = st.file_uploader("Upload Multi-lot Fine-Tuning Config", type=".yaml")
 
-        training_batch_size = st.select_slider("Inference batch size", [4, 8, 16, 32])
-        epochs = st.number_input('Epochs', value=10)
-        learning_rate = st.number_input('Learning rate', value=0.0001, step=0.0001, format="%0.4f")
-        output_dir = st.text_input('Output directory', value='', help='The directory to store the re-trained model.')
-        overwrite = st.toggle('Overwrite existing model', value=False, help='Overwrite the old model that has the same name as the re-trained model.')
-        st.caption(f":red[If overwrite=True, everything in output_dir will be deleted. Will be fixed before V2.]")
-        train_dir = st.text_input('Training images directory', value='', help='Directory containing training data.')
-        train_lrf_path = st.text_input('Training images .lrf path', value='', help='Path to the .lrf file for training images.')
-        val_dir = st.text_input('Validation images directory', value='', help='Directory containing validation data.')
-        val_lrf_path = st.text_input('Validation images .lrf path', value='', help='Path to the .lrf file for validation images.')
-        if st.button('Start fine-tuning', type='primary'):
-            request = helper.request_finetune(batch_size=training_batch_size,
-                                              epochs=epochs,
-                                              lr=learning_rate,
-                                              output_dir=output_dir,
-                                              overwrite=overwrite,
-                                              train_dir=train_dir,
-                                              train_lrf_path=train_lrf_path,
-                                              val_dir=val_dir,
-                                              val_lrf_path=val_lrf_path)
+    r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([3, 2])
+    with r2_col1:
+        ft_site = st.text_input("Site", max_chars=20)
+    with r2_col2:
+        ft_tool = st.text_input("Tool", value ="x9u", max_chars=20)
+    with r2_col3:
+        ft_techlayer = st.text_input("Tech Layer", max_chars=50)
+    with r2_col4:
+        ft_layergroup = st.text_input("Layer Group", max_chars=50)
 
-            if request.json().get('status') == 'error':
-                code = request.json().get('code')
-                message = request.json().get('message')
-                st.text(f'Error code: {code}\nError message: {message}')
-            else:
-                training_id = request.json().get('training_id')
-                st.text(f'Training ID: {training_id}')
+    with st.expander("Fine-Tuning Parameters"):
+        ft_epochs = st.number_input('Epochs', value=10)
+        ft_lr = st.number_input('Learning Rate', value=0.0001, step=0.0001, format="%0.4f")
+
+    if ft_configfile is not None:
+        ft_config = yaml.load(ft_configfile, Loader=yaml.Loader)
+        st.json(ft_config)
+
+
+    if st.button('Start Fine-Tuning'):
+        request = helper.request_finetune(base_model=ft_base_model,
+                                          model_naming=(ft_site, ft_tool, ft_techlayer, ft_layergroup),
+                                          multilot_config=ft_config,
+                                          epochs=ft_epochs, lr=ft_lr)
+
+        if request.json().get('status') == 'error':
+            code = request.json().get('code')
+            message = request.json().get('message')
+            st.text(f'Error code: {code}\nError message: {message}')
+        else:
+            training_id = request.json().get('training_id')
+            st.text(f'Training ID: {training_id}')
 
     if st.button('Check all fine-tuning jobs'):
         all_statuses = helper.request_all_finetuning_statuses()

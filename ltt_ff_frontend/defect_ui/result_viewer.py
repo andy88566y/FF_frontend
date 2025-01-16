@@ -347,8 +347,8 @@ def update_roc(org_fig, roc_data_ndarray, slith: float):
 
 
 def app() -> None:
-    logger.debug("Model Comparison Dashboard")
-    st.title("Model Comparison Dashboard")
+    logger.debug("Loading Result Viewer...")
+    st.title("False Filter Result Viewer")
 
     # TO BE REMOVED, for testing the comparison chart
     # dir_model_1 = st.text_input('Model 1', value='', help='First Model Database Directory')

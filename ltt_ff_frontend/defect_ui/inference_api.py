@@ -27,7 +27,9 @@ def get_color(status):
 
 
 def app() -> None:
-    logger.debug("Opening Inference API page")
+    logger.debug("Loading Inference Dashboard...")
+    st.title("False Filter Inference")
+    st.caption("Inference lot data with selected model")
 
     st.title("BDDetector False Filtering API")
     st.caption("API for running inference and fine-tuning False Filtering models.")

@@ -1,7 +1,7 @@
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.defect_ui import result_viewer, inference_api, finetuning_api, defect_viz
+from ltt_ff_frontend.defect_ui import finetuning_api, inference_api, result_viewer
 
 
 if __name__ == "__main__":
