@@ -301,7 +301,7 @@ def get_probability(db_path: str, defect_id: list[int]) -> list[float]:
     return r.json()['probability_list']
 
 @st.cache_data(ttl='1s')
-def get_answer(db_path: str, defect_id: list[int]) -> list[float]:
+def get_answer(db_path: str, defect_id: list[int]) -> list[int]:
     """
     Read a list of the ground truths from a database.
 
