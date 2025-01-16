@@ -15,7 +15,7 @@ def app() -> None:
         inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
                                         format_func=lambda x: x.replace("#", " "))
     with r1_col2:
-        inf_filter_threshold = st.slider("Confidence threshold:", 0.0, 1.0, 0.5, help="Probabilities above thershold will be considered as defects.")
+        inf_filter_threshold = st.slider("Confidence threshold:", 0.0, 1.0, 0.5, 0.01, help="Probabilities above thershold will be considered as defects.")
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
 
@@ -23,22 +23,22 @@ def app() -> None:
     with r2_col1:
         inf_lot_id = st.text_input(label='Lot ID', value='')
     with r2_col2:
-        inf_output_dir = st.text_input(label='Output directory', value='', help='The directory to store generated .lrf and .db')
+        inf_output_dir = st.text_input(label='Result directory', value='/mnt/dbpc/xxx', help='The directory to store generated .lrf and .db')
 
     r3_col1, r3_col2 = st.columns([1, 1])
     with r3_col1:
-        inf_image_dir = st.text_input(label='Image directory', value='', help='The directory that contains the Images folder.')
+        inf_image_dir = st.text_input(label='Image directory', value='/mnt/dbpc/xxx', help='The directory that contains the Images folder.')
     with r3_col2:
-        inf_lrf_path = st.text_input(label='.lrf path', value='', help='Absolute path to the selected .lrf file.')
+        inf_lrf_path = st.text_input(label='.lrf path', value='/mnt/dbpc/xxx', help='Absolute path to the selected .lrf file.')
 
     if st.button("Start Inference Job", type="primary"):
         request = helper.request_inference(base_model=inf_base_model,
-                                            lot_id=inf_lot_id,
-                                            output_dir=inf_output_dir,
-                                            image_dir=inf_image_dir,
-                                            lrf_path=inf_lrf_path,
-                                            confidence_threshold=inf_filter_threshold,
-                                            overwrite=inf_overwrite)
+                                           lot_id=inf_lot_id,
+                                           output_dir=inf_output_dir,
+                                           image_dir=inf_image_dir,
+                                           lrf_path=inf_lrf_path,
+                                           confidence_threshold=inf_filter_threshold,
+                                           overwrite=inf_overwrite)
 
         if request.json().get('status') == 'error':
             code = request.json().get('code')

@@ -6,21 +6,19 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
-def model_data(db_path: str) -> dict:
-    defect_id_list = helper.get_defect_id(db_path)
-    probability_list = helper.get_probability(db_path, defect_id_list)
-    answer_list = helper.get_answer(db_path, defect_id_list)
+def get_model_data(output_dir: str, lot_id: str, model_name: str) -> dict:
+    defect_id_list = helper.get_defect_id(output_dir, lot_id, model_name)
+    probability_list = helper.get_probability(output_dir, lot_id, model_name, defect_id_list)
+    answer_list = helper.get_answer(output_dir, lot_id, model_name, defect_id_list)
 
-    data = {
+    return {
         defect_id_list[i]: {
-            "db_path": db_path,
             "defect_id": defect_id_list[i],
             "probability": probability_list[i],
             "answer": answer_list[i],
         }
         for i in range(len(defect_id_list))
     }
-    return data
 
 
 def generate_2D_plot(model_1: dict, model_2: dict, slith1: float, slith2: float):
@@ -349,164 +347,93 @@ def update_roc(org_fig, roc_data_ndarray, slith: float):
 def app() -> None:
     logger.debug("Loading Result Viewer...")
     st.title("False Filter Result Viewer")
+    st.caption("Visualize False Filter Result (Model 2 fields are optional)")
 
-    # TO BE REMOVED, for testing the comparison chart
-    # dir_model_1 = st.text_input('Model 1', value='', help='First Model Database Directory')
-    # dir_model_2 = st.text_input('Model 2 (optional)', value='', help='Second Model Database Directory')
+    r1_col1, r1_col2, r1_col3, r1_col4, r1_col5 = st.columns([3, 2, 2, 2, 2])
+    r2_col1, r2_col2, r2_col3, r2_col4, r2_col5 = st.columns([3, 2, 2, 2, 2])
 
-    # slider_col1, slider_col2 = st.columns(2)
-    # with slider_col1:
-    #     slider_threshold_1 = st.slider('Select confidence threshold for model 1:', 0.0, 1.0, 0.5)
-    #     st.caption(f'Probabilities above :blue[{slider_threshold_1}] in Model 1 will be considered defects.')
+    with r1_col1:
+        rv_m1_output_dir = st.text_input("Model 1 Result Directory", value="/mnt/dbpc/xxx")
+    with r2_col1:
+        rv_m2_output_dir = st.text_input("Model 2 Result Directory", value="/mnt/dbpc/xxx")
 
-    # with slider_col2:
-    #     slider_threshold_2 = st.slider('Select confidence threshold for model 2:', 0.0, 1.0, 0.5)
-    #     st.caption(f'Probabilities above :blue[{slider_threshold_2}] in Model 2 will be considered defects.')
+    with r1_col2:
+        rv_m1_lot_id = st.text_input("Model 1 Lot ID", value="")
+    with r2_col2:
+        rv_m2_lot_id = st.text_input("Model 2 Lot ID", value="")
 
-    col_m1_1, col_m1_2, col_m1_3, col_m1_4, col_m1_5 = st.columns([3, 2, 2, 2, 2])
+    with r1_col3:
+        rv_m1_model_name = st.selectbox("Model 1 Model Name", options=helper.get_base_models(), index=0,
+                                        format_func=lambda x: x.replace("#", " "))
+    with r2_col3:
+        rv_m2_model_name = st.selectbox("Model 2 Model Name", options=helper.get_base_models(), index=0,
+                                        format_func=lambda x: x.replace("#", " "))
 
-    with col_m1_1:
-        dir_model_1 = st.text_input("Model 1 output_dir", value="")
-    with col_m1_2:
-        lot_id_1 = st.text_input("Model 1 lot_id", value="")
-    with col_m1_3:
-        model_name_1 = st.selectbox("Model 1 name", ("a", "b", "c", "d"))
-    with col_m1_4:
-        slider_threshold_1 = st.slider(
-            "Model 1 Confidence Threshold:",
-            0.0,
-            1.0,
-            0.5,
-            0.01,
-            help="Probabilities above threshold you choose will be considered defects.",
-        )
-    with col_m1_5:
-        if st.button("Generate .lrf", type="primary", key="gen_lrf_one"):
-            st.write("")
+    with r1_col4:
+        rv_m1_threshold = st.slider("Model 1 Confidence Threshold:", 0.0, 1.0, 0.5, 0.01, help="Probabilities above thershold will be considered as defects.")
+    with r2_col4:
+        rv_m2_threshold = st.slider("Model 2 Confidence Threshold:", 0.0, 1.0, 0.5, 0.01, help="Probabilities above thershold will be considered as defects.")
 
-    col_m2_1, col_m2_2, col_m2_3, col_m2_4, col_m2_5 = st.columns([3, 2, 2, 2, 2])
-    with col_m2_1:
-        dir_model_2 = st.text_input("Model 2 output_dir", value="")
-    with col_m2_2:
-        lot_id_2 = st.text_input("Model 2 lot_id", value="")
-    with col_m2_3:
-        model_name_2 = st.selectbox("Model 2 name", ("a", "b", "c", "d"))
-    with col_m2_4:
-        slider_threshold_2 = st.slider(
-            "Model 2 Confidence Threshold:",
-            0.0,
-            1.0,
-            0.5,
-            0.01,
-            help="Probabilities above threshold you choose will be considered defects.",
-        )
-    with col_m2_5:
-        if st.button("Generate .lrf", type="primary", key="gen_lrf_two"):
-            st.write("")
+    with r1_col5:
+        if st.button("Generate new Model 1 .lrf"):
+            request = helper.request_lrf(output_dir=rv_m1_output_dir, lot_id=rv_m1_lot_id, model_name=rv_m1_model_name,
+                                         confidence_threshold=rv_m1_threshold)
 
-    """
-        with st.expander('Generate .lrf'):
-            st.subheader('Generate .lrf for lot 1:')
-            output_dir_one = st.text_input('Output directory for model 1 .lrf file', key='output_dir_one')
-            lot_id_one = st.text_input('Lot ID for model 1', key='lot_id_one')
+            if request.json().get('status') == 'error':
+                code = request.json().get('code')
+                message = request.json().get('message')
+                st.text(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+                logger.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+            else:
+                # TODO: Check file generated
+                st.success(f'New .lrf file (threshold: {rv_m1_threshold}) generated at {rv_m1_output_dir}!')
+                logger.info(f'New .lrf file (threshold: {rv_m1_threshold}) generated at {rv_m1_output_dir}!')
+    with r2_col5:
+        if st.button("Generate new Model 2 .lrf"):
+            request = helper.request_lrf(output_dir=rv_m2_output_dir, lot_id=rv_m2_lot_id, model_name=rv_m2_model_name,
+                                         confidence_threshold=rv_m2_threshold)
 
-            if st.button('Generate .lrf', type='primary', key='gen_lrf_one'):
+            if request.json().get('status') == 'error':
+                code = request.json().get('code')
+                message = request.json().get('message')
+                st.text(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+                logger.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+            else:
+                # TODO: Check file generated
+                st.success(f'New .lrf file (threshold: {rv_m2_threshold}) generated at {rv_m2_output_dir}!')
+                logger.info(f'New .lrf file (threshold: {rv_m2_threshold}) generated at {rv_m2_output_dir}!')
 
-                request = helper.request_lrf(db_path=dir_model_1,
-                                        lot_id=lot_id_one,
-                                        output_dir=output_dir_one,
-                                        confidence_threshold=slider_threshold_1)
+    st.divider()
 
-                status = request.json()['status']
+    # TODO: Simplify below
 
-                # TODO: check file generated instead of just checking status == started
-                if status == 'started':
-                    st.success(f'.lrf file generated at {output_dir_one}!')
-                    logger.info(f'.lrf file generated at {output_dir_one}!')
-                else:
-                    st.error(f'.lrf file not generated! Error message: {request.json()['message']}')
-                    logger.error(f'.lrf file not generated! Error message: {request.json()['message']}')
+    if st.button("Visualize Result", type="primary"):
+        vr1_col1, vr1_col2 = st.columns(2)
 
-            st.subheader('Generate .lrf for lot 2:')
-            output_dir_two = st.text_input('Output directory for model 2 .lrf file', key='output_dir_two')
-            lot_id_two = st.text_input('Lot ID for model 2', key='lot_id_two')
+        if rv_m1_output_dir is not None and rv_m2_output_dir is not None:
+            # Draw 2D comparison chart
+            model_1_raw_data = get_model_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name)
+            model_2_raw_data = get_model_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name)
 
-            if st.button('Generate .lrf', type='primary', key='gen_lrf_two'):
+            with vr1_col1:
+                st.plotly_chart(generate_2D_plot(model_1_raw_data, model_2_raw_data, rv_m1_threshold, rv_m2_threshold))
 
-                request = helper.request_lrf(db_path=dir_model_2,
-                                        lot_id=lot_id_two,
-                                        output_dir=output_dir_two,
-                                        confidence_threshold=slider_threshold_2)
+            with vr1_col2:
+                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
+                st.plotly_chart(plot_roc([(model_1_roc_data, rv_m1_threshold), (model_2_roc_data, rv_m2_threshold)]))
 
-                status = request.json()['status']
-
-                # TODO: check file generated instead of just checking status == started
-                if status == 'started':
-                    st.success(f'.lrf file generated at {output_dir_two}!')
-                    logger.info(f'.lrf file generated at {output_dir_two}!')
-                else:
-                    st.error(f'.lrf file not generated! Error message: {request.json()['message']}')
-                    logger.error(f'.lrf file not generated! Error message: {request.json()['message']}')
-
-    """
-    if st.button("Visualize model", type="primary"):
-        if dir_model_1 and dir_model_2:
-            model_1 = model_data(dir_model_1)
-            model_2 = model_data(dir_model_2)
-
-            (
-                col1,
-                col2,
-            ) = st.columns(2)
-
-            fig_2d = generate_2D_plot(model_1, model_2, slider_threshold_1, slider_threshold_2)
-
-            with col1:
-                st.plotly_chart(fig_2d)
-            helper.gap(2)
-
-            prc_data_ndarray_1 = helper.get_prc_data(db_path=dir_model_1, return_curve=True)
-            prc_data_ndarray_2 = helper.get_prc_data(db_path=dir_model_2, return_curve=True)
-
-            # fig_prc = plot_init_prc(prc_data_ndarray_1, slider_threshold_1)
-            # update_prc(fig_prc, prc_data_ndarray_2, slider_threshold_2)
-            # st.plotly_chart(fig_prc)
-
-            roc_data_ndarray_1 = helper.get_roc_data(db_path=dir_model_1, return_curve=True)
-            roc_data_ndarray_2 = helper.get_roc_data(db_path=dir_model_2, return_curve=True)
-
-            fig_roc = plot_init_roc(roc_data_ndarray_1, slider_threshold_1)
-            update_roc(fig_roc, roc_data_ndarray_2, slider_threshold_2)
-
-            with col2:
-                st.plotly_chart(fig_roc)
+                # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
+                # st.plotly_chart(plot_prc([(model_1_prc_data, rv_m1_threshold), (model_2_prc_data, rv_m2_threshold)]))
 
         else:
-            if dir_model_1 and not dir_model_2:
-                dir_model = dir_model_1
-                model = model_data(dir_model_1)
-                slider_threshold = slider_threshold_1
-            else:
-                dir_model = dir_model_2
-                model = model_data(dir_model_2)
-                slider_threshold = slider_threshold_2
+            # Draw 1D comparison chart
+            model_1_raw_data = get_model_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name)
 
-            (
-                col1,
-                col2,
-            ) = st.columns(2)
+            with vr1_col1:
+                st.plotly_chart(generate_1D_plot(model_1_raw_data, rv_m1_threshold))
 
-            fig_1d = generate_1D_plot(model, slider_threshold)
-
-            with col1:
-                st.plotly_chart(fig_1d)
-
-            # prc_data_ndarray = helper.get_prc_data(db_path = dir_model, return_curve = True)
-            # fig_prc = plot_init_prc(prc_data_ndarray, slider_threshold)
-            # st.plotly_chart(fig_prc)
-
-            roc_data_ndarray = helper.get_roc_data(db_path=dir_model, return_curve=True)
-            fig_roc = plot_init_roc(roc_data_ndarray, slider_threshold)
-
-            with col2:
-                st.plotly_chart(fig_roc)
+            with vr1_col2:
+                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                st.plotly_chart(plot_roc([(model_1_roc_data, rv_m1_threshold)]))
