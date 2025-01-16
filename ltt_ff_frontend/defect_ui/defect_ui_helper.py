@@ -21,6 +21,19 @@ def gap(size: int) -> None:
         st.write('')
 
 
+def return_status_style(status: str) -> tuple[str, int]:
+    if status == "starting":
+        return ("green", 10)
+    elif status == "running":
+        return ("green", 70)
+    elif status == "completed":
+        return ("green", 100)
+    elif status == "error":
+        return ("red", 0)
+    else:
+        return ("grey", 0)
+
+
 @st.cache_data(ttl='10s')
 def generate_defect_list(db_path: str, confidence_threshold: float) -> list[str]:
     '''
@@ -365,3 +378,6 @@ def request_all_finetuning_statuses():
             logger.info(f'Status of finetuning request for {training_job}: {all_statuses[training_job]["status"]}')
 
         return all_statuses
+
+def get_base_models():
+    return ["Model#1", "Model#2", "Model#3"]

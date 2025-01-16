@@ -5,89 +5,61 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
-def dummy_get_progress(status):
-    if status == "starting":
-        return 10
-    elif status == "running":
-        return 70
-    elif status == "completed":
-        return 100
-    elif status == "error":
-        return 0
-    else:
-        return 0
-
-def get_color(status):
-    if status in ["starting", "running", "completed"]:
-        return "green"
-    elif status == "error":
-        return "red"
-    else:
-        return "grey"
-
-
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")
     st.title("False Filter Inference")
     st.caption("Inference lot data with selected model")
 
-    st.title("BDDetector False Filtering API")
-    st.caption("API for running inference and fine-tuning False Filtering models.")
+    r1_col1, r1_col2, r1_col3 = st.columns([3, 2, 2])
+    with r1_col1:
+        inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
+                                        format_func=lambda x: x.replace("#", " "))
+    with r1_col2:
+        inf_filter_threshold = st.slider("Confidence threshold:", 0.0, 1.0, 0.5, help="Probabilities above thershold will be considered as defects.")
+    with r1_col3:
+        inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
 
-    st.header("Inference")
+    r2_col1, r2_col2 = st.columns([1, 1])
+    with r2_col1:
+        inf_lot_id = st.text_input(label='Lot ID', value='')
+    with r2_col2:
+        inf_output_dir = st.text_input(label='Output directory', value='', help='The directory to store generated .lrf and .db')
 
+    r3_col1, r3_col2 = st.columns([1, 1])
+    with r3_col1:
+        inf_image_dir = st.text_input(label='Image directory', value='', help='The directory that contains the Images folder.')
+    with r3_col2:
+        inf_lrf_path = st.text_input(label='.lrf path', value='', help='Absolute path to the selected .lrf file.')
 
-    with st.expander("Run inference on images"):
-        st.markdown(":violet[Runs inference on images in the specified directory.]")
-        st.header("Parameters")
+    if st.button("Start Inference Job", type="primary"):
+        request = helper.request_inference(base_model=inf_base_model,
+                                            lot_id=inf_lot_id,
+                                            output_dir=inf_output_dir,
+                                            image_dir=inf_image_dir,
+                                            lrf_path=inf_lrf_path,
+                                            confidence_threshold=inf_filter_threshold,
+                                            overwrite=inf_overwrite)
 
-        model_path = st.text_input(label='Model path', value='', help='Absolute path to the inference model you want to use.')
-        model_key_path = st.text_input(label='Model key path', value='')
-        image_dir = st.text_input(label='Image directory', value='', help='The directory that contains the Images folder.')
-        lrf_path = st.text_input(label='.lrf path', value='', help='Absolute path to the selected .lrf file.')
-        lot_id = st.text_input(label='Lot ID', value='')
-        output_dir = st.text_input(label='Output directory', value='', help='The directory to store generated .lrf and .db')
-        inference_batch_size = st.select_slider(label='Inference batch size', options=[4, 8, 16, 32])
+        if request.json().get('status') == 'error':
+            code = request.json().get('code')
+            message = request.json().get('message')
+            st.text(f'Error code: {code}\nError message: {message}')
+        else:
+            inference_id = request.json().get('inference_id')
+            st.text(f'Inference Job ID: {inference_id}')
 
-        slider_threshold = st.slider("Select confidence threshold:", 0.0, 1.0, 0.5)
-        st.caption(f"Probabilities above :blue[{slider_threshold}] will be considered defects.")
-        helper.gap(2)
+    st.divider()
 
-        overwrite = st.toggle(label="Overwrite files in output directory", value=True)
-        helper.gap(2)
+    # TODO: Simplify below
 
-        if st.button("Run inference", type='primary'):
-            request = helper.request_inference(model_path,
-                                               model_key_path,
-                                               image_dir,
-                                               lrf_path,
-                                               lot_id,
-                                               output_dir,
-                                               inference_batch_size,
-                                               slider_threshold,
-                                               overwrite)
-            if request.json().get('status') == 'error':
-                code = request.json().get('code')
-                message = request.json().get('message')
-                st.text(f'Error code: {code}\nError message: {message}')
-            else:
-                inference_id = request.json().get('inference_id')
-                st.text(f'Inference ID: {inference_id}')
-
-    with st.expander("Current jobs"):
-        infer_id = st.text_input("Inference ID", help="The unique number generated after click Generate .lrf", value = '')
-        if st.button("Check status"):
-            status = helper.request_inference_status(infer_id)
-            st.json(status.json())
-
-    if st.button('Check all inference jobs'):
+    if st.button('Check all Inference Jobs'):
         all_statuses = helper.request_all_inference_statuses()
         columns = ["estimated_time_remaining", "lot_id", "output_dir", "processed_images", "progress", "start_time", "status", "total_images"]
         detail_status_df = pd.DataFrame(columns=columns)
 
         # rearrange and define which info should be displayed
-        brief = ['inference_id', 'status','progress_bar', 'processed_images', 'total_images']
-        reorder = ["inference_id", "start_time","estimated_time_remaining", "lot_id", "output_dir", "processed_images", "progress", "status", "total_images"]
+        brief = ['inference_id', 'status', 'progress_bar', 'processed_images', 'total_images']
+        reorder = ["inference_id", "start_time", "estimated_time_remaining", "lot_id", "output_dir", "processed_images", "progress", "status", "total_images"]
 
         for inference_id, status in all_statuses.items():
             status['inference_id'] = inference_id
@@ -101,8 +73,8 @@ def app() -> None:
 
         detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'], unit='s')
         detail_status_df['start_time'] = detail_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-        detail_status_df['progress_bar'] = detail_status_df['status'].apply(dummy_get_progress)
-        detail_status_df['color'] = detail_status_df['status'].apply(get_color)
+        detail_status_df['progress_bar'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[1])
+        detail_status_df['color'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[0])
 
         detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
         status_df = detail_status_df[brief]
@@ -141,7 +113,6 @@ def app() -> None:
         use_container_width=True,
         column_config={"progress_bar": progress_column}
     ) if not st.session_state.status_df_inf.empty else st.write("")
-
 
     if event_inf and event_inf.selection:
         # Check if the "row" value's list is not empty hi
