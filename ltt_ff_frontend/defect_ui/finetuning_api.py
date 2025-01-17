@@ -16,9 +16,21 @@ def app() -> None:
     with r1_col1:
         ft_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
                                      format_func=lambda x: x.replace("#", " "))
+
+    yaml_help_text = '''
+    **Example of a valid .yaml config file:**\n
+    data_paths:\n
+    \- lot_id: N0_M0-0_20240101_000000\n
+    &nbsp;&nbsp;lrf_path: /mnt/dbpc/xxx/N0_M0-0_20240101_000000_classified.lrf\n
+    &nbsp;&nbsp;image_dir: /mnt/dbpc/xxx/N0_M0-0_20240101_000000/N0_M0-0_20240101_000000\n
+    \- lot_id: N0_M0-0_20240101_000000\n
+    &nbsp;&nbsp;lrf_path: /mnt/dbpc/xxx/N0_M0-0_20240101_000000_classified.lrf\n
+    &nbsp;&nbsp;image_dir: /mnt/dbpc/xxx/N0_M0-0_20240101_000000/N0_M0-0_20240101_000000
+'''
+
     with r1_col2:
         # TODO: Add yaml format help
-        ft_configfile = st.file_uploader("Upload Multi-lot Fine-Tuning Config (.yaml)", type=".yaml")
+        ft_configfile = st.file_uploader("Upload Multi-lot Fine-Tuning Config (.yaml)", type=".yaml", help=yaml_help_text)
 
     r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1, 1, 2, 2])
     with r2_col1:

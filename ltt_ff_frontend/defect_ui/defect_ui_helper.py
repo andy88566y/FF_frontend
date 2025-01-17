@@ -234,8 +234,9 @@ def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
     Get the data needed to draw a PRC curve.
 
     Args:
-        db_path: Absolute path to the .db file containing inference results for
-                desired lot of defect images.
+        output_dir: Root output directory of inference resuits.
+        lot_id: Name of the lof of defect images.
+        model_name: Name of inference results.
         return_curve: If false, just return the area under the curve (AUPRC)
     '''
     r = requests.get(API_ROOT+'get_prc_data', json={
@@ -253,12 +254,13 @@ def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
 @st.cache_data(ttl='1s')
 def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     '''
-    Get the data needed to draw a PRC curve.
+    Get the data needed to draw an ROC curve.
 
     Args:
-        db_path: Absolute path to the .db file containing inference results for
-                desired lot of defect images.
-        return_curve: If false, just return the area under the curve (AUPRC)
+        output_dir: Root output directory of inference resuits.
+        lot_id: Name of the lof of defect images.
+        model_name: Name of inference results.
+        return_curve: If false, just return the area under the curve (AUROC)
     '''
     r = requests.get(API_ROOT+'get_roc_data', json={
                         "output_dir": output_dir,
@@ -299,8 +301,9 @@ def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: li
     Read a list of the defect probabilities from a database.
 
     Args:
-        db_path: Absolute path to the .db file containing inference results for
-            desired lot of defect images.
+        output_dir: Root output directory where inference results were stored.
+        lot_id: Name of the lot of defect images.
+        model_name: Name of model used to run inference.
         defect_id: ID of the defect images
 
     Returns:
@@ -321,8 +324,9 @@ def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[in
     Read a list of the ground truths from a database.
 
     Args:
-        db_path: Absolute path to the .db file containing inference results for
-            desired lot of defect images.
+        output_dir: Root output directory where inference results were stored.
+        lot_id: Name of the lot of defect images.
+        model_name: Name of model used to run inference.
         defect_id: ID of the defect images
 
     Returns:

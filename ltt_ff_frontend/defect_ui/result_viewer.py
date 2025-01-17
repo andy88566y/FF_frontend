@@ -158,7 +158,8 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
         fpr, tpr, threshold = data
         tnr = 1 - fpr
 
-        fig.add_trace(go.Scatter(x=tnr, y=tpr, mode="lines", name=model_name))
+        fig.add_trace(go.Scatter(x=tnr, y=tpr, mode="lines", name=model_name, hoverinfo='text+name',
+                                 hovertext=[f'Capture rate: {x}<br>Filter Rate: {y}<br>Threshold: {z}' for x, y, z in zip(tpr, tnr, threshold)]))
         fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode="lines", line={"dash": "dash"}))
 
         # Draw highest FR when CR = 1
@@ -261,10 +262,12 @@ def app() -> None:
     r1_col1, r1_col2, r1_col3, r1_col4, r1_col5 = st.columns([3, 2, 2, 2, 2])
     r2_col1, r2_col2, r2_col3, r2_col4, r2_col5 = st.columns([3, 2, 2, 2, 2])
 
+    output_dir_default = "/mnt/dbpc/xxx"
+
     with r1_col1:
-        rv_m1_output_dir = st.text_input("Model 1 Result Directory", value="/mnt/dbpc/xxx")
+        rv_m1_output_dir = st.text_input("Model 1 Result Directory", value=output_dir_default)
     with r2_col1:
-        rv_m2_output_dir = st.text_input("Model 2 Result Directory", value="/mnt/dbpc/xxx")
+        rv_m2_output_dir = st.text_input("Model 2 Result Directory", value=output_dir_default)
 
     with r1_col2:
         rv_m1_lot_id = st.text_input("Model 1 Lot ID", value="")
@@ -279,9 +282,9 @@ def app() -> None:
                                         format_func=lambda x: x.replace("#", " "))
 
     with r1_col4:
-        rv_m1_threshold = st.slider("Model 1 Confidence Threshold:", 0.0, 1.0, 0.5, 0.01, help="Probabilities above thershold will be considered as defects.")
+        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
     with r2_col4:
-        rv_m2_threshold = st.slider("Model 2 Confidence Threshold:", 0.0, 1.0, 0.5, 0.01, help="Probabilities above thershold will be considered as defects.")
+        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
 
     with r1_col5:
         if st.button("Generate new Model 1 .lrf"):
@@ -315,9 +318,15 @@ def app() -> None:
     st.divider()
 
     if st.button("Visualize Result", type="primary"):
+
         vr1_col1, vr1_col2 = st.columns(2)
 
-        if rv_m1_output_dir is not None and rv_m2_output_dir is not None:
+        if rv_m1_output_dir != output_dir_default and rv_m2_output_dir != output_dir_default:
+
+            if rv_m1_lot_id != rv_m2_lot_id:
+                st.error(f'Lot IDs do not match!  \nModel 1 lot ID: {rv_m1_lot_id}  \nModel 2 lot ID: {rv_m2_lot_id}')
+                return
+
             # Draw 2D comparison chart
             model_1_raw_data = get_model_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name)
             model_2_raw_data = get_model_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name)

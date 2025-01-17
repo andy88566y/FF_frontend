@@ -15,15 +15,15 @@ def app() -> None:
         inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
                                         format_func=lambda x: x.replace("#", " "))
     with r1_col2:
-        inf_filter_threshold = st.slider("Confidence threshold:", 0.0, 1.0, 0.5, 0.01, help="Probabilities above thershold will be considered as defects.")
+        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
 
     r2_col1, r2_col2 = st.columns([1, 1])
     with r2_col1:
-        inf_lot_id = st.text_input(label='Lot ID', value='')
+        inf_lot_id = st.text_input(label='Lot ID', value='', help='Name of the lot of defect images.')
     with r2_col2:
-        inf_output_dir = st.text_input(label='Result directory', value='/mnt/dbpc/xxx', help='The directory to store generated .lrf and .db')
+        inf_output_dir = st.text_input(label='Result directory', value='/mnt/dbpc/xxx', help='The directory to store generated .lrf and .db files.')
 
     r3_col1, r3_col2 = st.columns([1, 1])
     with r3_col1:
