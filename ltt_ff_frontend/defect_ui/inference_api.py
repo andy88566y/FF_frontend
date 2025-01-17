@@ -62,7 +62,7 @@ def app() -> None:
         inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
                                         format_func=lambda x: x.replace("#", " "))
     with r1_col2:
-        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
+        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, ltt_ff_frontend/defect_ui/inference_api.py0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
 
@@ -90,7 +90,7 @@ def app() -> None:
         if request.json().get('status') == 'error':
             code = request.json().get('code')
             message = request.json().get('message')
-            st.text(f'Error code: {code}\nError message: {message}')
+            st.text(f'Error code: {code}\nError message: {message}')ltt_ff_frontend/defect_ui/inference_api.py
         else:
             inference_id = request.json().get('inference_id')
             st.text(f'Inference Job ID: {inference_id}')
