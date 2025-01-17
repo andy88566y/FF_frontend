@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
@@ -10,64 +12,41 @@ def get_model_data(output_dir: str, lot_id: str, model_name: str) -> dict:
     defect_id_list = helper.get_defect_id(output_dir, lot_id, model_name)
     probability_list = helper.get_probability(output_dir, lot_id, model_name, defect_id_list)
     answer_list = helper.get_answer(output_dir, lot_id, model_name, defect_id_list)
-
-    return {
-        defect_id_list[i]: {
-            "defect_id": defect_id_list[i],
-            "probability": probability_list[i],
-            "answer": answer_list[i],
-        }
-        for i in range(len(defect_id_list))
-    }
+    return (defect_id_list, probability_list, answer_list)
 
 
-def generate_2D_plot(model_1: dict, model_2: dict, slith1: float, slith2: float):
-    probabilities_mod1 = [entry["probability"] for entry in model_1.values()]
-    yes_prob_mod1 = [entry["probability"] for entry in model_1.values() if entry["answer"]]
-    no_prob_mod1 = [entry["probability"] for entry in model_1.values() if not entry["answer"]]
-
-    probabilities_mod2 = [entry["probability"] for entry in model_2.values()]
-    yes_prob_mod2 = [entry["probability"] for entry in model_2.values() if entry["answer"]]
-    no_prob_mod2 = [entry["probability"] for entry in model_2.values() if not entry["answer"]]
-
-    # true / false to be determined
-
-    threshold_1, threshold_2 = slith1, slith2
-
-    answer_1 = [entry["answer"] for entry in model_1.values()]
-    answer_2 = [entry["answer"] for entry in model_2.values()]
-
-    indices = [entry["defect_id"] for entry in model_1.values()]
-
-    colors = [
-        "rgba(0, 255, 0, 0.3)" if a1 and a2 else "rgba(255, 0, 0, 0.3)" if not a1 and not a2 else "blue"
-        for a1, a2 in zip(answer_1, answer_2)
-    ]
+def generate_2D_plot(m1_data: dict, m2_data: dict, m1_threshold: float, m2_threshold: float):
+    m1_defect_ids, m1_probs, m1_ans = m1_data
+    m2_defect_ids, m2_probs, m2_ans = m2_data
+    assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
 
     # 2D scatter plot
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
-            x=probabilities_mod1,
-            y=probabilities_mod2,
+            x=m1_probs,
+            y=m2_probs,
             xaxis="x",
             yaxis="y",
             mode="markers",
             marker={
-                "color": colors,
+                "color": [
+                    "rgba(0, 255, 0, 0.3)" if a1 and a2 else "rgba(255, 0, 0, 0.3)" if not a1 and not a2 else "blue"
+                    for a1, a2 in zip(m1_ans, m2_ans)
+                ],
                 "size": 5,
             },
-            text=[f"Index: {index}" for index in indices],
+            text=[f"Defect ID: {defect_id}" for defect_id in m1_defect_ids],
             hoverinfo="text",
-            hovertemplate="%{text}<br>Model 1 Pred: %{x}<br>Model 2 Pred: %{y}",
+            hovertemplate="%{text}<br>Model 1 Prob: %{x}<br>Model 2 Prob: %{y}",
         )
     )
 
-    # threshold plot
+    # Add in threshold lines
     fig.add_shape(
         type="line",
-        x0=threshold_1,
-        x1=threshold_1,
+        x0=m1_threshold,
+        x1=m1_threshold,
         y0=0,
         y1=1,
         xref="x",
@@ -79,44 +58,48 @@ def generate_2D_plot(model_1: dict, model_2: dict, slith1: float, slith2: float)
         type="line",
         x0=0,
         x1=1,
-        y0=threshold_2,
-        y1=threshold_2,
+        y0=m2_threshold,
+        y1=m2_threshold,
         xref="paper",
         yref="y",
         line={"color": "Red", "width": 2, "dash": "dash"},
     )
 
-    # histograms
+    # Add side histograms
     fig.add_trace(
         go.Histogram(
-            y=yes_prob_mod2, xaxis="x2", marker={"color": "olivedrab"}, ybins={"start": 0.00, "end": 1.00, "size": 0.01}
+            y=[p for p, a in zip(m2_probs, m2_ans) if a == 1], xaxis="x2",
+            marker={"color": "olivedrab"}, ybins={"start": 0.00, "end": 1.00, "size": 0.01}
         )
     )
     fig.add_trace(
         go.Histogram(
-            y=no_prob_mod2, xaxis="x2", marker={"color": "darkred"}, ybins={"start": 0.00, "end": 1.00, "size": 0.01}
-        )
-    )
-
-    fig.add_trace(
-        go.Histogram(
-            x=yes_prob_mod1, yaxis="y2", marker={"color": "olivedrab"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
+            y=[p for p, a in zip(m2_probs, m2_ans) if a == 0], xaxis="x2",
+            marker={"color": "darkred"}, ybins={"start": 0.00, "end": 1.00, "size": 0.01}
         )
     )
 
     fig.add_trace(
         go.Histogram(
-            x=no_prob_mod1, yaxis="y2", marker={"color": "darkred"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
+            x=[p for p, a in zip(m1_probs, m1_ans) if a == 1], yaxis="y2",
+            marker={"color": "olivedrab"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
+        )
+    )
+
+    fig.add_trace(
+        go.Histogram(
+            x=[p for p, a in zip(m1_probs, m1_ans) if a == 0], yaxis="y2",
+            marker={"color": "darkred"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
         )
     )
 
     fig.update_layout(
-        title="2D Comparision Chart",
+        title="Model Comparision Chart",
         autosize=False,
         xaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model:1"},
         yaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model:2"},
-        xaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model:1"},
-        yaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model:2"},
+        xaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model:2"},
+        yaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model:1"},
         height=600,
         width=600,
         bargap=0,
@@ -128,27 +111,28 @@ def generate_2D_plot(model_1: dict, model_2: dict, slith1: float, slith2: float)
     return fig
 
 
-def generate_1D_plot(model: dict, slith: float):
-    true_probs = [entry["probability"] for entry in model.values() if entry["answer"]]
-    false_probs = [entry["probability"] for entry in model.values() if not entry["answer"]]
+def generate_1D_plot(m1_data: dict, m1_threshold: float):
+    _m1_defect_ids, m1_probs, m1_ans = m1_data
 
     fig = go.Figure()
     fig.add_trace(
         go.Histogram(
-            x=true_probs, yaxis="y2", marker={"color": "olivedrab"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
+            x=[p for p, a in zip(m1_probs, m1_ans) if a == 1], yaxis="y2",
+            marker={"color": "olivedrab"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
         )
     )
 
     fig.add_trace(
         go.Histogram(
-            x=false_probs, yaxis="y2", marker={"color": "darkred"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
+            x=[p for p, a in zip(m1_probs, m1_ans) if a == 0], yaxis="y2",
+            marker={"color": "darkred"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
         )
     )
 
     fig.add_shape(
         type="line",
-        x0=slith,
-        x1=slith,
+        x0=m1_threshold,
+        x1=m1_threshold,
         y0=0,
         y1=1,
         xref="x",
@@ -160,187 +144,112 @@ def generate_1D_plot(model: dict, slith: float):
         barmode="stack",
         xaxis_title="Probabilities",
         yaxis_title="Frequency",
-        title="Stacked Histogram by Probabilities",
+        title="Defect Probability Distribution",
     )
 
     return fig
 
 
-def plot_init_prc(prc_data_ndarray, slith: float):
-    precision, recall, threshold = prc_data_ndarray
+def plot_roc(roc_data: list[tuple[str, Any, float]]):
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=recall, y=precision, mode="lines", name="Model 1"))
 
-    if slith is not None:
-        idx = (np.abs(threshold - slith)).argmin()
-        threshold_trace = go.Scatter(
-            x=[recall[idx]],
-            y=[precision[idx]],
+    for curve_data in roc_data:
+        model_name, data, model_threshold = curve_data
+        fpr, tpr, threshold = data
+        tnr = 1 - fpr
+
+        fig.add_trace(go.Scatter(x=tnr, y=tpr, mode="lines", name=model_name))
+        fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode="lines", line={"dash": "dash"}))
+
+        # Draw highest FR when CR = 1
+        capture_all_idx = np.where(tpr == 1.0)[0][0]
+        fig.add_trace(go.Scatter(
+            x=[tnr[capture_all_idx]],
+            y=[tpr[capture_all_idx]],
+            mode="markers",
+            marker={"color": "blue", "size": 10},
+            name="Highest Filter Rate at 100% Capture Rate",
+        ))
+
+        # Draw default 0.5 threshold
+        default_idx = np.argmin(np.abs(threshold - 0.5))
+        fig.add_trace(go.Scatter(
+            x=[tnr[default_idx]],
+            y=[tpr[default_idx]],
+            mode="markers",
+            marker={"color": "black", "size": 10},
+            name=f"Default ({threshold[default_idx]:.2f})",
+        ))
+
+        # Draw current selected model threshold
+        selected_idx = np.argmin(np.abs(threshold - model_threshold))
+        fig.add_trace(go.Scatter(
+            x=[tnr[selected_idx]],
+            y=[tpr[selected_idx]],
             mode="markers",
             marker={"color": "red", "size": 10},
-            name=f"Threshold = {threshold[idx]:.2f}",
-        )
-        fig.add_trace(threshold_trace)
+            name=f"Selected Threshold ({threshold[selected_idx]:.2f})",
+        ))
+
         fig.add_annotation(
-            x=recall[idx],
-            y=precision[idx],
-            text=f"Model 1 Threshold = {threshold[idx]:.2f} <br> Recall: {recall[idx]:.4f} <br> Precision: {precision[idx]:.4f}",
+            x=tnr[selected_idx],
+            y=tpr[selected_idx],
+            text=f"{model_name} Threshold = {threshold[selected_idx]:.2f} <br> Capture Rate: {tpr[selected_idx]:.4f} <br> Filter Rate: {tnr[selected_idx]:.4f}",
             showarrow=True,
             arrowhead=2,
         )
 
     fig.update_layout(
-        title="Precision-Recall Curve",
+        title="Capture Rate / Filter Rate Curve",
+        xaxis_title="Filter Rate",
+        yaxis_title="Capture Rate",
+        legend_title="Models",
+        template="plotly_white",
+        showlegend=True,
+        xaxis={"range": [0.0, 1.05]},
+        yaxis={"range": [0.0, 1.05]},
+    )
+
+    return fig
+
+
+def plot_prc(prc_data: list[tuple[str, Any, float]]):
+    fig = go.Figure()
+
+    for curve_data in prc_data:
+        model_name, data, model_threshold = curve_data
+        precision, recall, threshold = data
+
+        fig.add_trace(go.Scatter(x=recall, y=precision, mode="lines", name=model_name))
+
+        # Draw current selected model threshold
+        selected_idx = (np.abs(threshold - model_threshold)).argmin()
+        fig.add_trace(go.Scatter(
+            x=[recall[selected_idx]],
+            y=[precision[selected_idx]],
+            mode="markers",
+            marker={"color": "red", "size": 10},
+            name=f"Threshold = {threshold[selected_idx]:.2f}",
+        ))
+        fig.add_annotation(
+            x=recall[selected_idx],
+            y=precision[selected_idx],
+            text=f"{model_name} Threshold = {threshold[selected_idx]:.2f} <br> Recall: {recall[selected_idx]:.4f} <br> Precision: {precision[selected_idx]:.4f}",
+            showarrow=True,
+            arrowhead=2,
+        )
+
+    fig.update_layout(
+        title="Precision / Recall Curve",
         xaxis_title="Recall",
         yaxis_title="Precision",
         legend_title="Models",
         template="plotly_white",
         showlegend=True,
-        xaxis={"range": [0.8, 1.05]},
-        yaxis={"range": [0.8, 1.05]},
+        xaxis={"range": [0.0, 1.05]},
+        yaxis={"range": [0.0, 1.05]},
     )
 
-    return fig
-
-
-def update_prc(org_fig, prc_data_ndarray, slith: float):
-    fig = org_fig
-    precision, recall, threshold = prc_data_ndarray
-
-    fig.add_trace(go.Scatter(x=recall, y=precision, mode="lines", name="Model 2"))
-
-    if slith is not None:
-        idx = (np.abs(threshold - slith)).argmin()
-        threshold_trace = go.Scatter(
-            x=[recall[idx]],
-            y=[precision[idx]],
-            mode="markers",
-            marker={"color": "red", "size": 10},
-            name=f"Threshold = {threshold[idx]:.2f}",
-        )
-        fig.add_trace(threshold_trace)
-
-        fig.add_annotation(
-            x=recall[idx],
-            y=precision[idx],
-            text=f"Model 2 Threshold = {threshold[idx]:.2f} <br> Recall: {recall[idx]:.4f} <br> Precision: {precision[idx]:.4f}",
-            showarrow=True,
-            arrowhead=2,
-        )
-
-    return fig
-
-
-def plot_init_roc(roc_data_ndarray, slith: float):
-    fpr, tpr, threshold = roc_data_ndarray
-    tnr = 1 - fpr
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=tnr, y=tpr, mode="lines", name="Model 1"))
-    fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode="lines", name="Random Classifier", line={"dash": "dash"}))
-
-    # highest filter rate when capture rate = 100
-    capture_all_idx = np.where(tpr == 1.0)[0][0]
-    highest_dot = tnr[capture_all_idx]
-
-    threshold_trace = go.Scatter(
-        x=[highest_dot],  # Single point for x
-        y=[tpr[capture_all_idx]],  # Single point for y
-        mode="markers",
-        marker={"color": "blue", "size": 10},
-        name=f"Highest Filter Rate at Capture Rate=100%",
-    )
-    fig.add_trace(threshold_trace)
-
-    # default 0.5 threshold
-    default_dot = np.argmin(np.abs(threshold - 0.5))
-    threshold_trace = go.Scatter(
-        x=[tnr[default_dot]],
-        y=[tpr[default_dot]],
-        mode="markers",
-        marker={"color": "black", "size": 10},
-        name=f"Default = {threshold[default_dot]:.2f}",
-    )
-    fig.add_trace(threshold_trace)
-
-    if slith is not None:
-        idx = (np.abs(threshold - slith)).argmin()
-        threshold_trace = go.Scatter(
-            x=[tnr[idx]],
-            y=[tpr[idx]],
-            mode="markers",
-            marker={"color": "red", "size": 10},
-            name=f"Threshold = {threshold[idx]:.2f}",
-        )
-        fig.add_trace(threshold_trace)
-
-        fig.add_annotation(
-            x=tnr[idx],
-            y=tpr[idx],
-            text=f"Model 1 Threshold = {threshold[idx]:.2f} <br> Capture Rate: {tnr[idx]:.4f} <br> Filter Rate: {tpr[idx]:.4f}",
-            showarrow=True,
-            arrowhead=2,
-        )
-
-    # Update layout
-    fig.update_layout(
-        title="ROC Curve",
-        xaxis_title="Filter Rate",
-        yaxis_title="Capture Rate",
-        legend_title="Models",
-        template="plotly_white",
-        xaxis={"range": [0.8, 1.05]},
-        yaxis={"range": [0.8, 1.05]},
-    )
-
-    return fig
-
-
-def update_roc(org_fig, roc_data_ndarray, slith: float):
-    fig = org_fig
-    fpr, tpr, threshold = roc_data_ndarray
-    tnr = 1 - fpr
-    fig.add_trace(go.Scatter(x=tnr, y=tpr, mode="lines", name="Model 2"))
-
-    # highest filter rate when capture rate = 100
-    capture_all_idx = np.where(tpr == 1.0)[0][0]
-    highest_dot = tnr[capture_all_idx]
-    threshold_trace = go.Scatter(
-        x=[highest_dot],  # Single point for x
-        y=[tpr[capture_all_idx]],  # Single point for y
-        mode="markers",
-        marker={"color": "blue", "size": 10},
-        name=f"Highest Filter Rate at Capture Rate=100%",
-    )
-    fig.add_trace(threshold_trace)
-
-    # default 0.5 threshold
-    default_dot = np.argmin(np.abs(threshold - 0.5))
-    threshold_trace = go.Scatter(
-        x=[tnr[default_dot]],
-        y=[tpr[default_dot]],
-        mode="markers",
-        marker={"color": "black", "size": 10},
-        name=f"Threshold = {threshold[default_dot]:.2f}",
-    )
-    fig.add_trace(threshold_trace)
-
-    if slith is not None:
-        idx = (np.abs(threshold - slith)).argmin()
-        threshold_trace = go.Scatter(
-            x=[tnr[idx]],
-            y=[tpr[idx]],
-            mode="markers",
-            marker={"color": "red", "size": 10},
-            name=f"Threshold = {threshold[idx]:.2f}",
-        )
-        fig.add_trace(threshold_trace)
-        fig.add_annotation(
-            x=tnr[idx],
-            y=tpr[idx],
-            text=f"Model 2 Threshold = {threshold[idx]:.2f} <br> Capture Rate: {tnr[idx]:.4f} <br> Filter Rate: {tpr[idx]:.4f}",
-            showarrow=True,
-            arrowhead=2,
-        )
     return fig
 
 
@@ -405,8 +314,6 @@ def app() -> None:
 
     st.divider()
 
-    # TODO: Simplify below
-
     if st.button("Visualize Result", type="primary"):
         vr1_col1, vr1_col2 = st.columns(2)
 
@@ -421,11 +328,11 @@ def app() -> None:
             with vr1_col2:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
                 model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
-                st.plotly_chart(plot_roc([(model_1_roc_data, rv_m1_threshold), (model_2_roc_data, rv_m2_threshold)]))
+                st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold), ("Model 2", model_2_roc_data, rv_m2_threshold)]))
 
-                # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
-                # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
-                # st.plotly_chart(plot_prc([(model_1_prc_data, rv_m1_threshold), (model_2_prc_data, rv_m2_threshold)]))
+                model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
+                st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold), ("Model 2", model_2_prc_data, rv_m2_threshold)]))
 
         else:
             # Draw 1D comparison chart
@@ -436,4 +343,7 @@ def app() -> None:
 
             with vr1_col2:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
-                st.plotly_chart(plot_roc([(model_1_roc_data, rv_m1_threshold)]))
+                st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold)]))
+
+                model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold)]))
