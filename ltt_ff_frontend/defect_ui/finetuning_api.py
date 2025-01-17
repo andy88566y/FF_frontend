@@ -108,11 +108,30 @@ def app() -> None:
         ft_config = yaml.load(ft_configfile, Loader=yaml.Loader)
         st.json(ft_config)
 
+<<<<<<< HEAD
     if st.button("Start Fine-Tuning Job", type="primary"):
         request = helper.request_finetune(base_model=ft_base_model,
                                           model_naming=(ft_site, ft_tool, ft_techlayer, ft_layergroup),
                                           multilot_config=ft_config,
                                           epochs=ft_epochs, lr=ft_lr)
+=======
+    st.caption(f':red[If overwrite=True, everything in output_dir will be deleted. Will be fixed before V2.]')
+
+    train_dir = st.text_input('Training images directory', value='', help='Directory containing training data.')
+    train_lrf_path = st.text_input('Training images .lrf path', value='', help='Path to the .lrf file for training images.')
+    val_dir = st.text_input('Validation images directory', value='', help='Directory containing validation data.')
+    val_lrf_path = st.text_input('Validation images .lrf path', value='', help='Path to the .lrf file for validation images.')
+
+    if st.button('Start fine-tuning', type='primary'):
+        request = helper.request_finetune(epochs=epochs,
+                                            lr=learning_rate,
+                                            output_dir=output_dir,
+                                            overwrite=overwrite,
+                                            train_dir=train_dir,
+                                            train_lrf_path=train_lrf_path,
+                                            val_dir=val_dir,
+                                            val_lrf_path=val_lrf_path)
+>>>>>>> 10534aa (fix: minor fixes of finetune)
 
         if request.json().get('status') == 'error':
             code = request.json().get('code')
