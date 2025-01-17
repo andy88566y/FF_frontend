@@ -50,37 +50,47 @@ def app() -> None:
 
     st.divider()
 
-    # TODO: Simplify below
+    brief = ['inference_id', 'status','progress_bar', 'processed_images', 'total_images']
+    inf_keys = ['inference_id']
+    with col1:
+        if st.button('Check all inference jobs'):
+            # TODO
+            #1. get paginated -> append -> define the brief -> show,
+            page_size = 10
+            current_page = 1
+            paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
 
-    if st.button('Check all Inference Jobs'):
-        all_statuses = helper.request_all_inference_statuses()
-        columns = ["estimated_time_remaining", "lot_id", "output_dir", "processed_images", "progress", "start_time", "status", "total_images"]
-        detail_status_df = pd.DataFrame(columns=columns)
+            # Retrieve the whitelisted dictionaries
+            if paged_statuses:
+                inf_keys = list(next(iter(paged_statuses.values())).keys())
+                inf_keys.append('inference_id')
 
-        # rearrange and define which info should be displayed
-        brief = ['inference_id', 'status', 'progress_bar', 'processed_images', 'total_images']
-        reorder = ["inference_id", "start_time", "estimated_time_remaining", "lot_id", "output_dir", "processed_images", "progress", "status", "total_images"]
 
-            for inference_id, status in all_statuses.items():
+            whitelist_status_df = pd.DataFrame(columns = inf_keys)
+
+
+            for inference_id, status in paged_statuses.items():
                 status['inference_id'] = inference_id
                 new_row = pd.DataFrame([status])
-                whitelist_status_df = pd.concat([whitelist_status_df, new_row], ignore_index=True)
+                if not new_row.empty and not new_row.isna().all().all():
+                    whitelist_status_df = pd.concat([whitelist_status_df, new_row], ignore_index=True)
 
             # convert start_time float to date time
             for column in whitelist_status_df.columns:
                 if whitelist_status_df[column].dtype == 'object':
                     whitelist_status_df[column] = whitelist_status_df[column].astype(str)
 
-        detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'], unit='s')
-        detail_status_df['start_time'] = detail_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-        detail_status_df['progress_bar'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[1])
-        detail_status_df['color'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[0])
+            whitelist_status_df['start_time'] = pd.to_datetime(whitelist_status_df['start_time'], unit='s')
+            whitelist_status_df['start_time'] = whitelist_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+            whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(dummy_get_progress)
+            whitelist_status_df['color'] = whitelist_status_df['status'].apply(get_color)
+            whitelist_status_df = whitelist_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=True)
 
-            whitelist_status_df = whitelist_status_df.iloc[::-1].reset_index(drop=True)
             status_df = whitelist_status_df[brief]
 
             st.session_state.status_df_inf = status_df
-            st.session_state.whitelist_inf = whitelist_status_df[whitelist]
+            st.session_state.whitelist_inf = whitelist_status_df[inf_keys]
+
 
     progress_column = st.column_config.ProgressColumn(
         label='progress_bar',
@@ -89,29 +99,51 @@ def app() -> None:
     )
 
     if 'status_df_inf' not in st.session_state:
-        st.session_state.status_df_inf = pd.DataFrame(columns=  ['inference_id', 'status','progress_bar', 'processed_images', 'total_images'])
+        st.session_state.status_df_inf = pd.DataFrame(columns=brief)
     if 'whitelist_inf' not in st.session_state:
-        st.session_state.whitelist_inf = pd.DataFrame(columns =  ['inference_id', 'lot_id', 'output_dir', 'processed_images', 'progress', 'start_time', 'status', 'total_images'])
-
-    start_index = 0
-    end_index = 10
-    page_size = 10
+        st.session_state.whitelist_inf = pd.DataFrame(columns=inf_keys)
 
     # Pagination settings
     with col2:
         if not st.session_state.status_df_inf.empty:
             page_size = 10
-            total_entries = len(st.session_state.status_df_inf)
-            total_pages = (total_entries + page_size - 1) // page_size
-            page_number = st.number_input('Page number', min_value=1, value=1, step=1, max_value = total_pages)
-            start_index = (page_number - 1) * page_size
-            end_index = page_number * page_size
+            current_page = st.number_input('Page number', min_value=1, value=1, step=1)
+            paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
+
+            # Retrieve the whitelisted dictionaries
+            if paged_statuses:
+                inf_keys = list(next(iter(paged_statuses.values())).keys())
+                inf_keys.append('inference_id')
+
+            whitelist_status_df = pd.DataFrame(columns = inf_keys)
+
+            for inference_id, status in paged_statuses.items():
+                status['inference_id'] = inference_id
+                new_row = pd.DataFrame([status])
+                if not new_row.empty and not new_row.isna().all().all():
+                    whitelist_status_df = pd.concat([whitelist_status_df, new_row], ignore_index=True)
+
+            # convert start_time float to date time
+            for column in whitelist_status_df.columns:
+                if whitelist_status_df[column].dtype == 'object':
+                    whitelist_status_df[column] = whitelist_status_df[column].astype(str)
+
+            whitelist_status_df['start_time'] = pd.to_datetime(whitelist_status_df['start_time'], unit='s')
+            whitelist_status_df['start_time'] = whitelist_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+            whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(dummy_get_progress)
+            whitelist_status_df['color'] = whitelist_status_df['status'].apply(get_color)
+            whitelist_status_df = whitelist_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=True)
+
+            status_df = whitelist_status_df[brief]
+
+            st.session_state.status_df_inf = status_df
+            st.session_state.whitelist_inf = whitelist_status_df[inf_keys]
 
     st.header('All inference jobs') if not st.session_state.status_df_inf.empty else st.write('')
 
     # Selection to find more detail
     event_inf = st.dataframe(
-        st.session_state.status_df_inf.iloc[start_index:end_index],
+        st.session_state.status_df_inf,
         key = 'statuses_inference',
         on_select = 'rerun',
         selection_mode = 'multi-row',
@@ -120,10 +152,10 @@ def app() -> None:
     ) if not st.session_state.status_df_inf.empty else st.write('')
 
     if event_inf and event_inf.selection:
-        # Check if the 'row' value's list is not empty hi
+    # Check if the 'row' value's list is not empty
         if event_inf.selection['rows']:
             # Extract the selected rows based on the indices
-            selected_indices = [start_index + st.session_state.status_df_inf.index[i] for i in event_inf.selection['rows']]
+            selected_indices = [st.session_state.status_df_inf.index[i] for i in event_inf.selection['rows']]
             selected_rows = st.session_state.whitelist_inf.loc[selected_indices]
             transposed_detail = selected_rows.T
-            st.dataframe(transposed_detail, use_container_width= True )
+            st.dataframe(transposed_detail, use_container_width= True)

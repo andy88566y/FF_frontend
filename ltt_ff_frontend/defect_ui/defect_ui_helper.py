@@ -202,6 +202,30 @@ def request_all_inference_statuses() -> str:
 
         return all_statuses
 
+@st.cache_data(ttl='1s')
+def request_paginated_inference_status(page_size: int, current_page: int) -> str:
+    '''
+    Gets pagainated inference status by calling FalseFilter API
+
+    Args:
+        page_size : the number of entries to be shown on the dataframe
+        current_page : the page that is current requested
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
+    logger.debug(r)
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return {}
+    else:
+        paged_statuses = r.json()['result']
+
+        for inference_job in paged_statuses:
+            logger.info(f'Status of inference request for {inference_job}: {paged_statuses[inference_job]}')
+
+        return paged_statuses
+
 @st.cache_data(ttl='10s')
 def read_database(db_path: str) -> requests.Response:
     '''
