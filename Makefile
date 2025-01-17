@@ -47,7 +47,7 @@ formater_ruff:
 	$(VENV_PREFIX) ruff format
 
 run_dev_defect_ui_gpu01:
-	$(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui.py --browser.gatherUsageStats false --server.port 7501 --server.address 192.168.201.11
+	$(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui.py --browser.gatherUsageStats false --server.port 7500 --server.address 192.168.201.11
 
 run_dev_defect_ui_gpu02:
 	$(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui.py --browser.gatherUsageStats false --server.port 7501 --server.address 192.168.201.12
