@@ -1,1 +1,1 @@
-API_ROOT = "http://localhost:7500/api/v1/"
+API_ROOT = "http://localhost:6500/api/v1/"
