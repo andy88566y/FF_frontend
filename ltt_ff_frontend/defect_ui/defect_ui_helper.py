@@ -411,3 +411,26 @@ def get_base_models() -> list[str]:
         base_model_list = r.json()['model_list']
         logger.info(f'List of base models: {base_model_list}')
         return base_model_list
+
+def request_paginated_finetuning_status(page_size: int, current_page: int) -> str:
+    '''
+    Gets pagainated inference status by calling FalseFilter API
+
+    Args:
+        page_size : the number of entries to be shown on the dataframe
+        current_page : the page that is current requested
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}train/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
+    logger.debug(r)
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return {}
+    else:
+        paged_statuses = r.json()['result']
+
+        for training_job in paged_statuses:
+            logger.info(f'Status of finetuning request for {training_job}: {paged_statuses[training_job]}')
+
+        return paged_statuses

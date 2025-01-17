@@ -6,6 +6,64 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
+def dummy_get_progress(status):
+    if status == 'starting':
+        return 10
+    elif status == 'running':
+        return 70
+    elif status == 'completed':
+        return 100
+    elif status == 'error':
+        return 0
+    else:
+        return 0
+
+def get_color(status):
+    if status in ['starting', 'running', 'completed']:
+        return 'green'
+    elif status == 'error':
+        return 'red'
+    else:
+        return 'grey'
+
+def create_job_list(paged_statuses):
+    brief = ['training_id', 'status','progress_bar', 'processed_images', 'total_images']
+    fin_keys = ['training_id']
+    # Retrieve the whitelisted dictionaries
+    if paged_statuses:
+        fin_keys = list(next(iter(paged_statuses.values())).keys())
+        fin_keys.append('inference_id')
+        if 'progress'in fin_keys:
+            fin_keys.remove('progress')
+        if 'estimated_time_remaining' in fin_keys:
+            fin_keys.remove('estimated_time_remaining')
+
+    whitelist_status_df = pd.DataFrame(columns = fin_keys)
+
+    for inference_id, status in paged_statuses.items():
+        status['training_id'] = training_id
+        new_row = pd.DataFrame([status])
+        if not new_row.empty and not new_row.isna().all().all():
+            whitelist_status_df = pd.concat([whitelist_status_df, new_row], ignore_index=True)
+
+    # convert start_time float to date time
+    for column in whitelist_status_df.columns:
+        if whitelist_status_df[column].dtype == 'object':
+            whitelist_status_df[column] = whitelist_status_df[column].astype(str)
+
+    if not whitelist_status_df.empty:
+        whitelist_status_df['start_time'] = pd.to_datetime(whitelist_status_df['start_time'], unit='s')
+        whitelist_status_df['start_time'] = whitelist_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(dummy_get_progress)
+        whitelist_status_df['color'] = whitelist_status_df['status'].apply(get_color)
+        whitelist_status_df = whitelist_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=True)
+
+        status_df = whitelist_status_df[brief]
+
+        st.session_state.status_df_fin = status_df
+        st.session_state.whitelist_fin = whitelist_status_df[fin_keys]
+
+
 def app() -> None:
     logger.debug("Loading Fine-Tuning Dashboard...")
     st.title("False Filter Fine-Tuning")
@@ -102,28 +160,24 @@ def app() -> None:
     )
 
     if 'status_df_fin' not in st.session_state:
-        st.session_state.status_df_fin = pd.DataFrame(columns = ['status','progress_bar','estimated_time_remaining','current_epoch','total_epochs','epoch_loss','val_loss'])
-    if 'detail_fin' not in st.session_state:
-        st.session_state.detail_fin = pd.DataFrame(columns = ['status', 'progress', 'current_epoch', 'total_epochs', 'estimated_time_remaining', 'output_dir', 'train_dir', 'val_dir', 'epoch_loss', 'val_loss', 'best_model_path', 'message', 'error_message'])
-
-    start_index = 0
-    end_index = 10
-    page_size = 10
+        st.session_state.status_df_fin = pd.DataFrame(columns = brief)
+    if 'whitelist_fin' not in st.session_state:
+        st.session_state.whitelist_fin = pd.DataFrame(columns = fin_keys)
 
     # Pagination settings
     with col2:
         if not st.session_state.status_df_fin.empty:
             page_size = 10
-            total_entries = len(st.session_state.status_df_fin)
-            total_pages = (total_entries + page_size - 1) // page_size
-            page_number = st.number_input('Page number', min_value=1, value=1, step=1, max_value=total_pages)
-            start_index = (page_number - 1) * page_size
-            end_index = page_number * page_size
+            current_page = st.number_input('Page number', min_value=1, value=1, step=1)
+            paged_statuses = helper.request_paginated_finetuning_status(page_size, current_page)
+            create_job_list(paged_statuses)
 
-    st.header('All fine-tuning jobs')
-        # Selection to find more detail
+
+    st.header('All fine-tuning jobs')  if not st.session_state.status_df_fin.empty else st.write('')
+
+    # Selection to find more detail
     event_fin = st.dataframe(
-        st.session_state.status_df_fin.iloc[start_index:end_index],
+        st.session_state.status_df_fin,
         key = 'statuses_finetuning',
         on_select = 'rerun',
         selection_mode = 'multi-row',
@@ -133,8 +187,8 @@ def app() -> None:
 
     if event_fin and event_fin.selection:
         if event_fin.selection['rows']:
-            selected_indices = [start_index + st.session_state.status_df_fin.index[i] for i in event_fin.selection['rows']]
-            selected_rows = st.session_state.detail_fin.loc[selected_indices]
+            selected_indices = [st.session_state.status_df_fin.index[i] for i in event_fin.selection['rows']]
+            selected_rows = st.session_state.whitelist_fin.loc[selected_indices]
 
             transposed_detail = selected_rows.T
             st.dataframe(transposed_detail, use_container_width= True )
