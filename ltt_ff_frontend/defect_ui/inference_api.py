@@ -12,32 +12,29 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str], inf_keys: 
     if paged_statuses:
         inf_keys = list(next(iter(paged_statuses.values())).keys())
         inf_keys.append('inference_id')
-        if 'progress' in inf_keys:
-            inf_keys.remove('progress')
 
-    whitelist_status_df = pd.DataFrame(columns = inf_keys)
+    detailed_status_df = pd.DataFrame(columns = inf_keys)
 
     for inference_id, status in paged_statuses.items():
         status['inference_id'] = inference_id
         new_row = pd.DataFrame([status])
         if not new_row.empty and not new_row.isna().all().all():
-            whitelist_status_df = pd.concat([whitelist_status_df, new_row], ignore_index=True)
+            detailed_status_df = pd.concat([detailed_status_df, new_row], ignore_index=True)
 
     # convert start_time float to date time
-    for column in whitelist_status_df.columns:
-        if whitelist_status_df[column].dtype == 'object':
-            whitelist_status_df[column] = whitelist_status_df[column].astype(str)
+    for column in detailed_status_df.columns:
+        if detailed_status_df[column].dtype == 'object':
+            detailed_status_df[column] = detailed_status_df[column].astype(str)
 
-    if not whitelist_status_df.empty:
-        whitelist_status_df['start_time'] = pd.to_datetime(whitelist_status_df['start_time'], unit='s')
-        whitelist_status_df['start_time'] = whitelist_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-        whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(lambda x: helper.return_status_style(x))
-        whitelist_status_df = whitelist_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=True)
+    if not detailed_status_df.empty:
+        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
+        detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
+        detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=True)
 
-        status_df = whitelist_status_df[brief]
+        status_df = detailed_status_df[brief]
 
         st.session_state.status_df_inf = status_df
-        st.session_state.detailed_df_inf = whitelist_status_df[inf_keys]
+        st.session_state.detailed_df_inf = detailed_status_df[inf_keys]
 
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")

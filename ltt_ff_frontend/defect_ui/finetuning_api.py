@@ -86,9 +86,7 @@ def app() -> None:
                 detail_status_df[column] = detail_status_df[column].astype(str)
 
         detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'], unit='s')
-        detail_status_df['start_time'] = detail_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-        detail_status_df['progress_bar'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[1])
-        detail_status_df['color'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[0])
+        detail_status_df['progress_bar'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x))
         detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
         status_df = detail_status_df[brief]
 
