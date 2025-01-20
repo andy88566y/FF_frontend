@@ -7,34 +7,18 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
-def create_job_list(paged_statuses: dict[str, Any], brief: list[str], inf_keys: list[str]):
-    # Retrieve the whitelisted dictionaries
-    if paged_statuses:
-        inf_keys = list(next(iter(paged_statuses.values())).keys())
-        inf_keys.append('inference_id')
+def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
 
-    detailed_status_df = pd.DataFrame(columns = inf_keys)
-
-    for inference_id, status in paged_statuses.items():
-        status['inference_id'] = inference_id
-        new_row = pd.DataFrame([status])
-        if not new_row.empty and not new_row.isna().all().all():
-            detailed_status_df = pd.concat([detailed_status_df, new_row], ignore_index=True)
-
-    # convert start_time float to date time
-    for column in detailed_status_df.columns:
-        if detailed_status_df[column].dtype == 'object':
-            detailed_status_df[column] = detailed_status_df[column].astype(str)
+    detailed_status_df = pd.DataFrame.from_dict(paged_statuses).T
 
     if not detailed_status_df.empty:
         detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
         detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
-        detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=True)
+        detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
+        detailed_status_df = detailed_status_df.rename(columns={'index': 'inference_id'})
 
-        status_df = detailed_status_df[brief]
-
-        st.session_state.status_df_inf = status_df
-        st.session_state.detailed_df_inf = detailed_status_df[inf_keys]
+        st.session_state.status_df_inf = detailed_status_df[brief]
+        st.session_state.detailed_df_inf = detailed_status_df
 
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")
@@ -82,14 +66,16 @@ def app() -> None:
     st.divider()
 
     col1, col2 = st.columns(2, vertical_alignment='bottom')
+
+    # headers required for the brief job descriptions
     brief = ['inference_id', 'status','progress_bar', 'processed_images', 'total_images']
-    inf_keys = ['inference_id']
+
     with col1:
         if st.button('Check all inference jobs'):
             page_size = 10
             current_page = 1
             paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
-            create_job_list(paged_statuses, brief, inf_keys)
+            create_job_list(paged_statuses, brief)
 
     progress_column = st.column_config.ProgressColumn(
         label='progress_bar',
@@ -98,17 +84,18 @@ def app() -> None:
     )
 
     if 'status_df_inf' not in st.session_state:
-        st.session_state.status_df_inf = pd.DataFrame(columns=brief)
+        st.session_state.status_df_inf = pd.DataFrame()
     if 'detailed_df_inf' not in st.session_state:
-        st.session_state.detailed_df_inf = pd.DataFrame(columns=inf_keys)
+        st.session_state.detailed_df_inf = pd.DataFrame()
 
     # Pagination settings
     with col2:
         if not st.session_state.status_df_inf.empty:
             page_size = 10
+
             current_page = st.number_input('Page number', min_value=1, value=1, step=1)
             paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
-            create_job_list(paged_statuses, brief, inf_keys)
+            create_job_list(paged_statuses, brief)
 
     st.header('All inference jobs') if not st.session_state.status_df_inf.empty else st.write('')
 
