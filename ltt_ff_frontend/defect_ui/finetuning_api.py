@@ -133,7 +133,7 @@ def app() -> None:
             page_size = 10
             current_page = st.number_input('Page number', min_value=1, value=1, step=1)
             paged_statuses = helper.request_paginated_finetuning_status(page_size, current_page)
-            create_job_list(paged_statuses)
+            create_job_list(paged_statuses,brief,fin_keys)
 
 
     st.header('All fine-tuning jobs')  if not st.session_state.status_df_fin.empty else st.write('')
