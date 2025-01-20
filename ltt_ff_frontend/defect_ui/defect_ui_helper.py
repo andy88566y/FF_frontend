@@ -1,9 +1,9 @@
 import glob
 import os
+from typing import Any
 
-import pandas as pd
 import numpy as np
-import json
+import pandas as pd
 import requests
 import streamlit as st
 from loguru import logger
@@ -20,6 +20,19 @@ def gap(size: int) -> None:
     '''
     for _ in range(size):
         st.write('')
+
+
+def return_status_style(status: str) -> int:
+    if status == "starting":
+        return 10
+    elif status == "running":
+        return 70
+    elif status == "completed":
+        return 100
+    elif status == "error":
+        return 0
+    else:
+        return 0
 
 
 @st.cache_data(ttl='10s')
@@ -52,24 +65,26 @@ def generate_defect_list(db_path: str, confidence_threshold: float) -> list[str]
 
 
 @st.cache_data(ttl='5s')
-def request_lrf(db_path: str,
+def request_lrf(output_dir: str,
                 lot_id: str,
-                output_dir: str,
+                model_name: str,
                 confidence_threshold: float) -> requests.Response:
     '''
     Calls FalseFilter API with use_cache=True.
 
     Args:
+        output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
         lot_id: Name of the lot
+        model_name: Name of the inference model.
         confidence_threshold: Images with defect probability lower than confidence threshold
                                 is considered defective.
 
     Returns the reponse of the API request.
     '''
     r = requests.post(API_ROOT+'generate_lrf', json={
-                        "db_path": db_path,
-                        "lot_id": lot_id,
                         "output_dir": output_dir,
+                        "lot_id": lot_id,
+                        "model_name": model_name,
                         "threshold": confidence_threshold,
                     }, timeout=10)
 
@@ -83,26 +98,30 @@ def request_lrf(db_path: str,
     return r
 
 @st.cache_data(ttl='10s')
-def request_inference(model_path: str, model_key_path: str, image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
-                      inference_batch_size: int, confidence_threshold: float, overwrite: bool) -> requests.Response:
+def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
+                      inference_batch_size: int = 32, confidence_threshold: float = 0.5, overwrite: bool = False) -> requests.Response:
     '''
-    Calls FalseFilter API with use_cache=False.
+    Calls FalseFilter API to run inference.
 
     Args:
-        lot_id: Name of the lot
-        confidence_threshold: Images with defect probability lower than confidence threshold
+        model_name: Name of inference model.
+        image_dir: Directory containing defect images.
+        lrf_path: Absolute path to the .lrf file for the defect images.
+        lot_id: Name of the lot of defect images.
+        output_dir: Directory to store the generated database file and filtered .lrf file.
+        inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
+        confidence_threshold: Images with defect probability higher than confidence threshold
                                 is considered defective.
-        overwrite: Whether to overwrite the output directory.
+        overwrite: Whether to overwrite the existing .db and .lrf files of the same name.
 
     Returns the reponse of the API request.
     '''
     r = requests.post(API_ROOT+'inference', json={
-                        "model_path": model_path,
-                        "model_key_path": model_key_path,
+                        "model_name": base_model,
                         "image_dir": image_dir,
-                        "output_dir": output_dir,
                         "lrf_path": lrf_path,
                         "lot_id": lot_id,
+                        "output_dir": output_dir,
                         "threshold": confidence_threshold,
                         "batch_size": inference_batch_size,
                         "overwrite": overwrite,
@@ -184,6 +203,30 @@ def request_all_inference_statuses() -> str:
 
         return all_statuses
 
+@st.cache_data(ttl='1s')
+def request_paginated_inference_status(page_size: int, current_page: int) -> str:
+    '''
+    Gets pagainated inference status by calling FalseFilter API
+
+    Args:
+        page_size : the number of entries to be shown on the dataframe
+        current_page : the page that is current requested
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
+    logger.debug(r)
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return {}
+    else:
+        paged_statuses = r.json()['result']
+
+        for inference_job in paged_statuses:
+            logger.info(f'Status of inference request for {inference_job}: {paged_statuses[inference_job]}')
+
+        return paged_statuses
+
 @st.cache_data(ttl='10s')
 def read_database(db_path: str) -> requests.Response:
     '''
@@ -211,17 +254,20 @@ def read_database(db_path: str) -> requests.Response:
     return pd.DataFrame.from_dict(r.json()['results'])
 
 @st.cache_data(ttl='1s')
-def get_prc_data(db_path: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     '''
     Get the data needed to draw a PRC curve.
 
     Args:
-        db_path: Absolute path to the .db file containing inference results for
-                desired lot of defect images.
+        output_dir: Root output directory of inference resuits.
+        lot_id: Name of the lof of defect images.
+        model_name: Name of inference results.
         return_curve: If false, just return the area under the curve (AUPRC)
     '''
     r = requests.get(API_ROOT+'get_prc_data', json={
-                        "db_path": db_path,
+                        "output_dir": output_dir,
+                        "lot_id": lot_id,
+                        "model_name": model_name,
                         "return_curve": return_curve,
                     }, timeout=10)
 
@@ -231,17 +277,20 @@ def get_prc_data(db_path: str, return_curve: bool = True) -> tuple[np.ndarray, n
     return prc_data_ndarray
 
 @st.cache_data(ttl='1s')
-def get_roc_data(db_path: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     '''
-    Get the data needed to draw a PRC curve.
+    Get the data needed to draw an ROC curve.
 
     Args:
-        db_path: Absolute path to the .db file containing inference results for
-                desired lot of defect images.
-        return_curve: If false, just return the area under the curve (AUPRC)
+        output_dir: Root output directory of inference resuits.
+        lot_id: Name of the lof of defect images.
+        model_name: Name of inference results.
+        return_curve: If false, just return the area under the curve (AUROC)
     '''
     r = requests.get(API_ROOT+'get_roc_data', json={
-                        "db_path": db_path,
+                        "output_dir": output_dir,
+                        "lot_id": lot_id,
+                        "model_name": model_name,
                         "return_curve": return_curve,
                     }, timeout=10)
 
@@ -251,91 +300,97 @@ def get_roc_data(db_path: str, return_curve: bool = True) -> tuple[np.ndarray, n
     return roc_data_ndarray
 
 @st.cache_data(ttl='1s')
-def get_defect_id(db_path: str) -> list[int]:
+def get_defect_id(output_dir: str, lot_id: str, model_name: str) -> list[int]:
     '''
     Get list of defect IDs from a database.
 
     Args:
-        db_path: Absolute path to the .db file containing inference results for
-            desired lot of defect images.
+        output_dir: Root output directory where inference results were stored.
+        lot_id: Name of the lot of defect images.
+        model_name: Name of model used to run inference.
 
         Returns:
             A list of the defect IDs of a lot of images.
     '''
     r = requests.get(API_ROOT+'get_defect_id', json={
-                        "db_path": db_path,
+                        "output_dir": output_dir,
+                        "lot_id": lot_id,
+                        "model_name": model_name,
                     }, timeout=10)
 
     return r.json()['defect_id_list']
 
 @st.cache_data(ttl='1s')
-def get_probability(db_path: str, defect_id: list[int]) -> list[float]:
+def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[float]:
     """
     Read a list of the defect probabilities from a database.
 
     Args:
-        db_path: Absolute path to the .db file containing inference results for
-            desired lot of defect images.
+        output_dir: Root output directory where inference results were stored.
+        lot_id: Name of the lot of defect images.
+        model_name: Name of model used to run inference.
         defect_id: ID of the defect images
 
     Returns:
         A list of the defect probabilities of a lot of images.
     """
     r = requests.get(API_ROOT+'get_probability', json={
-                        "db_path": db_path,
+                        "output_dir": output_dir,
+                        "lot_id": lot_id,
+                        "model_name": model_name,
                         "defect_id_list": defect_id,
                     }, timeout=10)
 
     return r.json()['probability_list']
 
 @st.cache_data(ttl='1s')
-def get_answer(db_path: str, defect_id: list[int]) -> list[float]:
+def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[int]:
     """
     Read a list of the ground truths from a database.
 
     Args:
-        db_path: Absolute path to the .db file containing inference results for
-            desired lot of defect images.
+        output_dir: Root output directory where inference results were stored.
+        lot_id: Name of the lot of defect images.
+        model_name: Name of model used to run inference.
         defect_id: ID of the defect images
 
     Returns:
         A list of the ground truths of a lot of images.
     """
     r = requests.get(API_ROOT+'get_answer', json={
-                        "db_path": db_path,
+                        "output_dir": output_dir,
+                        "lot_id": lot_id,
+                        "model_name": model_name,
                         "defect_id_list": defect_id,
                     }, timeout=10)
 
     return r.json()['answer_list']
 
 @st.cache_data(ttl='10s')
-def request_finetune(batch_size: int, epochs: int, lr: float, output_dir: str,
-                     overwrite: bool, train_dir: str, train_lrf_path: str,
-                     val_dir: str, val_lrf_path: str) -> requests.Response:
+def request_finetune(base_model: str,
+                     model_naming: tuple[str, str, str, str],
+                     multilot_config: dict,
+                     epochs: int,
+                     lr: float) -> requests.Response:
     '''
     Calls FFA model fine-tuning.
 
     Args:
-        batch_size: Training batch size.
+        base_model: Name of model to finetune.
+        model_naming: Details to be used for re-trained model (site, tool, tech layer, layer group)
+        multilot_config: Dict containing training data info (lot id, lrf path, image dir)
         epochs: Number of training epochs.
         lr: Learning rate.
-        output_dir: Directory to save the fine-tuned model.
-        overwrite: Whether to overwrite the existing output directory.
-        train_dir: Directory containing the training data.
-        val_dir: Directory containing the validation data.
 
     Returns the reponse of the API request.
     '''
     r = requests.post(API_ROOT+'train', json={
-                        "batch_size": batch_size,
+                        "base_model_name": base_model,
+                        "batch_size": 32,
                         "epochs": epochs,
                         "lr": lr,
-                        "output_dir": output_dir,
-                        "overwrite": overwrite,
-                        "train_dir": train_dir,
-                        "train_lrf_path": train_lrf_path,
-                        "val_dir": val_dir,
-                        "val_lrf_path": val_lrf_path
+                        "model_naming": model_naming,
+                        "training_info": multilot_config,
                     }, timeout=10)
 
     status = r.json()['status']
@@ -366,3 +421,41 @@ def request_all_finetuning_statuses():
             logger.info(f'Status of finetuning request for {training_job}: {all_statuses[training_job]["status"]}')
 
         return all_statuses
+
+@st.cache_data(ttl='1s')
+def get_base_models() -> list[str]:
+    '''
+    Returns a list of all available models to be used for inference or fine-tuning.
+    '''
+    r = requests.get(f'{API_ROOT}get_model_list', timeout=10)
+
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return []
+    else:
+        base_model_list = r.json()['model_list']
+        logger.info(f'List of base models: {base_model_list}')
+        return base_model_list
+
+def request_paginated_finetuning_status(page_size: int, current_page: int) -> dict[str, Any]:
+    '''
+    Gets pagainated inference status by calling FalseFilter API
+
+    Args:
+        page_size : the number of entries to be shown on the dataframe
+        current_page : the page that is current requested
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}train/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
+    logger.debug(r)
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return {}
+    else:
+        paged_statuses = r.json()['result']
+
+        for training_job in paged_statuses:
+            logger.info(f'Status of finetuning request for {training_job}: {paged_statuses[training_job]}')
+
+        return paged_statuses
