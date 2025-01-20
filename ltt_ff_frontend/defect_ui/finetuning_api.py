@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 import streamlit as st
 import yaml
@@ -5,9 +7,8 @@ from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
-def create_job_list(paged_statuses):
-    brief = ['training_id', 'status','progress_bar', 'processed_images', 'total_images']
-    fin_keys = ['training_id']
+def create_job_list(paged_statuses: dict[str, Any], brief: list[str], fin_keys: list[str]):
+
     # Retrieve the whitelisted dictionaries
     if paged_statuses:
         fin_keys = list(next(iter(paged_statuses.values())).keys())
@@ -108,13 +109,12 @@ def app() -> None:
 
     brief = ['training_id', 'status','progress_bar', 'processed_images', 'total_images']
     fin_keys = ['training_id']
-
     with col1:
         if st.button('Check all finetuning jobs'):
             page_size = 10
             current_page = 1
             paged_statuses = helper.request_paginated_finetuning_status(page_size, current_page)
-            create_job_list(paged_statuses)
+            create_job_list(paged_statuses,brief,fin_keys)
 
     progress_column = st.column_config.ProgressColumn(
         label='progress_bar',

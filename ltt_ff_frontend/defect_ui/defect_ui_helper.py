@@ -1,5 +1,6 @@
 import glob
 import os
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -412,7 +413,7 @@ def get_base_models() -> list[str]:
         logger.info(f'List of base models: {base_model_list}')
         return base_model_list
 
-def request_paginated_finetuning_status(page_size: int, current_page: int) -> str:
+def request_paginated_finetuning_status(page_size: int, current_page: int) -> dict[str, Any]:
     '''
     Gets pagainated inference status by calling FalseFilter API
 
