@@ -5,34 +5,13 @@ from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
-
-def dummy_get_progress(status):
-    if status == 'starting':
-        return 10
-    elif status == 'running':
-        return 70
-    elif status == 'completed':
-        return 100
-    elif status == 'error':
-        return 0
-    else:
-        return 0
-
-def get_color(status):
-    if status in ['starting', 'running', 'completed']:
-        return 'green'
-    elif status == 'error':
-        return 'red'
-    else:
-        return 'grey'
-
 def create_job_list(paged_statuses):
     brief = ['training_id', 'status','progress_bar', 'processed_images', 'total_images']
     fin_keys = ['training_id']
     # Retrieve the whitelisted dictionaries
     if paged_statuses:
         fin_keys = list(next(iter(paged_statuses.values())).keys())
-        fin_keys.append('inference_id')
+        fin_keys.append('training_id')
         if 'progress'in fin_keys:
             fin_keys.remove('progress')
         if 'estimated_time_remaining' in fin_keys:
@@ -54,8 +33,7 @@ def create_job_list(paged_statuses):
     if not whitelist_status_df.empty:
         whitelist_status_df['start_time'] = pd.to_datetime(whitelist_status_df['start_time'], unit='s')
         whitelist_status_df['start_time'] = whitelist_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-        whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(dummy_get_progress)
-        whitelist_status_df['color'] = whitelist_status_df['status'].apply(get_color)
+        whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(lambda x: helper.return_status_style(x))
         whitelist_status_df = whitelist_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=True)
 
         status_df = whitelist_status_df[brief]
@@ -108,30 +86,11 @@ def app() -> None:
         ft_config = yaml.load(ft_configfile, Loader=yaml.Loader)
         st.json(ft_config)
 
-<<<<<<< HEAD
     if st.button("Start Fine-Tuning Job", type="primary"):
         request = helper.request_finetune(base_model=ft_base_model,
                                           model_naming=(ft_site, ft_tool, ft_techlayer, ft_layergroup),
                                           multilot_config=ft_config,
                                           epochs=ft_epochs, lr=ft_lr)
-=======
-    st.caption(f':red[If overwrite=True, everything in output_dir will be deleted. Will be fixed before V2.]')
-
-    train_dir = st.text_input('Training images directory', value='', help='Directory containing training data.')
-    train_lrf_path = st.text_input('Training images .lrf path', value='', help='Path to the .lrf file for training images.')
-    val_dir = st.text_input('Validation images directory', value='', help='Directory containing validation data.')
-    val_lrf_path = st.text_input('Validation images .lrf path', value='', help='Path to the .lrf file for validation images.')
-
-    if st.button('Start fine-tuning', type='primary'):
-        request = helper.request_finetune(epochs=epochs,
-                                            lr=learning_rate,
-                                            output_dir=output_dir,
-                                            overwrite=overwrite,
-                                            train_dir=train_dir,
-                                            train_lrf_path=train_lrf_path,
-                                            val_dir=val_dir,
-                                            val_lrf_path=val_lrf_path)
->>>>>>> 10534aa (fix: minor fixes of finetune)
 
         if request.json().get('status') == 'error':
             code = request.json().get('code')
@@ -145,32 +104,17 @@ def app() -> None:
 
     # TODO: Simplify below
 
-    if st.button('Check all Fine-Tuning Jobs'):
-        all_statuses = helper.request_all_finetuning_statuses()
+    col1, col2 = st.columns(2, vertical_alignment='bottom')
 
-        brief = ["training_id", "status", "progress_bar", "estimated_time_remaining", "current_epoch", "total_epochs", "epoch_loss", "val_loss"]
-        reorder = ["training_id", "start_time", "status", "progress", "current_epoch", "total_epochs", "estimated_time_remaining", "output_dir", "train_dir", "val_dir", "epoch_loss", "val_loss", "best_model_path", "message", "error_message"]
+    brief = ['training_id', 'status','progress_bar', 'processed_images', 'total_images']
+    inf_keys = ['training_id']
 
-            detail_status_df = pd.DataFrame(columns = reorder)
-
-            for training_id, status in all_statuses.items():
-                status['training_id'] = training_id
-                new_row = pd.DataFrame([status])
-                detail_status_df = pd.concat([detail_status_df, new_row], ignore_index=True)
-
-            for column in detail_status_df.columns:
-                if detail_status_df[column].dtype == 'object':
-                    detail_status_df[column] = detail_status_df[column].astype(str)
-
-        detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'], unit='s')
-        detail_status_df['start_time'] = detail_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-        detail_status_df['progress_bar'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[1])
-        detail_status_df['color'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[0])
-        detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
-        status_df = detail_status_df[brief]
-
-            st.session_state.status_df_fin = status_df
-            st.session_state.detail_fin = detail_status_df[reorder]
+    with col1:
+        if st.button('Check all finetuning jobs'):
+            page_size = 10
+            current_page = 1
+            paged_statuses = helper.request_paginated_finetuning_status(page_size, current_page)
+            create_job_list(paged_statuses)
 
     progress_column = st.column_config.ProgressColumn(
         label='progress_bar',
@@ -208,6 +152,5 @@ def app() -> None:
         if event_fin.selection['rows']:
             selected_indices = [st.session_state.status_df_fin.index[i] for i in event_fin.selection['rows']]
             selected_rows = st.session_state.whitelist_fin.loc[selected_indices]
-
             transposed_detail = selected_rows.T
             st.dataframe(transposed_detail, use_container_width= True )
