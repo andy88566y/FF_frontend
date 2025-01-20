@@ -19,7 +19,7 @@ def create_job_list(paged_statuses):
 
     whitelist_status_df = pd.DataFrame(columns = fin_keys)
 
-    for inference_id, status in paged_statuses.items():
+    for training_id, status in paged_statuses.items():
         status['training_id'] = training_id
         new_row = pd.DataFrame([status])
         if not new_row.empty and not new_row.isna().all().all():
@@ -107,7 +107,7 @@ def app() -> None:
     col1, col2 = st.columns(2, vertical_alignment='bottom')
 
     brief = ['training_id', 'status','progress_bar', 'processed_images', 'total_images']
-    inf_keys = ['training_id']
+    fin_keys = ['training_id']
 
     with col1:
         if st.button('Check all finetuning jobs'):
