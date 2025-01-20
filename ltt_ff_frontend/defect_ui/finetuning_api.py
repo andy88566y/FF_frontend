@@ -17,8 +17,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
         detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
         detailed_status_df = detailed_status_df.rename(columns={'index': 'training_id'})
-
-        # detailed_status_df['training_info'] = detailed_status_df['training_info'].map(lambda x: pformat(x))
+        detailed_status_df['training_info'] = detailed_status_df['training_info'].map(lambda x: pformat(x))
 
         st.session_state.status_df_fin = detailed_status_df[brief]
         st.session_state.detailed_df_fin = detailed_status_df
