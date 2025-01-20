@@ -21,7 +21,7 @@ def gap(size: int) -> None:
         st.write('')
 
 
-def return_status_style(status: str) -> tuple[str, int]:
+def return_status_style(status: str) -> int:
     if status == "starting":
         return 10
     elif status == "running":

@@ -31,8 +31,7 @@ def create_job_list(paged_statuses):
     if not whitelist_status_df.empty:
         whitelist_status_df['start_time'] = pd.to_datetime(whitelist_status_df['start_time'], unit='s')
         whitelist_status_df['start_time'] = whitelist_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-        whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(helper.return_status_style)
-        whitelist_status_df['color'] = whitelist_status_df['status'].apply(get_color)
+        whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(lambda x: helper.return_status_style(x))
         whitelist_status_df = whitelist_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=True)
 
         status_df = whitelist_status_df[brief]
@@ -85,6 +84,7 @@ def app() -> None:
 
     st.divider()
 
+    col1, col2 = st.columns(2, vertical_alignment='bottom')
     brief = ['inference_id', 'status','progress_bar', 'processed_images', 'total_images']
     inf_keys = ['inference_id']
     with col1:
@@ -132,4 +132,4 @@ def app() -> None:
             selected_indices = [st.session_state.status_df_inf.index[i] for i in event_inf.selection['rows']]
             selected_rows = st.session_state.whitelist_inf.loc[selected_indices]
             transposed_detail = selected_rows.T
-            st.dataframe(transposed_detail, use_container_width= True)
+            st.dataframe(transposed_detail, use_container_width=True)
