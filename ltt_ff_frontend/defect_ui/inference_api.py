@@ -1,9 +1,24 @@
+from typing import Any
+
 import pandas as pd
 import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
+
+def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
+
+    detailed_status_df = pd.DataFrame.from_dict(paged_statuses).T
+
+    if not detailed_status_df.empty:
+        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
+        detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
+        detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
+        detailed_status_df = detailed_status_df.rename(columns={'index': 'inference_id'})
+
+        st.session_state.status_df_inf = detailed_status_df[brief]
+        st.session_state.detailed_df_inf = detailed_status_df
 
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")
@@ -50,75 +65,55 @@ def app() -> None:
 
     st.divider()
 
-    # TODO: Simplify below
+    col1, col2 = st.columns(2, vertical_alignment='bottom')
 
-    if st.button('Check all Inference Jobs'):
-        all_statuses = helper.request_all_inference_statuses()
-        columns = ["estimated_time_remaining", "lot_id", "output_dir", "processed_images", "progress", "start_time", "status", "total_images"]
-        detail_status_df = pd.DataFrame(columns=columns)
+    # headers required for the brief job descriptions
+    brief = ['inference_id', 'status','progress_bar', 'processed_images', 'total_images']
 
-        # rearrange and define which info should be displayed
-        brief = ['inference_id', 'status', 'progress_bar', 'processed_images', 'total_images']
-        reorder = ["inference_id", "start_time", "estimated_time_remaining", "lot_id", "output_dir", "processed_images", "progress", "status", "total_images"]
-
-        for inference_id, status in all_statuses.items():
-            status['inference_id'] = inference_id
-            new_row = pd.DataFrame([status])
-            detail_status_df = pd.concat([detail_status_df, new_row], ignore_index=True)
-
-        # convert start_time float to date time
-        for column in detail_status_df.columns:
-            if detail_status_df[column].dtype == 'object':
-                detail_status_df[column] = detail_status_df[column].astype(str)
-
-        detail_status_df['start_time'] = pd.to_datetime(detail_status_df['start_time'], unit='s')
-        detail_status_df['start_time'] = detail_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-        detail_status_df['progress_bar'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[1])
-        detail_status_df['color'] = detail_status_df['status'].apply(lambda x: helper.return_status_style(x)[0])
-
-        detail_status_df = detail_status_df.iloc[::-1].reset_index(drop=True)
-        status_df = detail_status_df[brief]
-
-        st.session_state.status_df_inf = status_df
-        st.session_state.detail_inf = detail_status_df[reorder]
+    with col1:
+        if st.button('Check all inference jobs'):
+            page_size = 10
+            current_page = 1
+            paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
+            create_job_list(paged_statuses, brief)
 
     progress_column = st.column_config.ProgressColumn(
-        label="progress_bar",
+        label='progress_bar',
         min_value=0,
         max_value=100
     )
 
-    if "status_df_inf" not in st.session_state:
-        st.session_state.status_df_inf = pd.DataFrame(columns=  ['inference_id', 'status','progress_bar', 'processed_images', 'total_images'])
-    if "detail_inf" not in st.session_state:
-        st.session_state.detail_inf = pd.DataFrame(columns =  ["inference_id", "estimated_time_remaining", "lot_id", "output_dir", "processed_images", "progress", "start_time", "status", "total_images"])
-
-    start_index = 0
-    end_index = 10
-    page_size = 10
+    if 'status_df_inf' not in st.session_state:
+        st.session_state.status_df_inf = pd.DataFrame()
+    if 'detailed_df_inf' not in st.session_state:
+        st.session_state.detailed_df_inf = pd.DataFrame()
 
     # Pagination settings
-    if not st.session_state.status_df_inf.empty:
-        page_size = 10
-        page_number = st.number_input('Page number', min_value=1, value=1, step=1)
-        start_index = (page_number - 1) * page_size
-        end_index = page_number * page_size
+    with col2:
+        if not st.session_state.status_df_inf.empty:
+            page_size = 10
+
+            current_page = st.number_input('Page number', min_value=1, value=1, step=1)
+            paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
+            create_job_list(paged_statuses, brief)
+
+    st.header('All inference jobs') if not st.session_state.status_df_inf.empty else st.write('')
 
     # Selection to find more detail
     event_inf = st.dataframe(
-        st.session_state.status_df_inf.iloc[start_index:end_index],
-        key = "statuses_inference",
-        on_select = "rerun",
-        selection_mode = "multi-row",
+        st.session_state.status_df_inf,
+        key = 'statuses_inference',
+        on_select = 'rerun',
+        selection_mode = 'multi-row',
         use_container_width=True,
-        column_config={"progress_bar": progress_column}
-    ) if not st.session_state.status_df_inf.empty else st.write("")
+        column_config={'progress_bar': progress_column}
+    ) if not st.session_state.status_df_inf.empty else st.write('')
 
     if event_inf and event_inf.selection:
-        # Check if the "row" value's list is not empty hi
-        if event_inf.selection["rows"]:
+    # Check if the 'row' value's list is not empty
+        if event_inf.selection['rows']:
             # Extract the selected rows based on the indices
-            selected_indices = [start_index + st.session_state.status_df_inf.index[i] for i in event_inf.selection["rows"]]
-            selected_rows = st.session_state.detail_inf.loc[selected_indices]
+            selected_indices = [st.session_state.status_df_inf.index[i] for i in event_inf.selection['rows']]
+            selected_rows = st.session_state.detailed_df_inf.loc[selected_indices]
             transposed_detail = selected_rows.T
-            st.dataframe(transposed_detail, use_container_width= True )
+            st.dataframe(transposed_detail, use_container_width=True)

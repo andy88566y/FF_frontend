@@ -1,5 +1,6 @@
 import glob
 import os
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -21,17 +22,17 @@ def gap(size: int) -> None:
         st.write('')
 
 
-def return_status_style(status: str) -> tuple[str, int]:
+def return_status_style(status: str) -> int:
     if status == "starting":
-        return ("green", 10)
+        return 10
     elif status == "running":
-        return ("green", 70)
+        return 70
     elif status == "completed":
-        return ("green", 100)
+        return 100
     elif status == "error":
-        return ("red", 0)
+        return 0
     else:
-        return ("grey", 0)
+        return 0
 
 
 @st.cache_data(ttl='10s')
@@ -201,6 +202,30 @@ def request_all_inference_statuses() -> str:
             logger.info(f'Status of inference request for {inference_job}: {all_statuses[inference_job]}')
 
         return all_statuses
+
+@st.cache_data(ttl='1s')
+def request_paginated_inference_status(page_size: int, current_page: int) -> str:
+    '''
+    Gets pagainated inference status by calling FalseFilter API
+
+    Args:
+        page_size : the number of entries to be shown on the dataframe
+        current_page : the page that is current requested
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
+    logger.debug(r)
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return {}
+    else:
+        paged_statuses = r.json()['result']
+
+        for inference_job in paged_statuses:
+            logger.info(f'Status of inference request for {inference_job}: {paged_statuses[inference_job]}')
+
+        return paged_statuses
 
 @st.cache_data(ttl='10s')
 def read_database(db_path: str) -> requests.Response:
@@ -411,3 +436,26 @@ def get_base_models() -> list[str]:
         base_model_list = r.json()['model_list']
         logger.info(f'List of base models: {base_model_list}')
         return base_model_list
+
+def request_paginated_finetuning_status(page_size: int, current_page: int) -> dict[str, Any]:
+    '''
+    Gets pagainated inference status by calling FalseFilter API
+
+    Args:
+        page_size : the number of entries to be shown on the dataframe
+        current_page : the page that is current requested
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}train/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
+    logger.debug(r)
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return {}
+    else:
+        paged_statuses = r.json()['result']
+
+        for training_job in paged_statuses:
+            logger.info(f'Status of finetuning request for {training_job}: {paged_statuses[training_job]}')
+
+        return paged_statuses
