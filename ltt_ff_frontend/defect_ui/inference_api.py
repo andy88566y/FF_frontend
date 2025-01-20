@@ -37,7 +37,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str], inf_keys: 
         status_df = whitelist_status_df[brief]
 
         st.session_state.status_df_inf = status_df
-        st.session_state.whitelist_inf = whitelist_status_df[inf_keys]
+        st.session_state.detailed_df_inf = whitelist_status_df[inf_keys]
 
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")
@@ -102,8 +102,8 @@ def app() -> None:
 
     if 'status_df_inf' not in st.session_state:
         st.session_state.status_df_inf = pd.DataFrame(columns=brief)
-    if 'whitelist_inf' not in st.session_state:
-        st.session_state.whitelist_inf = pd.DataFrame(columns=inf_keys)
+    if 'detailed_df_inf' not in st.session_state:
+        st.session_state.detailed_df_inf = pd.DataFrame(columns=inf_keys)
 
     # Pagination settings
     with col2:
@@ -130,6 +130,6 @@ def app() -> None:
         if event_inf.selection['rows']:
             # Extract the selected rows based on the indices
             selected_indices = [st.session_state.status_df_inf.index[i] for i in event_inf.selection['rows']]
-            selected_rows = st.session_state.whitelist_inf.loc[selected_indices]
+            selected_rows = st.session_state.detailed_df_inf.loc[selected_indices]
             transposed_detail = selected_rows.T
             st.dataframe(transposed_detail, use_container_width=True)
