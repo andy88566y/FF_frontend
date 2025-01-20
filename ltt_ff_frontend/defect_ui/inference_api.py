@@ -5,18 +5,6 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
-def dummy_get_progress(status):
-    if status == 'starting':
-        return 10
-    elif status == 'running':
-        return 70
-    elif status == 'completed':
-        return 100
-    elif status == 'error':
-        return 0
-    else:
-        return 0
-
 def create_job_list(paged_statuses):
     brief = ['inference_id', 'status','progress_bar', 'processed_images', 'total_images']
     inf_keys = ['inference_id']
@@ -43,7 +31,7 @@ def create_job_list(paged_statuses):
     if not whitelist_status_df.empty:
         whitelist_status_df['start_time'] = pd.to_datetime(whitelist_status_df['start_time'], unit='s')
         whitelist_status_df['start_time'] = whitelist_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-        whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(dummy_get_progress)
+        whitelist_status_df['progress_bar'] = whitelist_status_df['status'].apply(helper.return_status_style)
         whitelist_status_df['color'] = whitelist_status_df['status'].apply(get_color)
         whitelist_status_df = whitelist_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=True)
 
@@ -62,7 +50,7 @@ def app() -> None:
         inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
                                         format_func=lambda x: x.replace("#", " "))
     with r1_col2:
-        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, ltt_ff_frontend/defect_ui/inference_api.py0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
+        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
 
@@ -90,7 +78,7 @@ def app() -> None:
         if request.json().get('status') == 'error':
             code = request.json().get('code')
             message = request.json().get('message')
-            st.text(f'Error code: {code}\nError message: {message}')ltt_ff_frontend/defect_ui/inference_api.py
+            st.text(f'Error code: {code}\nError message: {message}')
         else:
             inference_id = request.json().get('inference_id')
             st.text(f'Inference Job ID: {inference_id}')

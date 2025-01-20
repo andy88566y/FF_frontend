@@ -23,15 +23,15 @@ def gap(size: int) -> None:
 
 def return_status_style(status: str) -> tuple[str, int]:
     if status == "starting":
-        return ("green", 10)
+        return 10
     elif status == "running":
-        return ("green", 70)
+        return 70
     elif status == "completed":
-        return ("green", 100)
+        return 100
     elif status == "error":
-        return ("red", 0)
+        return 0
     else:
-        return ("grey", 0)
+        return 0
 
 
 @st.cache_data(ttl='10s')
