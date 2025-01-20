@@ -111,7 +111,7 @@ def app() -> None:
             page_size = 10
             current_page = st.number_input('Page number', min_value=1, value=1, step=1)
             paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
-            create_job_list(paged_statuses)
+            create_job_list(paged_statuses, brief, inf_keys)
 
     st.header('All inference jobs') if not st.session_state.status_df_inf.empty else st.write('')
 
