@@ -40,7 +40,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str], fin_keys: 
         status_df = whitelist_status_df[brief]
 
         st.session_state.status_df_fin = status_df
-        st.session_state.whitelist_fin = whitelist_status_df[fin_keys]
+        st.session_state.detailed_df_fin = whitelist_status_df[fin_keys]
 
 
 def app() -> None:
@@ -124,8 +124,8 @@ def app() -> None:
 
     if 'status_df_fin' not in st.session_state:
         st.session_state.status_df_fin = pd.DataFrame(columns = brief)
-    if 'whitelist_fin' not in st.session_state:
-        st.session_state.whitelist_fin = pd.DataFrame(columns = fin_keys)
+    if 'detailed_df_fin' not in st.session_state:
+        st.session_state.detailed_df_fin = pd.DataFrame(columns = fin_keys)
 
     # Pagination settings
     with col2:
@@ -151,6 +151,6 @@ def app() -> None:
     if event_fin and event_fin.selection:
         if event_fin.selection['rows']:
             selected_indices = [st.session_state.status_df_fin.index[i] for i in event_fin.selection['rows']]
-            selected_rows = st.session_state.whitelist_fin.loc[selected_indices]
+            selected_rows = st.session_state.detailed_df_fin.loc[selected_indices]
             transposed_detail = selected_rows.T
             st.dataframe(transposed_detail, use_container_width= True )
