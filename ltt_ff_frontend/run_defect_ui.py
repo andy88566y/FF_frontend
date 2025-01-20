@@ -10,7 +10,7 @@ if __name__ == "__main__":
     result_viewer = st.Page(result_viewer.app, url_path="result_viewer",
                             title="Result Viewer", icon=":material/search_check_2:")
     inference_api = st.Page(inference_api.app, url_path="inference_api",
-                            title="Inference", icon=":material/search_check_2:")
+                            title="Inference", icon=":material/content_paste_search:")
     finetuning_api = st.Page(finetuning_api.app, url_path="training_api", title="Fine-tuning", icon=":material/build:")
 
     pg = st.navigation([result_viewer, inference_api, finetuning_api])
