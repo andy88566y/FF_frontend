@@ -26,9 +26,16 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
         if 'end_time' in detailed_status_df.columns:
             detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
 
+        if 'training_history' in detailed_status_df.columns:
+            training_history = detailed_status_df['training_history'].values
+            detailed_status_df['debug'] = training_history
+
         st.session_state.status_df_fin = detailed_status_df[brief]
 
         detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
+
+
+
         st.session_state.detailed_df_fin = detailed_status_df.reindex(columns=['training_id',
                                                                                'status',
                                                                                'start_time',
@@ -39,7 +46,8 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
                                                                                'output_model_name',
                                                                                'batch_size',
                                                                                'learning_rate',
-                                                                               'training_info',])
+                                                                               'training_info',
+                                                                               'debug',])
 
 def app() -> None:
     logger.debug("Loading Fine-Tuning Dashboard...")
