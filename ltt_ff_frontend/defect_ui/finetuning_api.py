@@ -83,6 +83,15 @@ def app() -> None:
         st.json(ft_config)
 
     if st.button("Start Fine-Tuning Job", type="primary"):
+
+        # Validate user input first
+        required_input = [ft_site, ft_tool, ft_techlayer, ft_layergroup, ft_configfile]
+        for input in required_input:
+            if not input:
+                logger.error('Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file.')
+                st.error('Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file.')
+                return
+
         request = helper.request_finetune(base_model=ft_base_model,
                                           model_naming=(ft_site, ft_tool, ft_techlayer, ft_layergroup),
                                           multilot_config=ft_config,

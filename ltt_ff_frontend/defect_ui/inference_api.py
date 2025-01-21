@@ -59,6 +59,15 @@ def app() -> None:
         inf_lrf_path = st.text_input(label='.lrf path', value='/mnt/dbpc/xxx', help='Absolute path to the selected .lrf file.')
 
     if st.button("Start Inference Job", type="primary"):
+
+        # Validate user input first
+        required_input = [inf_lot_id, inf_output_dir, inf_image_dir, inf_lrf_path]
+        for input in required_input:
+            if not input:
+                logger.error('Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path.')
+                st.error('Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path.')
+                return
+
         request = helper.request_inference(base_model=inf_base_model,
                                            lot_id=inf_lot_id,
                                            output_dir=inf_output_dir,

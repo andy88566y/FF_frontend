@@ -1,4 +1,5 @@
 from typing import Any
+import os
 
 import numpy as np
 import pandas as pd
@@ -14,7 +15,6 @@ DEFECT_COLOR_MAPPING = {
     "ND": "olivedrab",
     "UNK": "blue",
 }
-
 
 def get_model_data(output_dir: str, lot_id: str, model_name: str):
     defect_id_list = helper.get_defect_id(output_dir, lot_id, model_name)
@@ -335,13 +335,18 @@ def app() -> None:
 
     with r1_col5:
         if st.button("Generate new Model 1 .lrf"):
+
+            if rv_m1_output_dir == '' or rv_m1_lot_id == '':
+                logger.error('Missing Model 1 Result Directory or Lot ID.')
+                st.error('Missing Model 1 Result Directory or Lot ID.')
+
             request = helper.request_lrf(output_dir=rv_m1_output_dir, lot_id=rv_m1_lot_id, model_name=rv_m1_model_name,
                                          confidence_threshold=rv_m1_threshold)
 
             if request.json().get('status') == 'error':
                 code = request.json().get('code')
                 message = request.json().get('message')
-                st.text(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+                st.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
                 logger.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
             else:
                 # TODO: Check file generated
@@ -349,13 +354,18 @@ def app() -> None:
                 logger.info(f'New .lrf file (threshold: {rv_m1_threshold}) generated at {rv_m1_output_dir}!')
     with r2_col5:
         if st.button("Generate new Model 2 .lrf"):
+
+            if rv_m2_output_dir == '' or rv_m2_lot_id == '':
+                logger.error('Missing Model 2 Result Directory or Lot ID.')
+                st.error('Missing Model 2 Result Directory or Lot ID.')
+
             request = helper.request_lrf(output_dir=rv_m2_output_dir, lot_id=rv_m2_lot_id, model_name=rv_m2_model_name,
                                          confidence_threshold=rv_m2_threshold)
 
             if request.json().get('status') == 'error':
                 code = request.json().get('code')
                 message = request.json().get('message')
-                st.text(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+                st.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
                 logger.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
             else:
                 # TODO: Check file generated
@@ -368,7 +378,9 @@ def app() -> None:
 
         vr1_col1, vr1_col2 = st.columns(2)
 
-        if rv_m1_output_dir != output_dir_default and rv_m2_output_dir != output_dir_default:
+        invalid_input = [output_dir_default, '']
+
+        if rv_m1_output_dir not in invalid_input and rv_m2_output_dir not in invalid_input and rv_m1_lot_id not in invalid_input and rv_m2_lot_id not in invalid_input:
 
             if rv_m1_lot_id != rv_m2_lot_id:
                 st.error(f'Lot IDs do not match!  \nModel 1 lot ID: {rv_m1_lot_id}  \nModel 2 lot ID: {rv_m2_lot_id}')
@@ -391,6 +403,14 @@ def app() -> None:
                 # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold), ("Model 2", model_2_prc_data, rv_m2_threshold)]))
 
         else:
+            if rv_m1_output_dir == '':
+                st.error(f'Model 1 Result Directory input field is empty!')
+                return
+            elif rv_m1_lot_id == '':
+                st.error(f'Model 1 Lot ID input field is empty!')
+                return
+
+
             # Draw 1D comparison chart
             model_1_raw_data = get_model_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name)
 
