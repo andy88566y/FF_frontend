@@ -30,7 +30,8 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
                                                                                'message',
                                                                                'lot_id',
                                                                                'output_dir',
-                                                                               'total_images'])
+                                                                               'total_images',
+                                                                               'lrf_type',])
 
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")
