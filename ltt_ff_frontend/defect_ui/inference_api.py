@@ -17,8 +17,21 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
         detailed_status_df = detailed_status_df.rename(columns={'index': 'inference_id'})
 
+        if 'end_time' in detailed_status_df.columns:
+            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
+
         st.session_state.status_df_inf = detailed_status_df[brief]
-        st.session_state.detailed_df_inf = detailed_status_df
+
+        detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
+        st.session_state.detailed_df_inf = detailed_status_df.reindex(columns=['inference_id',
+                                                                               'status',
+                                                                               'start_time',
+                                                                               'end_time',
+                                                                               'message',
+                                                                               'lot_id',
+                                                                               'output_dir',
+                                                                               'total_images',
+                                                                               'lrf_type',])
 
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")
@@ -28,7 +41,7 @@ def app() -> None:
     r1_col1, r1_col2, r1_col3 = st.columns([3, 2, 2])
     with r1_col1:
         inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
-                                        format_func=lambda x: x.replace("#", " "))
+                                        format_func=helper.format_model_name)
     with r1_col2:
         inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:
@@ -47,6 +60,15 @@ def app() -> None:
         inf_lrf_path = st.text_input(label='.lrf path', value='/mnt/dbpc/xxx', help='Absolute path to the selected .lrf file.')
 
     if st.button("Start Inference Job", type="primary"):
+
+        # Validate user input first
+        required_input = [inf_lot_id, inf_output_dir, inf_image_dir, inf_lrf_path]
+        for item in required_input:
+            if not item:
+                logger.error('Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path.')
+                st.error('Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path.')
+                return
+
         request = helper.request_inference(base_model=inf_base_model,
                                            lot_id=inf_lot_id,
                                            output_dir=inf_output_dir,
@@ -68,7 +90,7 @@ def app() -> None:
     col1, col2 = st.columns(2, vertical_alignment='bottom')
 
     # headers required for the brief job descriptions
-    brief = ['inference_id', 'status','progress_bar', 'processed_images', 'total_images']
+    brief = ['inference_id', 'status','progress_bar', 'total_images']
 
     with col1:
         if st.button('Check all inference jobs'):

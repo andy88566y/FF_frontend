@@ -19,4 +19,6 @@ if __name__ == "__main__":
                        page_icon=":material/manufacturing:",
                        layout="wide", initial_sidebar_state="collapsed")
 
+    st.sidebar.markdown("###### FF-FE v0.2.0")
+
     pg.run()

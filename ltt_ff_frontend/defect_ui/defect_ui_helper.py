@@ -34,6 +34,23 @@ def return_status_style(status: str) -> int:
     else:
         return 0
 
+def return_finetune_status_style(status: str, current_epoch: int, total_epochs: int) -> int:
+    if status == "starting":
+        return 10
+    elif status == "running":
+        progress = ((current_epoch[-1] / total_epochs[-1]) * 90) + 10
+        return int(progress)
+    elif status == "completed":
+        return 100
+    elif status == "error":
+        return 0
+    else:
+        return 0
+
+def format_model_name(name: str) -> str:
+    model_type, model_name = name.split("/")
+    return f"[{model_type}] {model_name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
+
 
 @st.cache_data(ttl='10s')
 def generate_defect_list(db_path: str, confidence_threshold: float) -> list[str]:
@@ -318,7 +335,12 @@ def get_defect_id(output_dir: str, lot_id: str, model_name: str) -> list[int]:
                         "model_name": model_name,
                     }, timeout=10)
 
-    return r.json()['defect_id_list']
+    if r.json()['status'] == 'completed':
+        logger.info("DB read started running successfully!")
+        return r.json()['defect_id_list']
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 @st.cache_data(ttl='1s')
 def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[float]:
@@ -341,7 +363,12 @@ def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: li
                         "defect_id_list": defect_id,
                     }, timeout=10)
 
-    return r.json()['probability_list']
+    if r.json()['status'] == 'completed':
+        logger.info("DB read started running successfully!")
+        return r.json()['probability_list']
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 @st.cache_data(ttl='1s')
 def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[int]:
@@ -364,7 +391,12 @@ def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[in
                         "defect_id_list": defect_id,
                     }, timeout=10)
 
-    return r.json()['answer_list']
+    if r.json()['status'] == 'completed':
+        logger.info("DB read started running successfully!")
+        return r.json()['answer_list']
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 @st.cache_data(ttl='10s')
 def request_finetune(base_model: str,

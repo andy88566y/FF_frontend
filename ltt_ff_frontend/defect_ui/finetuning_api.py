@@ -14,14 +14,40 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
 
     if not detailed_status_df.empty:
         detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
-        detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
+
+        current_epoch = detailed_status_df['current_epoch']
+        total_epochs = detailed_status_df['total_epochs']
+
+        detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_finetune_status_style(x, current_epoch, total_epochs))
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
         detailed_status_df = detailed_status_df.rename(columns={'index': 'training_id'})
         detailed_status_df['training_info'] = detailed_status_df['training_info'].map(lambda x: pformat(x))
 
-        st.session_state.status_df_fin = detailed_status_df[brief]
-        st.session_state.detailed_df_fin = detailed_status_df
+        if 'end_time' in detailed_status_df.columns:
+            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
 
+        if 'training_history' in detailed_status_df.columns:
+            training_history = detailed_status_df['training_history'].values
+            detailed_status_df['debug'] = training_history
+
+        st.session_state.status_df_fin = detailed_status_df[brief]
+
+        detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
+
+
+
+        st.session_state.detailed_df_fin = detailed_status_df.reindex(columns=['training_id',
+                                                                               'status',
+                                                                               'start_time',
+                                                                               'end_time',
+                                                                               'current_epoch',
+                                                                               'total_epochs',
+                                                                               'base_model_name',
+                                                                               'output_model_name',
+                                                                               'batch_size',
+                                                                               'learning_rate',
+                                                                               'training_info',
+                                                                               'debug',])
 
 def app() -> None:
     logger.debug("Loading Fine-Tuning Dashboard...")
@@ -32,7 +58,7 @@ def app() -> None:
 
     with r1_col1:
         ft_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
-                                     format_func=lambda x: x.replace("#", " "))
+                                     format_func=helper.format_model_name)
 
     yaml_help_text = '''
     **Example of a valid .yaml config file:**\n
@@ -68,6 +94,15 @@ def app() -> None:
         st.json(ft_config)
 
     if st.button("Start Fine-Tuning Job", type="primary"):
+
+        # Validate user input first
+        required_input = [ft_site, ft_tool, ft_techlayer, ft_layergroup, ft_configfile]
+        for item in required_input:
+            if not item:
+                logger.error('Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file.')
+                st.error('Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file.')
+                return
+
         request = helper.request_finetune(base_model=ft_base_model,
                                           model_naming=(ft_site, ft_tool, ft_techlayer, ft_layergroup),
                                           multilot_config=ft_config,
