@@ -118,14 +118,16 @@ def generate_1D_plot(m1_data: dict, m1_threshold: float):
     fig.add_trace(
         go.Histogram(
             x=[p for p, a in zip(m1_probs, m1_ans) if a == 1], yaxis="y2",
-            marker={"color": "olivedrab"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
+            marker={"color": "olivedrab"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
+            name='True defects'
         )
     )
 
     fig.add_trace(
         go.Histogram(
             x=[p for p, a in zip(m1_probs, m1_ans) if a == 0], yaxis="y2",
-            marker={"color": "darkred"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
+            marker={"color": "darkred"}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
+            name='False alarms'
         )
     )
 
@@ -145,6 +147,7 @@ def generate_1D_plot(m1_data: dict, m1_threshold: float):
         xaxis_title="Probabilities",
         yaxis_title="Frequency",
         title="Defect Probability Distribution",
+
     )
 
     return fig

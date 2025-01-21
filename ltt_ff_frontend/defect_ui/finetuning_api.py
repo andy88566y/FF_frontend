@@ -19,8 +19,23 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
         detailed_status_df = detailed_status_df.rename(columns={'index': 'training_id'})
         detailed_status_df['training_info'] = detailed_status_df['training_info'].map(lambda x: pformat(x))
 
+        if 'end_time' in detailed_status_df.columns:
+            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
+
         st.session_state.status_df_fin = detailed_status_df[brief]
-        st.session_state.detailed_df_fin = detailed_status_df
+
+        detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
+        st.session_state.detailed_df_fin = detailed_status_df.reindex(columns=['training_id',
+                                                                               'status',
+                                                                               'start_time',
+                                                                               'end_time',
+                                                                               'current_epoch',
+                                                                               'total_epoch',
+                                                                               'base_model_name',
+                                                                               'output_model_name',
+                                                                               'batch_size',
+                                                                               'learning_rate',
+                                                                               'training_info',])
 
 
 def app() -> None:

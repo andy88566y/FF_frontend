@@ -17,8 +17,20 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
         detailed_status_df = detailed_status_df.rename(columns={'index': 'inference_id'})
 
+        if 'end_time' in detailed_status_df.columns:
+            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
+
         st.session_state.status_df_inf = detailed_status_df[brief]
-        st.session_state.detailed_df_inf = detailed_status_df
+
+        detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
+        st.session_state.detailed_df_inf = detailed_status_df.reindex(columns=['inference_id',
+                                                                               'status',
+                                                                               'start_time',
+                                                                               'end_time',
+                                                                               'message',
+                                                                               'lot_id',
+                                                                               'output_dir',
+                                                                               'total_images'])
 
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")
@@ -68,7 +80,7 @@ def app() -> None:
     col1, col2 = st.columns(2, vertical_alignment='bottom')
 
     # headers required for the brief job descriptions
-    brief = ['inference_id', 'status','progress_bar', 'processed_images', 'total_images']
+    brief = ['inference_id', 'status','progress_bar', 'total_images']
 
     with col1:
         if st.button('Check all inference jobs'):
