@@ -14,7 +14,11 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
 
     if not detailed_status_df.empty:
         detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
-        detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
+
+        current_epoch = detailed_status_df['current_epoch']
+        total_epochs = detailed_status_df['total_epochs']
+
+        detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_finetune_status_style(x, current_epoch, total_epochs))
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
         detailed_status_df = detailed_status_df.rename(columns={'index': 'training_id'})
         detailed_status_df['training_info'] = detailed_status_df['training_info'].map(lambda x: pformat(x))
@@ -30,13 +34,12 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
                                                                                'start_time',
                                                                                'end_time',
                                                                                'current_epoch',
-                                                                               'total_epoch',
+                                                                               'total_epochs',
                                                                                'base_model_name',
                                                                                'output_model_name',
                                                                                'batch_size',
                                                                                'learning_rate',
                                                                                'training_info',])
-
 
 def app() -> None:
     logger.debug("Loading Fine-Tuning Dashboard...")

@@ -34,6 +34,18 @@ def return_status_style(status: str) -> int:
     else:
         return 0
 
+def return_finetune_status_style(status: str, current_epoch: int, total_epochs: int) -> int:
+    if status == "starting":
+        return 10
+    elif status == "running":
+        progress = ((current_epoch[-1] / total_epochs[-1]) * 90) + 10
+        return int(progress)
+    elif status == "completed":
+        return 100
+    elif status == "error":
+        return 0
+    else:
+        return 0
 
 def format_model_name(name: str) -> str:
     model_type, model_name = name.split("/")
