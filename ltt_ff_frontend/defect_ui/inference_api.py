@@ -40,7 +40,7 @@ def app() -> None:
     r1_col1, r1_col2, r1_col3 = st.columns([3, 2, 2])
     with r1_col1:
         inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
-                                        format_func=lambda x: x.replace("#", " "))
+                                        format_func=helper.format_model_name)
     with r1_col2:
         inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:

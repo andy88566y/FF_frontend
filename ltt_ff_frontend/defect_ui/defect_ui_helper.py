@@ -35,6 +35,11 @@ def return_status_style(status: str) -> int:
         return 0
 
 
+def format_model_name(name: str) -> str:
+    model_type, model_name = name.split("/")
+    return f"[{model_type}] {model_name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
+
+
 @st.cache_data(ttl='10s')
 def generate_defect_list(db_path: str, confidence_threshold: float) -> list[str]:
     '''

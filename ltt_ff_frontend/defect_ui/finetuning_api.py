@@ -47,7 +47,7 @@ def app() -> None:
 
     with r1_col1:
         ft_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
-                                     format_func=lambda x: x.replace("#", " "))
+                                     format_func=helper.format_model_name)
 
     yaml_help_text = '''
     **Example of a valid .yaml config file:**\n
