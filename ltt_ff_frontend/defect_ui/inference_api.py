@@ -63,8 +63,8 @@ def app() -> None:
 
         # Validate user input first
         required_input = [inf_lot_id, inf_output_dir, inf_image_dir, inf_lrf_path]
-        for input in required_input:
-            if not input:
+        for item in required_input:
+            if not item:
                 logger.error('Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path.')
                 st.error('Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path.')
                 return

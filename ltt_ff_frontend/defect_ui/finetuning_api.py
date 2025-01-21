@@ -97,8 +97,8 @@ def app() -> None:
 
         # Validate user input first
         required_input = [ft_site, ft_tool, ft_techlayer, ft_layergroup, ft_configfile]
-        for input in required_input:
-            if not input:
+        for item in required_input:
+            if not item:
                 logger.error('Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file.')
                 st.error('Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file.')
                 return
