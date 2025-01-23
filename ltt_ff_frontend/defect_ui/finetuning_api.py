@@ -14,6 +14,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
 
     if not detailed_status_df.empty:
         detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
+        detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         current_epoch = detailed_status_df['current_epoch']
         total_epochs = detailed_status_df['total_epochs']
@@ -25,6 +26,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
 
         if 'end_time' in detailed_status_df.columns:
             detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
+            detailed_status_df['end_time'] = detailed_status_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         if 'training_history' in detailed_status_df.columns:
             training_history = detailed_status_df['training_history'].values

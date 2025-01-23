@@ -13,12 +13,14 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
 
     if not detailed_status_df.empty:
         detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
+        detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
         detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
         detailed_status_df = detailed_status_df.rename(columns={'index': 'inference_id'})
 
         if 'end_time' in detailed_status_df.columns:
             detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
+            detailed_status_df['end_time'] = detailed_status_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         st.session_state.status_df_inf = detailed_status_df[brief]
 
