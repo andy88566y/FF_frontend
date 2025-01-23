@@ -349,9 +349,9 @@ def app() -> None:
                                         format_func=helper.format_model_name)
 
     with r1_col4:
-        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.176, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
     with r2_col4:
-        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
+        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.176, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
 
     with r1_col5:
         if st.button("Generate new Model 1 .lrf"):
