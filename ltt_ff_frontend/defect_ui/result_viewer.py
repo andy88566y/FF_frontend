@@ -79,6 +79,10 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
     m2_defect_ids, m2_probs, m2_ans = m2_data
     assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
 
+    defect_ids = [f"Defect ID: {defect_id}" for defect_id in m1_defect_ids]
+    classifications = ['Defect' if a1 and a2 else 'Non-defect' if not a1 and not a2 else 'Unclassified' for a1, a2 in zip(m1_ans, m2_ans)]
+    marker_text = [f'{defect_id}<br>{classification}' for defect_id, classification in zip(defect_ids, classifications)]
+
     # 2D scatter plot
     fig = go.Figure()
     fig.add_trace(
@@ -95,10 +99,10 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
                 ],
                 "size": 5,
             },
-            text=[f"Defect ID: {defect_id}" for defect_id in m1_defect_ids],
+            text=marker_text,
             hoverinfo="text",
             hovertemplate="%{text}<br>Model 1 Prob: %{x}<br>Model 2 Prob: %{y}",
-            name="Defects"
+            name=""
         )
     )
 
@@ -125,31 +129,47 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
         line={"color": "Red", "width": 2, "dash": "dash"},
     )
 
+    # add diagonal dotted line
+    fig.add_shape(
+        type="line",
+        x0=0,
+        x1=1,
+        y0=0,
+        y1=1,
+        xref="x",
+        yref="y",
+        line={"color": "Gray", "width": 2, "dash": "dash"},
+    )
+
     # Add side histograms
     fig.add_trace(
         go.Histogram(
             y=[p for p, a in zip(m2_probs, m2_ans) if a == 1], xaxis="x2",
-            marker={"color": DEFECT_COLOR_MAPPING["D"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01}
+            marker={"color": DEFECT_COLOR_MAPPING["D"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
+            name='Defects',
         )
     )
     fig.add_trace(
         go.Histogram(
             y=[p for p, a in zip(m2_probs, m2_ans) if a == 0], xaxis="x2",
-            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01}
+            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
+            name='Non-defects',
         )
     )
 
     fig.add_trace(
         go.Histogram(
             x=[p for p, a in zip(m1_probs, m1_ans) if a == 1], yaxis="y2",
-            marker={"color": DEFECT_COLOR_MAPPING["D"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
+            marker={"color": DEFECT_COLOR_MAPPING["D"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
+            name='Defects',
         )
     )
 
     fig.add_trace(
         go.Histogram(
             x=[p for p, a in zip(m1_probs, m1_ans) if a == 0], yaxis="y2",
-            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01}
+            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
+            name='Non-defects',
         )
     )
 
@@ -329,9 +349,9 @@ def app() -> None:
                                         format_func=helper.format_model_name)
 
     with r1_col4:
-        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.176, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
     with r2_col4:
-        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
+        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.176, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
 
     with r1_col5:
         if st.button("Generate new Model 1 .lrf"):

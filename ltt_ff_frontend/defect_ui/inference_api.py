@@ -13,12 +13,14 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
 
     if not detailed_status_df.empty:
         detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
+        detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
         detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
         detailed_status_df = detailed_status_df.rename(columns={'index': 'inference_id'})
 
         if 'end_time' in detailed_status_df.columns:
             detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
+            detailed_status_df['end_time'] = detailed_status_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         st.session_state.status_df_inf = detailed_status_df[brief]
 
@@ -43,7 +45,7 @@ def app() -> None:
         inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
                                         format_func=helper.format_model_name)
     with r1_col2:
-        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.05, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
+        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.176, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
 
