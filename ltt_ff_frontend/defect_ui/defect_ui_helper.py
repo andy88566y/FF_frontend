@@ -116,7 +116,7 @@ def request_lrf(output_dir: str,
 
 @st.cache_data(ttl='10s')
 def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
-                      inference_batch_size: int = 32, confidence_threshold: float = 0.5, overwrite: bool = False) -> requests.Response:
+                      inference_batch_size: int = 32, confidence_threshold: float = 0.174, overwrite: bool = False) -> requests.Response:
     '''
     Calls FalseFilter API to run inference.
 
