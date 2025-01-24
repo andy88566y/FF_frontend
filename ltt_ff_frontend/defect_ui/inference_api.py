@@ -45,7 +45,7 @@ def app() -> None:
         inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
                                         format_func=helper.format_model_name)
     with r1_col2:
-        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.176, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
+        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.174, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
 

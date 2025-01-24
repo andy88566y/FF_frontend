@@ -241,9 +241,9 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
             yshift=30,
         )
 
-        if model_threshold != 0.05:
-            # Draw default 0.05 threshold
-            default_idx = np.argmin(np.abs(threshold - 0.05))
+        if model_threshold != 0.174:
+            # Draw default 0.174 threshold
+            default_idx = np.argmin(np.abs(threshold - 0.174))
             fig.add_trace(go.Scatter(
                 x=[tnr[default_idx]],
                 y=[tpr[default_idx]],
@@ -349,9 +349,9 @@ def app() -> None:
                                         format_func=helper.format_model_name)
 
     with r1_col4:
-        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.176, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.174, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
     with r2_col4:
-        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.176, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
+        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.174, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
 
     with r1_col5:
         if st.button("Generate new Model 1 .lrf"):
