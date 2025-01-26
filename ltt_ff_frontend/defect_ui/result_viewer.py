@@ -80,7 +80,7 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
     assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
 
     defect_ids = [f"Defect ID: {defect_id}" for defect_id in m1_defect_ids]
-    classifications = ['Defect' if a1 and a2 else 'Non-defect' if not a1 and not a2 else 'Unclassified' for a1, a2 in zip(m1_ans, m2_ans)]
+    classifications = ['Defect' if a1 == 1 and a2 == 1 else 'Non-defect' if a1 == 0 and a2 == 0 else 'Unclassified' for a1, a2 in zip(m1_ans, m2_ans)]
     marker_text = [f'{defect_id}<br>{classification}' for defect_id, classification in zip(defect_ids, classifications)]
 
     # 2D scatter plot
@@ -94,7 +94,7 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
             mode="markers",
             marker={
                 "color": [
-                    DEFECT_COLOR_MAPPING["D"] if a1 and a2 else DEFECT_COLOR_MAPPING["ND"] if not a1 and not a2 else DEFECT_COLOR_MAPPING["UNK"]
+                    DEFECT_COLOR_MAPPING["D"] if a1 == 1 and a2 == 1 else DEFECT_COLOR_MAPPING["ND"] if a1 == 0 and a2 == 0 else DEFECT_COLOR_MAPPING["UNK"]
                     for a1, a2 in zip(m1_ans, m2_ans)
                 ],
                 "size": 5,
@@ -138,7 +138,7 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
         y1=1,
         xref="x",
         yref="y",
-        line={"color": "Gray", "width": 2, "dash": "dash"},
+        line={"color": "Gray", "width": 1, "dash": "dash"},
     )
 
     # Add side histograms
@@ -156,6 +156,13 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
             name='Non-defects',
         )
     )
+    fig.add_trace(
+        go.Histogram(
+            y=[p for p, a in zip(m2_probs, m2_ans) if a == -1], xaxis="x2",
+            marker={"color": DEFECT_COLOR_MAPPING["UNK"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
+            name='No-Label',
+        )
+    )
 
     fig.add_trace(
         go.Histogram(
@@ -164,12 +171,18 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
             name='Defects',
         )
     )
-
     fig.add_trace(
         go.Histogram(
             x=[p for p, a in zip(m1_probs, m1_ans) if a == 0], yaxis="y2",
             marker={"color": DEFECT_COLOR_MAPPING["ND"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
             name='Non-defects',
+        )
+    )
+    fig.add_trace(
+        go.Histogram(
+            x=[p for p, a in zip(m2_probs, m2_ans) if a == -1], yaxis="y2",
+            marker={"color": DEFECT_COLOR_MAPPING["UNK"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
+            name='No-Label',
         )
     )
 
@@ -414,13 +427,19 @@ def app() -> None:
                 st.plotly_chart(generate_2D_plot(model_1_raw_data, model_2_raw_data, rv_m1_threshold, rv_m2_threshold))
 
             with vr1_col2:
-                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
-                model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
-                st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold), ("Model 2", model_2_roc_data, rv_m2_threshold)]))
+                # TODO: This should be done somewhere else
+                if set(model_1_raw_data[2]) == {-1} or set(model_2_raw_data[2]) == {-1}:
+                    # All data is unlabeled
+                    st.markdown("##### All data is unlabeled! Skipping chart.")
+                else:
 
-                # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
-                # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
-                # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold), ("Model 2", model_2_prc_data, rv_m2_threshold)]))
+                    model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                    model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
+                    st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold), ("Model 2", model_2_roc_data, rv_m2_threshold)]))
+
+                    # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                    # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
+                    # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold), ("Model 2", model_2_prc_data, rv_m2_threshold)]))
 
         else:
             if rv_m1_output_dir == '':
@@ -438,8 +457,13 @@ def app() -> None:
                 st.plotly_chart(generate_1D_plot(model_1_raw_data, rv_m1_threshold))
 
             with vr1_col2:
-                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
-                st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold)]))
+                # TODO: This should be done somewhere else
+                if set(model_1_raw_data[2]) == {-1}:
+                    # All data is unlabeled
+                    st.markdown("##### All data is unlabeled! Skipping chart.")
+                else:
+                    model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                    st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold)]))
 
-                # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
-                # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold)]))
+                    # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                    # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold)]))
