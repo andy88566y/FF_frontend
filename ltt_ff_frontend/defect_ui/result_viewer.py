@@ -80,7 +80,7 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
     assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
 
     defect_ids = [f"Defect ID: {defect_id}" for defect_id in m1_defect_ids]
-    classifications = ['Defect' if a1 == 1 and a2 == 1 else 'Non-defect' if a1 == 0 and a2 == 0 else 'Unclassified' for a1, a2 in zip(m1_ans, m2_ans)]
+    classifications = ['Defect' if a1 == 1 and a2 == 1 else 'Non-defect' if a1 == 0 and a2 == 0 else 'No-Label' for a1, a2 in zip(m1_ans, m2_ans)]
     marker_text = [f'{defect_id}<br>{classification}' for defect_id, classification in zip(defect_ids, classifications)]
 
     # 2D scatter plot
