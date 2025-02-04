@@ -147,7 +147,8 @@ def app(selected_row, selected_folder):
     col1, col2, col3 = st.columns(3)
 
     # Construct the file paths_Rt
-    base_path = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}/Images/InstantReviewRt/"
+    # base_path = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}/Images/InstantReviewRt/"
+    base_path = f"{selected_folder}/Images/InstantReviewRt/"
     no = selected_row.No.values[0]
     type_options = ["L", "L_p", "U", "U_p"]
 
@@ -163,7 +164,8 @@ def app(selected_row, selected_folder):
             break
 
     # Construct the file paths_T
-    base_path_T = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}/Images/InstantReviewT/"
+    # base_path_T = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}/Images/InstantReviewT/"
+    base_path_T = f"{selected_folder}/Images/InstantReviewT/"
     type_options = ["L", "L_p", "U", "U_p"]
     ref_image_path_T = f"{base_path_T}{no}.png"
     diff_image_path_T = f"{base_path_T}{no}D.png"

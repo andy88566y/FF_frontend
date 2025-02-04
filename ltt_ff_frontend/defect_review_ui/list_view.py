@@ -47,9 +47,9 @@ def reload_data(df):
     st.session_state.filtered_df = df[selected_columns]
 
 
-def app(selected_folder):
-    selected_folder = st.query_params["lot"]
-    lrf_path = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}_classified.lrf"
+def app(selected_folder, lrf_path):
+    # selected_folder = st.query_params["lot"]
+    # lrf_path = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}_classified.lrf"
     defects = cached_read_defects(lrf_path)
 
     # Extract relevant columns and convert "X" and "Y" to floats
@@ -58,8 +58,8 @@ def app(selected_folder):
         for defect in defects.values()
     ]
 
-    # Get defect IDs
-    defect_ids = [defect["No"] for defect in defect_data]
+    # # Get defect IDs
+    # defect_ids = [defect["No"] for defect in defect_data]
 
     # Get probabilities
     # probabilities = get_probability("/mnt/fs0/xxx", "xxx", "xxx", defect_ids)
@@ -305,27 +305,30 @@ def app(selected_folder):
 
 
     # Get the selected row based on the session state
+    defect_number = 0
     if st.session_state.selection_source == "list":
         selected_data = df.loc[st.session_state.selected_row_index]
-        st.query_params.defect_no = st.session_state.selected_row_index
+        # st.query_params.defect_no = st.session_state.selected_row_index
+        defect_number = st.session_state.selected_row_index
 
     elif st.session_state.selection_source == "map":
         selected_data = df[df['No'] == st.session_state.selected_map_index]
-        st.query_params.defect_no = st.session_state.selected_map_index
+        # st.query_params.defect_no = st.session_state.selected_map_index
+        defect_number = st.session_state.selected_map_index
 
     else:
         selected_data = df[df['No'] == 1]
 
-    # Parse URL to get the 'lot' parameter
-    query_params = st.query_params
-    defect_number = query_params.get('defect_no', None)
+    # # Parse URL to get the 'lot' parameter
+    # query_params = st.query_params
+    # defect_number = query_params.get('defect_no', None)
 
     # Find the index of the lot_name in filtered_folders
     if defect_number:
         defect_number = int(defect_number)
         if defect_number >= len(df):
             defect_number = 1
-        st.query_params.defect_no = defect_number
+        # st.query_params.defect_no = defect_number
         selected_data = df[df['No'] == defect_number]
 
     if selected_data is not None:
