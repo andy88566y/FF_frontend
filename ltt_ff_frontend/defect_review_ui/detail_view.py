@@ -146,7 +146,7 @@ def app(selected_row, selected_folder):
     # Create three columns
     col1, col2, col3 = st.columns(3)
 
-    # Construct the file paths
+    # Construct the file paths_Rt
     base_path = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}/Images/InstantReviewRt/"
     no = selected_row.No.values[0]
     type_options = ["L", "L_p", "U", "U_p"]
@@ -187,7 +187,7 @@ def app(selected_row, selected_folder):
 
     # Create a subplot with shared axes
     #TODO: Movement along the Y-axis will update synchronously, but movement along the X-axis will not.
-    fig = make_subplots(rows=1, cols=6, shared_xaxes=True, shared_yaxes=True,
+    fig = make_subplots(rows=2, cols=3, shared_xaxes=True, shared_yaxes=True, vertical_spacing=0.10,
                         subplot_titles=("Reference Image Rt", "Test Image Rt", "Difference Rt",
                                         "Reference Image T", "Test Image T", "Difference T"))
 
@@ -195,9 +195,9 @@ def app(selected_row, selected_folder):
     fig.add_trace(go.Image(z=np.array(ref_image)), row=1, col=1)
     fig.add_trace(go.Image(z=np.array(test_image)), row=1, col=2)
     fig.add_trace(go.Image(z=np.array(diff_image)), row=1, col=3)
-    fig.add_trace(go.Image(z=np.array(ref_image_T)), row=1, col=4)
-    fig.add_trace(go.Image(z=np.array(test_image_T)), row=1, col=5)
-    fig.add_trace(go.Image(z=np.array(diff_image_T)), row=1, col=6)
+    fig.add_trace(go.Image(z=np.array(ref_image_T)), row=2, col=1)
+    fig.add_trace(go.Image(z=np.array(test_image_T)), row=2, col=2)
+    fig.add_trace(go.Image(z=np.array(diff_image_T)), row=2, col=3)
 
     # Add a scatter trace
     fig.add_trace(
@@ -213,16 +213,16 @@ def app(selected_row, selected_folder):
     # Update layout
     fig.update_layout(
         width=900,
-        height=200,
-        margin=dict(t=20, b=20, l=20, r=20),
-        modebar=dict(
-            orientation='v',
-            bgcolor='rgba(0,0,0,0)',
-            color='gray',
-            activecolor='#c37969',
-        ),
-        xaxis=dict(scaleanchor="y", scaleratio=1),
-        yaxis=dict(scaleanchor="x", scaleratio=1),
+        height=800,
+        margin={'t':20, 'b':20, 'l':20, 'r':20},
+        modebar={
+            'orientation': 'v',
+            'bgcolor': 'rgba(0,0,0,0)',
+            'color': 'gray',
+            'activecolor': '#c37969',
+        },
+        xaxis={'scaleanchor': "y", 'scaleratio': 1},
+        yaxis={'scaleanchor': "x", 'scaleratio': 1},
         dragmode='zoom',
         modebar_add=['select'],
     )
@@ -249,7 +249,7 @@ def app(selected_row, selected_folder):
     # show image and enable selection
     event = st.plotly_chart(fig, use_container_width=True, key="images", on_select="rerun")
 
-    # Ensure color_option is set in session state
+    # Ensure direction is set in session state
     if "direction" not in st.session_state:
         st.session_state.direction = "horizontal"
 

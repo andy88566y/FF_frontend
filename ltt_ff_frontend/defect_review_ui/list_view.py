@@ -6,6 +6,7 @@ import pydeck as pdk
 import streamlit as st
 import matplotlib.pyplot as plt
 from sklearn.cluster import DBSCAN
+from loguru import logger
 
 from ltt_ff_frontend.read_defect import read_defects
 from ltt_ff_frontend.defect_review_ui import detail_view
@@ -61,8 +62,8 @@ def app(selected_folder):
     defect_ids = [defect["No"] for defect in defect_data]
 
     # Get probabilities
-    probabilities = get_probability("/mnt/fs0/xxx", "xxx", "xxx", defect_ids)
-    # probabilities = [0]*len(defect_data)
+    # probabilities = get_probability("/mnt/fs0/xxx", "xxx", "xxx", defect_ids)
+    probabilities = [-1]*len(defect_data)
 
     # Add probabilities to defect_data
     for defect, probability in zip(defect_data, probabilities):
@@ -89,7 +90,7 @@ def app(selected_folder):
         st.session_state.selected_folder = ''
     # Initialize session state for probability threshold
     if 'prob_threshold' not in st.session_state:
-        st.session_state.prob_threshold = 0.5
+        st.session_state.prob_threshold = 0.174
     # Ensure color_option is set in session state
     if "color_option" not in st.session_state:
         st.session_state.color_option = "Cluster"
@@ -101,11 +102,12 @@ def app(selected_folder):
     df["ClassType"] = df["ClassType"].astype(int)
     df["Probability"] = df["Probability"].astype(float)
 
-    # Add "D/ND" column based on the threshold
+    # Add "D/ND" column based on the threshold (Defect/Not defect)
     df["D/ND"] = df["Probability"] > st.session_state.prob_threshold
     # Convert "D/ND" column to T/F
     df["D/ND"] = df["D/ND"].apply(lambda x: 'T' if x else 'F')
-    # Create the new column 'C/NC' based on the conditions provided
+    # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
+    # TODO: need to switch to lrf classtype mapping instead of hardcoding
     df['C/NC'] = ((df['D/ND'] == 'T') & (df['ClassType'] == 1)) | ((df['D/ND'] == 'F') & (df['ClassType'] != 1))
     # Convert "C/NC" column to T/F
     df["C/NC"] = df["C/NC"].apply(lambda x: 'T' if x else 'F')
@@ -116,7 +118,7 @@ def app(selected_folder):
     df["X_norm"] = (df["X"] - x_min) / (x_max - x_min)
     df["Y_norm"] = (df["Y"] - y_min) / (y_max - y_min)
 
-    # Use DBScan
+    # Use DBScan to identify clusters
     dbscan = DBSCAN(eps=50, min_samples=5)
     df['Cluster'] = dbscan.fit_predict(df[['X', 'Y']])
 
@@ -131,7 +133,7 @@ def app(selected_folder):
     if 'filtered_df' not in st.session_state:
         st.session_state.filtered_df = df
 
-
+    # Reset session state values when changing folder
     previous_selected_folder = st.session_state.get("selected_folder", None)
     if previous_selected_folder != selected_folder:
         st.session_state.filter_column = df.columns[0]
@@ -140,7 +142,6 @@ def app(selected_folder):
         st.session_state.selection_source = ''
         st.session_state.selected_folder = selected_folder
 
-
     # Create two columns
     col1, col2 = st.columns([1, 1])
 
@@ -148,12 +149,13 @@ def app(selected_folder):
         # Create columns
         col10, col11, col12, col13, col14,col15= st.columns([4,2,2,2,1,1])
 
-        # Add a slider for threshold selection
-        threshold = st.slider(
+        # Add threshold selection
+        threshold = st.number_input(
             "Select Probability Threshold",
             min_value=0.0,
             max_value=1.0,
-            step=0.01,
+            step=0.00001,
+            format="%.5f",
             key='prob_threshold',
             on_change=reload_data(st.session_state.filtered_df)
         )
