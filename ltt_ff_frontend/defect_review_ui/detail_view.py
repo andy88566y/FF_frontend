@@ -233,12 +233,14 @@ def app(selected_row, selected_folder):
     fig.update_yaxes(
         scaleanchor="x",
         scaleratio=1,
-        range=[0, 200]
+        range=[0, 200],
+        matches="y",
     )
     fig.update_xaxes(
         scaleanchor="y",
         scaleratio=1,
-        range=[0, 200]
+        range=[0, 200],
+        matches="x",
     )
     # # Autoscale the images
     # fig.update_xaxes(autorange=True)
