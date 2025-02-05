@@ -11,14 +11,11 @@ from ltt_ff_frontend.defect_ui.defect_ui_helper import check_matching_lot_id
 def app():
     st.title("Defect Review")
 
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        text_input_image_dir = st.text_input('Image Directory', value='')
-    with col2:
-        text_input_lrf_path = st.text_input('.lrf Path', value='')
-
-    if not text_input_image_dir or not text_input_lrf_path:
-        st.caption("Please input an Image Directory and an .lrf path to begin reviewing defects.")
+    # Initialize session state for image_dir and lrf_path inputs
+    if "image_dir" not in st.session_state:
+        st.session_state.image_dir = ''
+    if "lrf_path" not in st.session_state:
+        st.session_state.lrf_path = ''
 
     # Parse URL to get the encoded 'image_dir' and 'lrf_path' parameters
     # They must have already been encoded using urlsafe_b64encode, then coverted to str.
@@ -33,10 +30,21 @@ def app():
         encoded_image_dir_as_bytes = str.encode(encoded_image_dir_as_str)
         decoded_image_dir_as_bytes = base64.urlsafe_b64decode(encoded_image_dir_as_bytes)
         decoded_image_dir_as_str = decoded_image_dir_as_bytes.decode()
+        st.session_state.image_dir = decoded_image_dir_as_str
     if isinstance(encoded_lrf_path_as_str, str):
         encoded_lrf_path_as_bytes = str.encode(encoded_lrf_path_as_str)
         decoded_lrf_path_as_bytes = base64.urlsafe_b64decode(encoded_lrf_path_as_bytes)
         decoded_lrf_path_as_str = decoded_lrf_path_as_bytes.decode()
+        st.session_state.lrf_path = decoded_lrf_path_as_str
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        text_input_image_dir = st.text_input(label='Image Directory', value=st.session_state.image_dir)
+    with col2:
+        text_input_lrf_path = st.text_input(label='.lrf Path', value=st.session_state.lrf_path)
+
+    if not text_input_image_dir or not text_input_lrf_path:
+        st.caption("Please input an Image Directory and an .lrf path to begin reviewing defects.")
 
     # Use the decoded image_dir and lrf_path if they are valid.
     # Otherwise, use the input from the text fields + encode them and store in query_params.
