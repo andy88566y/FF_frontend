@@ -140,14 +140,11 @@ def app(selected_folder, lrf_path):
         st.session_state.selection_source = ''
         st.session_state.selected_folder = selected_folder
 
-    # Create two columns
-    col1, col2 = st.columns([1, 1])
+    # Create three columsn (prob threshold, filter options, message to show filtered values)
+    threshold_col, filter_options_col, filter_value_col, filter_message_col = st.columns([1, 1, 1, 1])
 
-    with col1:
-        # Create columns
-        col10, col11, col12, col13, col14,col15= st.columns([4,2,2,2,1,1])
-
-        # Add threshold selection
+    # Add threshold selection
+    with threshold_col:
         threshold = st.number_input(
             "Select Probability Threshold",
             min_value=0.0,
@@ -158,48 +155,52 @@ def app(selected_folder, lrf_path):
             on_change=reload_data(st.session_state.filtered_df)
         )
 
-        with col10:
-            st.subheader("List View")
+    # Add filter options
+    with filter_options_col:
+        # Define the columns I want to display
+        specific_columns = ["X", "Y", "ClassType", "Cluster", "D/ND", "C/NC"]
+        # Filter the DataFrame columns to only include the specific columns
+        filtered_columns = [col for col in df.columns if col in specific_columns]
 
-        with col11:
-            st.markdown(
-                """
-                <div style='display: flex; align-items: center; justify-content: flex-end; height: 100%; font-weight: bold;'>
-                    Filter
-                </div>
-                """,
-                unsafe_allow_html=True
+        # Use the filtered columns in the selectbox
+        st.session_state.filter_column = st.selectbox(
+            label="Filter options",
+            options=filtered_columns,
+            index=filtered_columns.index(st.session_state.filter_column),
+        )
+
+    # Add filter value text input, confirm button, and cancel button
+    with filter_value_col:
+        filter_value_input_col, confirm_col, cancel_col = st.columns([3, 1, 1])
+        with filter_value_input_col:
+            st.session_state.filter_value = st.text_input(
+                label="Filter value",
+                value=st.session_state.filter_value,
             )
-
-        with col12:
-            # Define the columns I want to display
-            specific_columns = ["X", "Y", "ClassType", "Cluster", "D/ND", "C/NC"]
-            # Filter the DataFrame columns to only include the specific columns
-            filtered_columns = [col for col in df.columns if col in specific_columns]
-
-            # Use the filtered columns in the selectbox
-            st.session_state.filter_column = st.selectbox(
-                "dummylabel1",
-                filtered_columns,
-                index=filtered_columns.index(st.session_state.filter_column),
-                label_visibility="collapsed"
-            )
-
-        with col13:
-             st.session_state.filter_value = st.text_input("dummylabel2", st.session_state.filter_value, label_visibility="collapsed")
-
-        with col14:
-            if st.button("", icon=":material/check:"):
+        with confirm_col:
+            if st.button(label="", icon=":material/check:", use_container_width=True):
                 st.session_state.filtered_df = df[df[st.session_state.filter_column].astype(str) == st.session_state.filter_value]
                 # st.session_state.filtered_df.set_index("No", inplace=True)
-
-        # TODO: Sometimes the value field is not correctly cleared
-        with col15:
-            if st.button("", icon=":material/close:"):
+        with cancel_col:
+            if st.button("", icon=":material/close:", use_container_width=True):
                 st.session_state.filter_column = df.columns[0]
                 st.session_state.filter_value = ''
                 st.session_state.filtered_df = df
                 st.rerun()
+
+    # Add message box showing active filters
+    with filter_message_col:
+        # TODO: To be fixed. Current method will cause message box to not appear if no values are filtered,
+        #       even if filter is active. But this is unlikely to happen.
+        if len(defect_data) != len(st.session_state.filtered_df):
+            st.warning(f'Active filter: {st.session_state.filter_column} = {st.session_state.filter_value}')
+
+    # Create two columns (list view, map view)
+    col1, col2 = st.columns([1, 1])
+
+    # List view
+    with col1:
+        st.subheader("List View")
 
         # Select only the columns I want to display
         selected_columns = ["X", "Y", "ClassType", "Cluster", "Probability", "D/ND", "C/NC"]
@@ -208,7 +209,7 @@ def app(selected_folder, lrf_path):
         event = st.dataframe(
             listview_df,
             use_container_width=True,
-            height=200,
+            height=300,
             hide_index=False,
             on_select="rerun",
             selection_mode=["single-row"]
@@ -227,6 +228,7 @@ def app(selected_folder, lrf_path):
                 if previous_selected_row_index != st.session_state.selected_row_index:
                     st.session_state.selection_source = "list"
 
+    # Map view
     with col2:
         # Create two columns
         col21, col22, col23= st.columns([5,2,2])
@@ -306,27 +308,27 @@ def app(selected_folder, lrf_path):
     defect_number = 0
     if st.session_state.selection_source == "list":
         selected_data = df.loc[st.session_state.selected_row_index]
-        # st.query_params.defect_no = st.session_state.selected_row_index
+        st.query_params.defect_no = st.session_state.selected_row_index
         defect_number = st.session_state.selected_row_index
 
     elif st.session_state.selection_source == "map":
         selected_data = df[df['No'] == st.session_state.selected_map_index]
-        # st.query_params.defect_no = st.session_state.selected_map_index
+        st.query_params.defect_no = st.session_state.selected_map_index
         defect_number = st.session_state.selected_map_index
 
     else:
         selected_data = df[df['No'] == 1]
 
-    # # Parse URL to get the 'lot' parameter
-    # query_params = st.query_params
-    # defect_number = query_params.get('defect_no', None)
+    # Parse URL to get the 'lot' parameter
+    query_params = st.query_params
+    defect_number = query_params.get('defect_no', None)
 
     # Find the index of the lot_name in filtered_folders
     if defect_number:
         defect_number = int(defect_number)
         if defect_number >= len(df):
             defect_number = 1
-        # st.query_params.defect_no = defect_number
+        st.query_params.defect_no = defect_number
         selected_data = df[df['No'] == defect_number]
 
     if selected_data is not None:
