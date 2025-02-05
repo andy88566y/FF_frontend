@@ -48,8 +48,6 @@ def reload_data(df):
 
 
 def app(selected_folder, lrf_path):
-    # selected_folder = st.query_params["lot"]
-    # lrf_path = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}_classified.lrf"
     defects = cached_read_defects(lrf_path)
 
     # Extract relevant columns and convert "X" and "Y" to floats
