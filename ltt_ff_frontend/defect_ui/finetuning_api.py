@@ -27,6 +27,12 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
         detailed_status_df['base_model_name'] = detailed_status_df['base_model_name'].apply(helper.format_model_name)
         detailed_status_df['output_model_name'] = detailed_status_df['output_model_name'].apply(helper.format_model_name)
 
+        # Add model name details to detailed status table
+        detailed_status_df['site'] = detailed_status_df['base_model_name'].apply(lambda x: helper.filter_details(x, 'site'))
+        detailed_status_df['tool'] = detailed_status_df['base_model_name'].apply(lambda x: helper.filter_details(x, 'tool'))
+        detailed_status_df['tech_layer'] = detailed_status_df['base_model_name'].apply(lambda x: helper.filter_details(x, 'tech_layer'))
+        detailed_status_df['layer_group'] = detailed_status_df['base_model_name'].apply(lambda x: helper.filter_details(x, 'layer_group'))
+
         # Sort jobs by start time
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
 
@@ -61,6 +67,10 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
                                                                                'total_epochs',
                                                                                'base_model_name',
                                                                                'output_model_name',
+                                                                               'site',
+                                                                               'tool',
+                                                                               'tech_layer',
+                                                                               'layer_group',
                                                                                'batch_size',
                                                                                'learning_rate',
                                                                                'training_info',
