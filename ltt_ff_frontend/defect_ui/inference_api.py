@@ -12,23 +12,40 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
     detailed_status_df = pd.DataFrame.from_dict(paged_statuses).T
 
     if not detailed_status_df.empty:
-        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s').dt.floor('S')
         detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+        # Add progress bar based on current job completion rate
         detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
+
+        # Convert model name to user-readable format
+        detailed_status_df['model_name'] = detailed_status_df['model_name'].apply(helper.format_model_name)
+
+        # Sort jobs by start time
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
+
+        # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
         detailed_status_df = detailed_status_df.rename(columns={'index': 'inference_id'})
 
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if 'end_time' in detailed_status_df.columns:
-            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
+            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s').dt.floor('S')
             detailed_status_df['end_time'] = detailed_status_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
+        # Update brief job list
         st.session_state.status_df_inf = detailed_status_df[brief]
 
+        # Don't show progress bar in the detailed status table
         detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
+
+        # Sort the items to show based on what may be important to user
         st.session_state.detailed_df_inf = detailed_status_df.reindex(columns=['inference_id',
                                                                                'status',
                                                                                'start_time',
                                                                                'end_time',
+                                                                               'model_name',
                                                                                'message',
                                                                                'lot_id',
                                                                                'output_dir',
