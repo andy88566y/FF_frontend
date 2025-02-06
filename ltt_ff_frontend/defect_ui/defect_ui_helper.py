@@ -55,6 +55,16 @@ def format_model_name(name: str) -> str:
     model_type, model_name = name.split("/")
     return f"[{model_type}] {model_name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
+def filter_details(name: str, detail: str) -> str:
+    split_model_name = name.split(' ')
+    if detail == 'site':
+        return split_model_name[1]
+    elif detail == 'tool':
+        return split_model_name[2]
+    elif detail == 'tech_layer':
+        return split_model_name[3]
+    elif detail == 'layer_group':
+        return split_model_name[4]
 
 @st.cache_data(ttl='10s')
 def generate_defect_list(db_path: str, confidence_threshold: float) -> list[str]:
