@@ -8,6 +8,7 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
+from ltt_ff_frontend.constant import DEFAULT_THRESHOLD
 
 
 DEFECT_COLOR_MAPPING = {
@@ -362,9 +363,9 @@ def app() -> None:
                                         format_func=helper.format_model_name)
 
     with r1_col4:
-        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.174, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
     with r2_col4:
-        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.174, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
+        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
 
     with r1_col5:
         if st.button("Generate new Model 1 .lrf"):
