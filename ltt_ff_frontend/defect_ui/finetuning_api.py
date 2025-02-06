@@ -89,7 +89,6 @@ def app() -> None:
 '''
 
     with r1_col2:
-        # TODO: Add yaml format help
         ft_configfile = st.file_uploader("Upload Multi-lot Fine-Tuning Config (.yaml)", type=".yaml", help=yaml_help_text)
 
     r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1, 1, 2, 2])
@@ -108,6 +107,8 @@ def app() -> None:
 
     if ft_configfile is not None:
         ft_config = yaml.load(ft_configfile, Loader=yaml.Loader)
+        if helper.check_valid_lrf_in_yaml(ft_config):
+            logger.info("All lrf_paths in .yaml config file are valid!")
         st.json(ft_config)
 
     if st.button("Start Fine-Tuning Job", type="primary"):

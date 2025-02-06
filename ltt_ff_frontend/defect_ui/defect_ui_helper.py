@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 from typing import Any
 
 import numpy as np
@@ -8,7 +9,7 @@ import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import API_ROOT
+from ltt_ff_frontend.constant import API_ROOT, ALLOWED_LRF_TYPES
 
 
 def gap(size: int) -> None:
@@ -494,3 +495,36 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
             logger.info(f'Status of finetuning request for {training_job}: {paged_statuses[training_job]}')
 
         return paged_statuses
+
+def check_valid_lrf_in_yaml(yaml_config: dict) -> bool:
+    '''
+    Ensures all .lrf files listed in the yaml config file are valid
+    (i.e. exists, has correct file extension, is lableled)
+
+    Args:
+        yaml_config: Dict containing training info such as lrf path, lot id, training image dir
+
+    Returns true if there are no invalid lrf files found (check passed), and returns false if
+    an invalid lrf file is found (check failed).
+    '''
+    # Extract all lrf paths from the yaml config
+    lrf_paths = [batch['lrf_path'] for batch in yaml_config['data_paths']]
+
+    for lrf_path in lrf_paths:
+        lrf_string = os.path.basename(lrf_path)
+
+        # Check .lrf file extension
+        if re.search(r".lrf$", lrf_string):
+            lrf_string = re.sub(r".lrf$", "", lrf_string)
+        else:
+            logger.error(f'Invalid lrf path found in .yaml config file: {lrf_string}. Check file extension.')
+            raise ValueError(f'Invalid lrf path found in .yaml config file: {lrf_string}. Check file extension.')
+
+        # Check invalid lrf types (lrf is not an allowed type and lrf is not 'filtered' type)
+        if not lrf_string.endswith(tuple(ALLOWED_LRF_TYPES)) and re.search(r'_filtered_\d{6}$', lrf_string) is None:
+            logger.error(f'''Invalid lrf path found in .yaml config file: {lrf_string}.
+                         Check that it belongs to one of these types: {ALLOWED_LRF_TYPES}''')
+            raise ValueError(f'''Invalid lrf path found in .yaml config file: {lrf_string}.
+                         Check that it belongs to one of these types: {ALLOWED_LRF_TYPES}''')
+
+        return True
