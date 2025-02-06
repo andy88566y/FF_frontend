@@ -424,7 +424,7 @@ def request_finetune(base_model: str,
                         "base_model_name": base_model,
                         "batch_size": 32,
                         "epochs": epochs,
-                        "lr": lr,
+                        "learning_rate": lr,
                         "model_naming": model_naming,
                         "training_info": multilot_config,
                     }, timeout=10)
