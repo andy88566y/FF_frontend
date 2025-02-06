@@ -13,31 +13,46 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
     detailed_status_df = pd.DataFrame.from_dict(paged_statuses).T
 
     if not detailed_status_df.empty:
-        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s')
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s').dt.floor('s')
         detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
+        # Get current and total epoch to caluclate progress
         current_epoch = detailed_status_df['current_epoch']
         total_epochs = detailed_status_df['total_epochs']
-
         detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_finetune_status_style(x, current_epoch, total_epochs))
+
+        # Convert model name to user-readable format
+        detailed_status_df['base_model_name'] = detailed_status_df['base_model_name'].apply(helper.format_model_name)
+        detailed_status_df['output_model_name'] = detailed_status_df['output_model_name'].apply(helper.format_model_name)
+
+        # Sort jobs by start time
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
+
+        # Rename index column so that detailed status table will show 'training_id' instead of 'index'
         detailed_status_df = detailed_status_df.rename(columns={'index': 'training_id'})
+
+        # Format training info (from yaml config) to be easily readable
         detailed_status_df['training_info'] = detailed_status_df['training_info'].map(lambda x: pformat(x))
 
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if 'end_time' in detailed_status_df.columns:
-            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s')
+            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s').dt.floor('s')
             detailed_status_df['end_time'] = detailed_status_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
+        # Rename epoch loss & validation loss column to 'debug' as it is for internal use only
         if 'training_history' in detailed_status_df.columns:
-            training_history = detailed_status_df['training_history'].values
-            detailed_status_df['debug'] = training_history
+            detailed_status_df = detailed_status_df.rename(columns={'training_history': 'debug'})
+            detailed_status_df['debug'] = detailed_status_df['debug'].map(lambda x: pformat(x))
 
+        # Update brief job list
         st.session_state.status_df_fin = detailed_status_df[brief]
 
+        # Don't show progress bar in the detailed status table
         detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
 
-
-
+        # Sort the items to show based on what may be important to user
         st.session_state.detailed_df_fin = detailed_status_df.reindex(columns=['training_id',
                                                                                'status',
                                                                                'start_time',

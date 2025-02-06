@@ -15,7 +15,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
     if not detailed_status_df.empty:
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s').dt.floor('S')
+        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s').dt.floor('s')
         detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         # Add progress bar based on current job completion rate
@@ -32,7 +32,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if 'end_time' in detailed_status_df.columns:
-            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s').dt.floor('S')
+            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s').dt.floor('s')
             detailed_status_df['end_time'] = detailed_status_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         # Update brief job list
