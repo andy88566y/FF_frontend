@@ -48,6 +48,9 @@ def return_finetune_status_style(status: str, current_epoch: int, total_epochs: 
         return 0
 
 def format_model_name(name: str) -> str:
+    if name == '' or '/' not in name:
+        logger.warning("Trying to format empty string or a string without /, returning empty string...")
+        return ''
     model_type, model_name = name.split("/")
     return f"[{model_type}] {model_name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
