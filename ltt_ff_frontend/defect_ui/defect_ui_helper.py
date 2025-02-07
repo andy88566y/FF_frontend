@@ -527,14 +527,14 @@ def check_valid_lrf_in_yaml(yaml_config: dict) -> bool:
         if re.search(r".lrf$", lrf_string):
             lrf_string = re.sub(r".lrf$", "", lrf_string)
         else:
-            logger.error(f'Invalid lrf path found in .yaml config file: {lrf_string}. Check file extension.')
-            raise ValueError(f'Invalid lrf path found in .yaml config file: {lrf_string}. Check file extension.')
+            logger.error(f'Invalid lrf path found in .yaml config file: {lrf_path}. Check file extension.')
+            raise ValueError(f'Invalid lrf path found in .yaml config file: {lrf_path}. Check file extension.')
 
         # Check invalid lrf types (lrf is not an allowed type and lrf is not 'filtered' type)
         if not lrf_string.endswith(tuple(ALLOWED_LRF_TYPES)) and re.search(r'_filtered_\d{6}$', lrf_string) is None:
-            logger.error(f'''Invalid lrf path found in .yaml config file: {lrf_string}.
+            logger.error(f'''Invalid lrf path found in .yaml config file: {lrf_path}.
                          Check that it belongs to one of these types: {ALLOWED_LRF_TYPES}''')
-            raise ValueError(f'''Invalid lrf path found in .yaml config file: {lrf_string}.
+            raise ValueError(f'''Invalid lrf path found in .yaml config file: {lrf_path}.
                          Check that it belongs to one of these types: {ALLOWED_LRF_TYPES}''')
 
         return True
