@@ -39,7 +39,7 @@ def return_finetune_status_style(status: str, current_epoch: int, total_epochs: 
     if status == "starting":
         return 10
     elif status == "running":
-        progress = ((current_epoch[-1] / total_epochs[-1]) * 90) + 10
+        progress = ((current_epoch / total_epochs) * 90) + 10
         return int(progress)
     elif status == "completed":
         return 100

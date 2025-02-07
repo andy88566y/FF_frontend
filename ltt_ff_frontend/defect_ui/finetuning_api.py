@@ -18,10 +18,8 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
         detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s').dt.floor('s')
         detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
-        # Get current and total epoch to caluclate progress
-        current_epoch = detailed_status_df['current_epoch']
-        total_epochs = detailed_status_df['total_epochs']
-        detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_finetune_status_style(x, current_epoch, total_epochs))
+        # Calculate progress for each job
+        detailed_status_df['progress_bar'] = detailed_status_df.apply(lambda row: helper.return_finetune_status_style(row['status'], row['current_epoch'], row['total_epochs']), axis=1)
 
         # Convert model name to user-readable format
         detailed_status_df['base_model_name'] = detailed_status_df['base_model_name'].apply(helper.format_model_name)
