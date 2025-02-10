@@ -143,7 +143,8 @@ def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: st
         inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
         confidence_threshold: Images with defect probability higher than confidence threshold
                                 is considered defective.
-        overwrite: Whether to overwrite the existing .db and .lrf files of the same name.
+        overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
+                   If overwrite=True, the entire result directory will be cleared.
 
     Returns the reponse of the API request.
     '''
