@@ -66,6 +66,7 @@ def app() -> None:
         inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
+        st.caption(":red[If Overwrite is set to true, all existing files in Result Directory will be removed.]")
 
     r2_col1, r2_col2 = st.columns([1, 1])
     with r2_col1:
