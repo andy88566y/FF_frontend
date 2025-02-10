@@ -9,7 +9,7 @@ import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import API_ROOT, ALLOWED_LRF_TYPES
+from ltt_ff_frontend.constant import API_ROOT, ALLOWED_LRF_TYPES, TIMEOUT
 
 
 def gap(size: int) -> None:
@@ -83,7 +83,7 @@ def generate_defect_list(db_path: str, confidence_threshold: float) -> list[str]
     results = requests.post(API_ROOT+'filter_threshold', json={
                         "db_path": db_path,
                         "confidence_threshold": confidence_threshold,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     status = results.json()['status']
 
@@ -117,7 +117,7 @@ def request_lrf(output_dir: str,
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "threshold": confidence_threshold,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     status = r.json()['status']
 
@@ -157,7 +157,7 @@ def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: st
                         "batch_size": inference_batch_size,
                         "overwrite": overwrite,
                         "use_cache": False
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     status = r.json()['status']
 
@@ -198,7 +198,7 @@ def request_inference_status(inference_id: str) -> requests.Response:
 
     Returns the response of the API request
     '''
-    r = requests.get(f"{API_ROOT}inference/status/{inference_id}", timeout=10)
+    r = requests.get(f"{API_ROOT}inference/status/{inference_id}", timeout=TIMEOUT)
 
     status = r.json()['status']
 
@@ -221,7 +221,7 @@ def request_all_inference_statuses() -> str:
 
     Returns the a list of statuses for all inference jobs.
     '''
-    r = requests.get(f"{API_ROOT}inference/get_all_status", timeout=10)
+    r = requests.get(f"{API_ROOT}inference/get_all_status", timeout=TIMEOUT)
 
     if r.json()['status'] == 'error':
         logger.error(r.json()['message'])
@@ -245,7 +245,7 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
 
     Returns the response of the API request
     '''
-    r = requests.get(f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
+    r = requests.get(f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
     logger.debug(r)
     if r.json()['status'] == 'error':
         logger.error(r.json()['message'])
@@ -273,7 +273,7 @@ def read_database(db_path: str) -> requests.Response:
 
     r = requests.post(API_ROOT+'read_database', json={
                         "db_path": db_path,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     status = r.json()['status']
 
@@ -300,7 +300,7 @@ def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "return_curve": return_curve,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     prc_data_list = r.json()['prc_data']
     prc_data_ndarray = tuple(np.array(data_list) for data_list in prc_data_list)
@@ -323,7 +323,7 @@ def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "return_curve": return_curve,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     roc_data_list = r.json()['roc_data']
     roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
@@ -347,7 +347,7 @@ def get_defect_id(output_dir: str, lot_id: str, model_name: str) -> list[int]:
                         "output_dir": output_dir,
                         "lot_id": lot_id,
                         "model_name": model_name,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
         logger.info("DB read started running successfully!")
@@ -375,7 +375,7 @@ def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: li
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "defect_id_list": defect_id,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
         logger.info("DB read started running successfully!")
@@ -403,7 +403,7 @@ def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[in
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "defect_id_list": defect_id,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
         logger.info("DB read started running successfully!")
@@ -437,7 +437,7 @@ def request_finetune(base_model: str,
                         "learning_rate": lr,
                         "model_naming": model_naming,
                         "training_info": multilot_config,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     status = r.json()['status']
 
@@ -455,7 +455,7 @@ def request_all_finetuning_statuses():
 
     Returns the a list of statuses for all finetuning jobs.
     '''
-    r = requests.get(f"{API_ROOT}train/get_all_status", timeout=10)
+    r = requests.get(f"{API_ROOT}train/get_all_status", timeout=TIMEOUT)
 
     if r.json()['status'] == 'error':
         logger.error(r.json()['message'])
@@ -473,7 +473,7 @@ def get_base_models() -> list[str]:
     '''
     Returns a list of all available models to be used for inference or fine-tuning.
     '''
-    r = requests.get(f'{API_ROOT}get_model_list', timeout=10)
+    r = requests.get(f'{API_ROOT}get_model_list', timeout=TIMEOUT)
 
     if r.json()['status'] == 'error':
         logger.error(r.json()['message'])
@@ -493,7 +493,7 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
 
     Returns the response of the API request
     '''
-    r = requests.get(f"{API_ROOT}train/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
+    r = requests.get(f"{API_ROOT}train/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
     logger.debug(r)
     if r.json()['status'] == 'error':
         logger.error(r.json()['message'])
