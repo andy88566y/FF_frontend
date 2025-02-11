@@ -247,8 +247,15 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
             yshift=-30,
         )
 
+        # Search for the marker whose threshold is equal or smaller than selected threshold.
+        # Note: need to reverse because threshold is from 1 to 0.
+        reversed_threshold = threshold[::-1]
+        selected_idx = np.searchsorted(reversed_threshold, model_threshold, side='left')
+        selected_idx = len(threshold) - selected_idx
+        if selected_idx == len(threshold):
+            selected_idx -= 1
+
         # Draw marker for current selected model threshold
-        selected_idx = np.argmin(np.abs(threshold - model_threshold))
         fig.add_trace(go.Scatter(
             x=[tnr[selected_idx]],
             y=[tpr[selected_idx]],
