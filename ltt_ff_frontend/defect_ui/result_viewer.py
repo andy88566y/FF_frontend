@@ -268,8 +268,8 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
         )
 
         if model_threshold != DEFAULT_THRESHOLD:
-            # Draw default 0.174 threshold
-            default_idx = np.argmin(np.abs(threshold - 0.174))
+            # Draw default threshold
+            default_idx = np.argmin(np.abs(threshold - DEFAULT_THRESHOLD))
             fig.add_trace(go.Scatter(
                 x=[tnr[default_idx]],
                 y=[tpr[default_idx]],
