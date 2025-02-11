@@ -235,7 +235,8 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
             mode="markers",
             marker={"color": "blue", "size": 10},
             name="Highest Filter Rate at 100% Capture Rate",
-            hovertext=f"Capture rate: {tpr[highest_fr_idx]}<br>Filter Rate: {tnr[highest_fr_idx]}",
+            hoverinfo='text',
+            hovertext=f"Highest Filter Rate at 100% Capture Rate<br> Capture rate: {tpr[highest_fr_idx]}<br>Filter Rate: {tnr[highest_fr_idx]}<br>Threshold: {threshold[highest_fr_idx]:.5f}",
         ))
 
         # Add annotation above the highest FR marker
@@ -261,35 +262,41 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
             y=[tpr[selected_idx]],
             mode="markers",
             marker={"color": "red", "size": 10},
-            name=f"Selected Threshold ({threshold[selected_idx]:.5f})",
-            hovertext=f"Capture rate: {tpr[selected_idx]}<br>Filter Rate: {tnr[selected_idx]}",
+            name=f"Selected Threshold ({model_threshold:.5f})",
+            hoverinfo='text',
+            hovertext=f"Selected Threshold<br>Capture rate: {tpr[selected_idx]}<br>Filter Rate: {tnr[selected_idx]}<br>Threshold: {model_threshold:.5f}",
         ))
 
         # Add annotation above current selected model threshold
         fig.add_annotation(
             x=tnr[selected_idx],
             y=tpr[selected_idx],
-            text=f"{model_name} Threshold = {threshold[selected_idx]:.5f} <br> Capture Rate: {tpr[selected_idx]:.4f} <br> Filter Rate: {tnr[selected_idx]:.4f}",
+            text=f"{model_name} Threshold = {model_threshold:.5f} <br> Capture Rate: {tpr[selected_idx]:.4f} <br> Filter Rate: {tnr[selected_idx]:.4f}",
             showarrow=False,
             yshift=30,
         )
 
+        # Draw default threshold
         if model_threshold != DEFAULT_THRESHOLD:
-            # Draw default threshold
-            default_idx = np.argmin(np.abs(threshold - DEFAULT_THRESHOLD))
+            default_idx = np.searchsorted(reversed_threshold, DEFAULT_THRESHOLD, side='left')
+            default_idx = len(threshold) - default_idx
+            if default_idx == len(threshold):
+                default_idx -= 1
+
             fig.add_trace(go.Scatter(
                 x=[tnr[default_idx]],
                 y=[tpr[default_idx]],
                 mode="markers",
                 marker={"color": "black", "size": 10},
-                name=f"Default ({threshold[default_idx]:.2f})",
-                hovertext=f"Capture rate: {tpr[default_idx]}<br>Filter Rate: {tnr[default_idx]}",
+                name=f"Default ({DEFAULT_THRESHOLD:.5f})",
+                hoverinfo='text',
+                hovertext=f"Default Threshold<br>Capture rate: {tpr[default_idx]}<br>Filter Rate: {tnr[default_idx]}<br>Threshold: {DEFAULT_THRESHOLD:.5f}",
             ))
 
             fig.add_annotation(
                 x=tnr[default_idx],
                 y=tpr[default_idx],
-                text=f"{model_name} Default threshold = {threshold[default_idx]:.5f} <br> Capture Rate: {tpr[default_idx]:.4f} <br> Filter Rate: {tnr[default_idx]:.4f}",
+                text=f"{model_name} Default threshold = {DEFAULT_THRESHOLD:.5f} <br> Capture Rate: {tpr[default_idx]:.4f} <br> Filter Rate: {tnr[default_idx]:.4f}",
                 showarrow=False,
                 yshift=-30,
             )
