@@ -9,66 +9,6 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
-def create_job_list(paged_statuses: dict[str, Any]) -> None:
-
-    detailed_status_df = pd.DataFrame.from_dict(paged_statuses).T
-
-    if not detailed_status_df.empty:
-
-        # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s').dt.floor('s')
-        detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-
-        # Calculate progress for each job
-        detailed_status_df['progress_bar'] = detailed_status_df['progress']
-
-        # Convert model name to user-readable format
-        detailed_status_df['base_model_name'] = detailed_status_df['base_model_name'].apply(helper.format_model_name)
-        detailed_status_df['output_model_name'] = detailed_status_df['output_model_name'].apply(helper.format_model_name)
-
-        # Sort jobs by start time
-        detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
-
-        # Rename index column so that detailed status table will show 'training_id' instead of 'index'
-        detailed_status_df = detailed_status_df.rename(columns={'index': 'training_id'})
-
-        # Format training info (from yaml config) to be easily readable
-        detailed_status_df['training_info'] = detailed_status_df['training_info'].map(lambda x: pformat(x))
-
-        # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        if 'end_time' in detailed_status_df.columns:
-            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s').dt.floor('s')
-            detailed_status_df['end_time'] = detailed_status_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-
-        # Rename epoch loss & validation loss column to 'debug' as it is for internal use only
-        if 'training_history' in detailed_status_df.columns:
-            detailed_status_df = detailed_status_df.rename(columns={'training_history': 'debug'})
-            detailed_status_df['debug'] = detailed_status_df['debug'].map(lambda x: pformat(x))
-
-        # Update brief job list
-        st.session_state.status_df_fin = detailed_status_df
-
-        # Don't show progress bar in the detailed status table
-        detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
-
-        # Sort the items to show based on what may be important to user
-        st.session_state.detailed_df_fin = detailed_status_df.reindex(columns=['training_id',
-                                                                               'status',
-                                                                               'start_time',
-                                                                               'end_time',
-                                                                               'current_epoch',
-                                                                               'total_epochs',
-                                                                               'base_model_name',
-                                                                               'output_model_name',
-                                                                               'site',
-                                                                               'tool',
-                                                                               'tech_layer',
-                                                                               'layer_group',
-                                                                               'batch_size',
-                                                                               'learning_rate',
-                                                                               'training_info',
-                                                                               'debug',])
-
 def app() -> None:
     logger.debug("Loading Fine-Tuning Dashboard...")
     st.title("False Filter Fine-Tuning")
@@ -139,17 +79,18 @@ def app() -> None:
 
     st.divider()
 
-    col1, col2 = st.columns(2, vertical_alignment='bottom')
+    if 'status_df_fin' not in st.session_state:
+        st.session_state.status_df_fin = pd.DataFrame()
+    if 'detailed_df_fin' not in st.session_state:
+        st.session_state.detailed_df_fin = pd.DataFrame()
 
-    # headers required for the brief job descriptions
-    brief = ['training_id', 'status','progress_bar']
+    col1, col2 = st.columns(2, vertical_alignment='bottom')
 
     with col1:
         if st.button('Check all finetuning jobs'):
             page_size = 10
             current_page = 1
-            paged_statuses = helper.request_paginated_finetuning_status(page_size, current_page)
-            create_job_list(paged_statuses)
+            st.session_state.status_df_fin = helper.request_paginated_finetuning_status(page_size, current_page)
 
     progress_column = st.column_config.ProgressColumn(
         label='progress_bar',
@@ -157,20 +98,13 @@ def app() -> None:
         max_value=100
     )
 
-    if 'status_df_fin' not in st.session_state:
-        st.session_state.status_df_fin = pd.DataFrame()
-    if 'detailed_df_fin' not in st.session_state:
-        st.session_state.detailed_df_fin = pd.DataFrame()
-
     # Pagination settings
     with col2:
-        if not st.session_state.status_df_fin.empty:
-            page_size = 10
-            current_page = st.number_input('Page number', min_value=1, value=1, step=1)
-            paged_statuses = helper.request_paginated_finetuning_status(page_size, current_page)
-            create_job_list(paged_statuses)
+        page_size = 10
+        current_page = st.number_input('Page number', min_value=1, value=1, step=1)
+        st.session_state.status_df_fin = helper.request_paginated_finetuning_status(page_size, current_page)
 
-    st.header('All fine-tuning jobs')  if not st.session_state.status_df_fin.empty else st.write('')
+    st.header('All fine-tuning jobs') if not st.session_state.status_df_fin.empty else st.write('')
 
     # Selection to find more detail
     event_fin = st.dataframe(
@@ -179,12 +113,14 @@ def app() -> None:
         on_select = 'rerun',
         selection_mode = 'multi-row',
         use_container_width=True,
-        column_config={'progress_bar': progress_column}
+        column_config={'progress': progress_column}
     ) if not st.session_state.status_df_fin.empty else st.write('')
 
     if event_fin and event_fin.selection:
         if event_fin.selection['rows']:
-            selected_indices = [st.session_state.status_df_fin.index[i] for i in event_fin.selection['rows']]
-            selected_rows = st.session_state.detailed_df_fin.loc[selected_indices]
-            transposed_detail = selected_rows.T
-            st.dataframe(transposed_detail, use_container_width= True )
+            # Get list of training_id for all selected fientuning jobs
+            selected_finetuning_id = [st.session_state.status_df_fin.iloc[i]['training_id'] for i in event_fin.selection['rows']]
+
+            # Get detailed statuses for each finetuning job and combine into one df
+            st.session_state.detailed_df_fin = helper.request_finetuning_statuses(selected_finetuning_id)
+            st.dataframe(st.session_state.detailed_df_fin, use_container_width=True)
