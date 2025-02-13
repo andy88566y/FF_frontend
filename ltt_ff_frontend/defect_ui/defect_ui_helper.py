@@ -1,6 +1,7 @@
 import glob
 import os
 import re
+from pprint import pformat
 from typing import Any
 
 import numpy as np
@@ -9,7 +10,7 @@ import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import API_ROOT
+from ltt_ff_frontend.constant import ALLOWED_LRF_TYPES, API_ROOT, TIMEOUT
 
 
 def gap(size: int) -> None:
@@ -23,66 +24,32 @@ def gap(size: int) -> None:
         st.write('')
 
 
-def return_status_style(status: str) -> int:
-    if status == "starting":
-        return 10
-    elif status == "running":
-        return 70
-    elif status == "completed":
-        return 100
-    elif status == "error":
-        return 0
-    else:
-        return 0
-
-def return_finetune_status_style(status: str, current_epoch: int, total_epochs: int) -> int:
-    if status == "starting":
-        return 10
-    elif status == "running":
-        progress = ((current_epoch[-1] / total_epochs[-1]) * 90) + 10
-        return int(progress)
-    elif status == "completed":
-        return 100
-    elif status == "error":
-        return 0
-    else:
-        return 0
-
 def format_model_name(name: str) -> str:
-    model_type, model_name = name.split("/")
-    return f"[{model_type}] {model_name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
-
-
-@st.cache_data(ttl='10s')
-def generate_defect_list(db_path: str, confidence_threshold: float) -> list[str]:
-    '''
-    From the inference result, filter images with probability higher than confidence threshold.
-    These images are considered to be defects.
-
-    Args:
-        db_path: Absolute path to database containing inference results
-        confidence_threshold: Images with defect probability lower than confidence threshold
-                                is considered defective.
-
-    Returns a list of ID numbers of the defect images.
-    '''
-
-    results = requests.post(API_ROOT+'filter_threshold', json={
-                        "db_path": db_path,
-                        "confidence_threshold": confidence_threshold,
-                    }, timeout=10)
-
-    status = results.json()['status']
-
-    if status == 'started':
-        logger.info("Threshold filter successfully started!")
+    # For base model name (e.g. base/LTT_SW#x9u#N3#M0-M2#20250124T000000Z#55032dae#55032dae.encrypted.pth)
+    if '/' in name:
+        model_type, model_name = name.split("/")
+        return f"[{model_type}] {model_name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
+    # For output model name (e.g. 13feb_minye#x9u#tl#lg20250213T151435Z#55032dae#5fb1017f)
     else:
-        logger.error(f"Error occurred when calling inference API: {results.json()['message']}")
-
-    return results.json()['defect_list']
+        return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
 
-@st.cache_data(ttl='5s')
+@st.cache_data(ttl='1s')
+def get_base_models() -> list[str]:
+    '''
+    Returns a list of all available models to be used for inference or fine-tuning.
+    '''
+    r = requests.get(f'{API_ROOT}get_model_list', timeout=TIMEOUT)
+
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return []
+    else:
+        base_model_list = r.json()['model_list']
+        logger.info(f'List of base models: {base_model_list}')
+        return base_model_list
+
+
 def request_lrf(output_dir: str,
                 lot_id: str,
                 model_name: str,
@@ -104,7 +71,7 @@ def request_lrf(output_dir: str,
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "threshold": confidence_threshold,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     status = r.json()['status']
 
@@ -115,7 +82,7 @@ def request_lrf(output_dir: str,
 
     return r
 
-@st.cache_data(ttl='10s')
+
 def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
                       inference_batch_size: int = 32, confidence_threshold: float = 0.174, overwrite: bool = False) -> requests.Response:
     '''
@@ -130,7 +97,8 @@ def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: st
         inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
         confidence_threshold: Images with defect probability higher than confidence threshold
                                 is considered defective.
-        overwrite: Whether to overwrite the existing .db and .lrf files of the same name.
+        overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
+                   If overwrite=True, the entire result directory will be cleared.
 
     Returns the reponse of the API request.
     '''
@@ -144,7 +112,7 @@ def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: st
                         "batch_size": inference_batch_size,
                         "overwrite": overwrite,
                         "use_cache": False
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     status = r.json()['status']
 
@@ -155,71 +123,6 @@ def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: st
 
     return r
 
-
-def get_files_by_format(format: str) -> list[str]:
-    '''
-    Search for all file names that end with the input format.
-
-    Args:
-        format: File extension (e.g. .db, .txt)
-
-    Returns a list of absolute paths to the files that match the format.
-    '''
-    return glob.glob(f"{st.session_state.global_output_dir}/**/*{format}", recursive=True)
-
-
-def get_all_lots() -> list[str]:
-    '''
-    Returns a list of files and directories in the output directory.
-    '''
-    return os.listdir(st.session_state.global_input_dir)
-
-
-@st.cache_data(ttl='1s')
-def request_inference_status(inference_id: str) -> requests.Response:
-    '''
-    Gets inference status by calling FalseFilter API
-
-    Args:
-      inference_id: Name of the inference job
-
-    Returns the response of the API request
-    '''
-    r = requests.get(f"{API_ROOT}inference/status/{inference_id}", timeout=10)
-
-    status = r.json()['status']
-
-    # TODO: The check is NOT working as intended...
-    if status == 'starting':
-        logger.info(f"Inference status request for {inference_id} was successful!")
-    elif status == 'running':
-        logger.info(f"Inference status request for {inference_id} is ongoing...")
-    elif status == 'completed':
-        logger.info(f"Inference status request for {inference_id} is completed.")
-    else:
-        logger.error(f"Unknown status for {inference_id}: {r.json()['message']}")
-
-    return r
-
-@st.cache_data(ttl='1s')
-def request_all_inference_statuses() -> str:
-    '''
-    Gets inference status for all inference jobs by calling FalseFilter API
-
-    Returns the a list of statuses for all inference jobs.
-    '''
-    r = requests.get(f"{API_ROOT}inference/get_all_status", timeout=10)
-
-    if r.json()['status'] == 'error':
-        logger.error(r.json()['message'])
-        return {}
-    else:
-        all_statuses = r.json()['result']
-
-        for inference_job in all_statuses:
-            logger.info(f'Status of inference request for {inference_job}: {all_statuses[inference_job]}')
-
-        return all_statuses
 
 @st.cache_data(ttl='1s')
 def request_paginated_inference_status(page_size: int, current_page: int) -> str:
@@ -232,44 +135,321 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
 
     Returns the response of the API request
     '''
-    r = requests.get(f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
-    logger.debug(r)
-    if r.json()['status'] == 'error':
-        logger.error(r.json()['message'])
-        return {}
-    else:
-        paged_statuses = r.json()['result']
+    r = requests.get(f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
+    paged_statuses = r.json()
+    logger.info(f'Status of inference request [{current_page}, {page_size}]: {paged_statuses}')
 
-        for inference_job in paged_statuses:
-            logger.info(f'Status of inference request for {inference_job}: {paged_statuses[inference_job]}')
+    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
 
-        return paged_statuses
+    if not paged_statuses_df.empty:
 
-@st.cache_data(ttl='10s')
-def read_database(db_path: str) -> requests.Response:
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        paged_statuses_df['start_time'] = pd.to_datetime(paged_statuses_df['start_time'], unit='s').dt.floor('s')
+        paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+        # Sort jobs by start time
+        paged_statuses_df = paged_statuses_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
+
+        # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
+        paged_statuses_df = paged_statuses_df.rename(columns={'index': 'inference_id'})
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        if 'end_time' in paged_statuses_df.columns:
+            paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
+            paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+    # Change ordering
+    sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
+        'inference_id',
+        'status',
+        'progress',
+        'lot_id',
+        'total_images',
+        'start_time',
+        'end_time',
+    ])
+
+    # For columns not included above, just add them to the back.
+    for column in paged_statuses_df.columns:
+        if column not in sorted_paged_statuses_df.columns:
+            sorted_paged_statuses_df[column] = paged_statuses_df[column]
+
+    return sorted_paged_statuses_df
+
+
+@st.cache_data(ttl='1s')
+def request_inference_status(inference_id: str) -> requests.Response:
     '''
-    Calls DB API to read a database file.
+    Gets inference status by calling FalseFilter API
 
     Args:
-        db_dir: Directory where the .db file is stored.
-        lot_id: The name of the lot of images.
+      inference_id: Name of the inference job
 
-    Returns the reponse of the API request, including the data read from the database,
-    as a pandas dataframe.
+    Returns the response of the API request
     '''
+    r = requests.get(f"{API_ROOT}inference/status/{inference_id}", timeout=TIMEOUT)
+    return r.json()
 
-    r = requests.post(API_ROOT+'read_database', json={
-                        "db_path": db_path,
-                    }, timeout=10)
+
+@st.cache_data(ttl='1s')
+def request_inference_statuses(inference_id_list: list[str]) -> pd.DataFrame:
+    '''
+    Gets inference status by calling FalseFilter API
+
+    Args:
+      inference_id_list: List of inference id to get statuses for.
+
+    Returns the response of the API request
+    '''
+    detailed_inference_statuses = {}
+    for inference_id in inference_id_list:
+        detailed_inference_statuses[inference_id] = request_inference_status(inference_id)
+
+    return format_inference_status(pd.DataFrame.from_dict(detailed_inference_statuses).T).T
+
+
+def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Format and sort the detailed inference status dataframe.
+
+    Args:
+        inference_status: Dataframe containing raw inference job status details.
+
+    Returns a processed dataframe with adjusted timezones and formatted details.
+    '''
+    if not inference_status.empty:
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        inference_status['start_time'] = pd.to_datetime(inference_status['start_time'], unit='s').dt.floor('s')
+        inference_status['start_time'] = inference_status['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+        # Convert model name to user-readable format
+        inference_status['model_name'] = inference_status['model_name'].apply(format_model_name)
+
+        # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
+        inference_status = inference_status.rename(columns={'index': 'inference_id'})
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        if 'end_time' in inference_status.columns:
+            inference_status['end_time'] = pd.to_datetime(inference_status['end_time'], unit='s').dt.floor('s')
+            inference_status['end_time'] = inference_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+    # Change ordering
+    sorted_inference_statuses_df = inference_status.reindex(columns=[
+        'status',
+        'progress',
+        'start_time',
+        'end_time',
+        'lot_id',
+        'total_images',
+        'image_dir',
+        'lrf_path',
+        'lrf_type',
+        'model_name',
+        'output_dir',
+        'message',
+        'error_message',
+    ])
+
+    # For columns not included above, just add them to the back.
+    for column in inference_status.columns:
+        if column not in sorted_inference_statuses_df.columns:
+            sorted_inference_statuses_df[column] = inference_status[column]
+
+    return sorted_inference_statuses_df
+
+
+def request_finetune(base_model: str,
+                     model_naming: tuple[str, str, str, str],
+                     multilot_config: dict,
+                     epochs: int,
+                     lr: float) -> requests.Response:
+    '''
+    Calls FFA model fine-tuning.
+
+    Args:
+        base_model: Name of model to finetune.
+        model_naming: Details to be used for re-trained model (site, tool, tech layer, layer group)
+        multilot_config: Dict containing training data info (lot id, lrf path, image dir)
+        epochs: Number of training epochs.
+        lr: Learning rate.
+
+    Returns the reponse of the API request.
+    '''
+    # TODO: Check multilot_config is valid structure
+
+    r = requests.post(API_ROOT+'train', json={
+        "base_model_name": base_model,
+        "batch_size": 32,
+        "epochs": epochs,
+        "learning_rate": lr,
+        "model_naming": model_naming,
+        "training_info": multilot_config,
+    }, timeout=TIMEOUT)
 
     status = r.json()['status']
 
     if status == 'started':
-        logger.info("DB read started running successfully!")
+        logger.info("Model fine-tuning started running successfully!")
     else:
-        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        logger.error(f"Error occurred when calling fine-tuning API: {r.json()['message']}")
 
-    return pd.DataFrame.from_dict(r.json()['results'])
+    return r
+
+
+@st.cache_data(ttl='1s')
+def request_paginated_finetuning_status(page_size: int, current_page: int) -> dict[str, Any]:
+    '''
+    Gets pagainated inference status by calling FalseFilter API
+
+    Args:
+        page_size : the number of entries to be shown on the dataframe
+        current_page : the page that is current requested
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}train/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
+    paged_statuses = r.json()
+    logger.info(f'Status of finetuning request [{current_page}, {page_size}]: {paged_statuses}')
+
+    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
+
+    if not paged_statuses_df.empty:
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        paged_statuses_df['start_time'] = pd.to_datetime(paged_statuses_df['start_time'], unit='s').dt.floor('s')
+        paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+        # Convert model name to user-readable format
+        paged_statuses_df['base_model_name'] = paged_statuses_df['base_model_name'].apply(format_model_name)
+
+        # Sort jobs by start time
+        paged_statuses_df = paged_statuses_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
+
+        # Rename index column so that detailed status table will show 'training_id' instead of 'index'
+        paged_statuses_df = paged_statuses_df.rename(columns={'index': 'training_id'})
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        if 'end_time' in paged_statuses_df.columns:
+            paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
+            paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+    # Change ordering
+    sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
+        'training_id',
+        'status',
+        'progress',
+        'start_time',
+        'end_time',
+        'base_model_name',
+        'site',
+        'tool',
+        'tech_layer',
+        'layer_group',
+    ])
+
+    # For columns not included above, just add them to the back.
+    for column in paged_statuses_df.columns:
+        if column not in sorted_paged_statuses_df.columns:
+            sorted_paged_statuses_df[column] = paged_statuses_df[column]
+
+    return sorted_paged_statuses_df
+
+
+@st.cache_data(ttl='1s')
+def request_finetuning_status(finetuning_id: str) -> requests.Response:
+    '''
+    Gets finetuning status by calling FalseFilter API
+
+    Args:
+      finetuning_id: Name of the finetuning job
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}train/status/{finetuning_id}", timeout=TIMEOUT)
+    return r.json()
+
+
+@st.cache_data(ttl='1s')
+def request_finetuning_statuses(finetuning_id_list: list[str]) -> pd.DataFrame:
+    '''
+    Gets finetuning status by calling FalseFilter API
+
+    Args:
+      finetuning_id_list: List of training id to get statuses for.
+
+    Returns the response of the API request
+    '''
+    detailed_finetuning_statuses = {}
+    for training_id in finetuning_id_list:
+        detailed_finetuning_statuses[training_id] = request_finetuning_status(training_id)
+
+    return format_finetuning_status(pd.DataFrame.from_dict(detailed_finetuning_statuses).T).T
+
+
+def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Format and sort the detailed finetuning status dataframe.
+
+    Args:
+        finetuning_status: Dataframe containing raw finetuning job status details.
+
+    Returns a processed dataframe with adjusted timezones and formatted details.
+    '''
+    if not finetuning_status.empty:
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        finetuning_status['start_time'] = pd.to_datetime(finetuning_status['start_time'], unit='s').dt.floor('s')
+        finetuning_status['start_time'] = finetuning_status['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+        # Convert model name to user-readable format
+        finetuning_status['base_model_name'] = finetuning_status['base_model_name'].apply(format_model_name)
+        finetuning_status['output_model_name'] = finetuning_status['output_model_name'].apply(format_model_name)
+
+        # Format training info (from yaml config) to be easily readable
+        finetuning_status['training_info'] = finetuning_status['training_info'].map(lambda x: pformat(x))
+
+        # Format epoch loss and validation loss to be more readable
+        if 'debug' in finetuning_status.columns:
+            finetuning_status['debug'] = finetuning_status['debug'].map(lambda x: pformat(x))
+
+        # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
+        finetuning_status = finetuning_status.rename(columns={'index': 'inference_id'})
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        if 'end_time' in finetuning_status.columns:
+            finetuning_status['end_time'] = pd.to_datetime(finetuning_status['end_time'], unit='s').dt.floor('s')
+            finetuning_status['end_time'] = finetuning_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+    # Change ordering
+    sorted_finetuning_statuses_df = finetuning_status.reindex(columns=[
+        'status',
+        'progress',
+        'start_time',
+        'end_time',
+        'base_model_name',
+        'site',
+        'tool',
+        'tech_layer',
+        'layer_group',
+        'output_model_name',
+        'current_epoch',
+        'total_epochs',
+        'batch_size',
+        'learning_rate',
+        'training_info',
+        'debug',
+        'message',
+        'error_message',
+    ])
+
+    # For columns not included above, just add them to the back.
+    for column in finetuning_status.columns:
+        if column not in sorted_finetuning_statuses_df.columns:
+            sorted_finetuning_statuses_df[column] = finetuning_status[column]
+
+    return sorted_finetuning_statuses_df
+
 
 @st.cache_data(ttl='1s')
 def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -287,12 +467,13 @@ def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "return_curve": return_curve,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     prc_data_list = r.json()['prc_data']
     prc_data_ndarray = tuple(np.array(data_list) for data_list in prc_data_list)
 
     return prc_data_ndarray
+
 
 @st.cache_data(ttl='1s')
 def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -310,12 +491,13 @@ def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "return_curve": return_curve,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     roc_data_list = r.json()['roc_data']
     roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
 
     return roc_data_ndarray
+
 
 @st.cache_data(ttl='1s')
 def get_defect_id(output_dir: str, lot_id: str, model_name: str) -> list[int]:
@@ -334,7 +516,7 @@ def get_defect_id(output_dir: str, lot_id: str, model_name: str) -> list[int]:
                         "output_dir": output_dir,
                         "lot_id": lot_id,
                         "model_name": model_name,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
         logger.info("DB read started running successfully!")
@@ -342,6 +524,7 @@ def get_defect_id(output_dir: str, lot_id: str, model_name: str) -> list[int]:
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
 
 @st.cache_data(ttl='1s')
 def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[float]:
@@ -362,7 +545,7 @@ def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: li
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "defect_id_list": defect_id,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
         logger.info("DB read started running successfully!")
@@ -370,6 +553,7 @@ def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: li
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
 
 @st.cache_data(ttl='1s')
 def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[int]:
@@ -390,7 +574,7 @@ def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[in
                         "lot_id": lot_id,
                         "model_name": model_name,
                         "defect_id_list": defect_id,
-                    }, timeout=10)
+                    }, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
         logger.info("DB read started running successfully!")
@@ -399,99 +583,39 @@ def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[in
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
-@st.cache_data(ttl='10s')
-def request_finetune(base_model: str,
-                     model_naming: tuple[str, str, str, str],
-                     multilot_config: dict,
-                     epochs: int,
-                     lr: float) -> requests.Response:
+
+def check_valid_lrf_in_yaml(yaml_config: dict) -> bool:
     '''
-    Calls FFA model fine-tuning.
+    Ensures all .lrf files listed in the yaml config file are valid
+    (i.e. exists, has correct file extension, is lableled)
 
     Args:
-        base_model: Name of model to finetune.
-        model_naming: Details to be used for re-trained model (site, tool, tech layer, layer group)
-        multilot_config: Dict containing training data info (lot id, lrf path, image dir)
-        epochs: Number of training epochs.
-        lr: Learning rate.
+        yaml_config: Dict containing training info such as lrf path, lot id, training image dir
 
-    Returns the reponse of the API request.
+    Returns true if there are no invalid lrf files found (check passed), and returns false if
+    an invalid lrf file is found (check failed).
     '''
-    r = requests.post(API_ROOT+'train', json={
-                        "base_model_name": base_model,
-                        "batch_size": 32,
-                        "epochs": epochs,
-                        "lr": lr,
-                        "model_naming": model_naming,
-                        "training_info": multilot_config,
-                    }, timeout=10)
+    # Extract all lrf paths from the yaml config
+    lrf_paths = [batch['lrf_path'] for batch in yaml_config['data_paths']]
 
-    status = r.json()['status']
+    for lrf_path in lrf_paths:
+        lrf_string = os.path.basename(lrf_path)
 
-    if status == 'started':
-        logger.info("Model fine-tuning started running successfully!")
-    else:
-        logger.error(f"Error occurred when calling fine-tuning API: {r.json()['message']}")
+        # Check .lrf file extension
+        if re.search(r".lrf$", lrf_string):
+            lrf_string = re.sub(r".lrf$", "", lrf_string)
+        else:
+            logger.error(f'Invalid lrf path found in .yaml config file: {lrf_path}. Check file extension.')
+            raise ValueError(f'Invalid lrf path found in .yaml config file: {lrf_path}. Check file extension.')
 
-    return r
+        # Check invalid lrf types (lrf is not an allowed type and lrf is not 'filtered' type)
+        if not lrf_string.endswith(tuple(ALLOWED_LRF_TYPES)) and re.search(r'_filtered_\d{6}$', lrf_string) is None:
+            logger.error(f'''Invalid lrf path found in .yaml config file: {lrf_path}.
+                         Check that it belongs to one of these types: {ALLOWED_LRF_TYPES}''')
+            raise ValueError(f'''Invalid lrf path found in .yaml config file: {lrf_path}.
+                         Check that it belongs to one of these types: {ALLOWED_LRF_TYPES}''')
 
-@st.cache_data(ttl='1s')
-def request_all_finetuning_statuses():
-    '''
-    Gets finetuning status for all finetuning jobs by calling FalseFilter API
-
-    Returns the a list of statuses for all finetuning jobs.
-    '''
-    r = requests.get(f"{API_ROOT}train/get_all_status", timeout=10)
-
-    if r.json()['status'] == 'error':
-        logger.error(r.json()['message'])
-        return {}
-    else:
-        all_statuses = r.json()['result']
-
-        for training_job in all_statuses:
-            logger.info(f'Status of finetuning request for {training_job}: {all_statuses[training_job]["status"]}')
-
-        return all_statuses
-
-@st.cache_data(ttl='1s')
-def get_base_models() -> list[str]:
-    '''
-    Returns a list of all available models to be used for inference or fine-tuning.
-    '''
-    r = requests.get(f'{API_ROOT}get_model_list', timeout=10)
-
-    if r.json()['status'] == 'error':
-        logger.error(r.json()['message'])
-        return []
-    else:
-        base_model_list = r.json()['model_list']
-        logger.info(f'List of base models: {base_model_list}')
-        return base_model_list
-
-def request_paginated_finetuning_status(page_size: int, current_page: int) -> dict[str, Any]:
-    '''
-    Gets pagainated inference status by calling FalseFilter API
-
-    Args:
-        page_size : the number of entries to be shown on the dataframe
-        current_page : the page that is current requested
-
-    Returns the response of the API request
-    '''
-    r = requests.get(f"{API_ROOT}train/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=10)
-    logger.debug(r)
-    if r.json()['status'] == 'error':
-        logger.error(r.json()['message'])
-        return {}
-    else:
-        paged_statuses = r.json()['result']
-
-        for training_job in paged_statuses:
-            logger.info(f'Status of finetuning request for {training_job}: {paged_statuses[training_job]}')
-
-        return paged_statuses
+        return True
 
 def check_matching_lot_id(image_dir: str, lrf_path: str) -> bool:
     '''

@@ -1,5 +1,5 @@
-from typing import Any
 import os
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from loguru import logger
 
+from ltt_ff_frontend.constant import DEFAULT_THRESHOLD
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
@@ -212,64 +213,90 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
         fpr, tpr, threshold = data
         tnr = 1 - fpr
 
+        # Draw the main curve
         fig.add_trace(go.Scatter(x=tnr, y=tpr, mode="lines", name=model_name, hoverinfo='text+name',
                                  hovertext=[f'Capture rate: {x}<br>Filter Rate: {y}<br>Threshold: {z}' for x, y, z in zip(tpr, tnr, threshold)]))
+
+        # Add a diagonal grey dotted-line
         fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode="lines", line={"dash": "dash", "color": "grey"}, name="Random"))
 
+        # Search for index of highest FR when CR = 1
+        cr_one_indices = np.where(tpr == 1.0)[0]
+        highest_fr_idx = cr_one_indices[0]
+        for idx in cr_one_indices:
+            if tnr[idx] > tnr[highest_fr_idx]:
+                highest_fr_idx = idx
+        logger.debug(f'Index of highest filter rate when capture rate is 100%: {highest_fr_idx}')
+
         # Draw highest FR when CR = 1
-        capture_all_idx = np.where(tpr == 1.0)[0][0]
         fig.add_trace(go.Scatter(
-            x=[tnr[capture_all_idx]],
-            y=[tpr[capture_all_idx]],
+            x=[tnr[highest_fr_idx]],
+            y=[tpr[highest_fr_idx]],
             mode="markers",
             marker={"color": "blue", "size": 10},
             name="Highest Filter Rate at 100% Capture Rate",
-            hovertext=f"Capture rate: {tpr[capture_all_idx]}<br>Filter Rate: {tnr[capture_all_idx]}",
+            hoverinfo='text',
+            hovertext=f"Highest Filter Rate at 100% Capture Rate<br> Capture rate: {tpr[highest_fr_idx]}<br>Filter Rate: {tnr[highest_fr_idx]}<br>Threshold: {threshold[highest_fr_idx]:.5f}",
         ))
 
+        # Add annotation above the highest FR marker
         fig.add_annotation(
-            x=tnr[capture_all_idx],
-            y=tpr[capture_all_idx],
-            text=f"{model_name} Threshold = {threshold[capture_all_idx]:.2f} <br> Capture Rate: {tpr[capture_all_idx]:.4f} <br> Filter Rate: {tnr[capture_all_idx]:.4f}",
+            x=tnr[highest_fr_idx],
+            y=tpr[highest_fr_idx],
+            text=f"{model_name} Threshold = {threshold[highest_fr_idx]:.5f} <br> Capture Rate: {tpr[highest_fr_idx]:.4f} <br> Filter Rate: {tnr[highest_fr_idx]:.4f}",
             showarrow=False,
             yshift=-30,
         )
 
-        # Draw current selected model threshold
-        selected_idx = np.argmin(np.abs(threshold - model_threshold))
+        # Search for the marker whose threshold is equal or smaller than selected threshold.
+        # Note: need to reverse because threshold is from 1 to 0.
+        reversed_threshold = threshold[::-1]
+        selected_idx = np.searchsorted(reversed_threshold, model_threshold, side='left')
+        selected_idx = len(threshold) - selected_idx
+        if selected_idx == len(threshold):
+            selected_idx -= 1
+
+        # Draw marker for current selected model threshold
         fig.add_trace(go.Scatter(
             x=[tnr[selected_idx]],
             y=[tpr[selected_idx]],
             mode="markers",
             marker={"color": "red", "size": 10},
-            name=f"Selected Threshold ({threshold[selected_idx]:.2f})",
-            hovertext=f"Capture rate: {tpr[selected_idx]}<br>Filter Rate: {tnr[selected_idx]}",
+            name=f"Selected Threshold ({model_threshold:.5f})",
+            hoverinfo='text',
+            hovertext=f"Selected Threshold<br>Capture rate: {tpr[selected_idx]}<br>Filter Rate: {tnr[selected_idx]}<br>Threshold: {model_threshold:.5f}",
         ))
 
+        # Add annotation above current selected model threshold
         fig.add_annotation(
             x=tnr[selected_idx],
             y=tpr[selected_idx],
-            text=f"{model_name} Threshold = {threshold[selected_idx]:.2f} <br> Capture Rate: {tpr[selected_idx]:.4f} <br> Filter Rate: {tnr[selected_idx]:.4f}",
+            text=f"{model_name} Threshold = {model_threshold:.5f} <br> Capture Rate: {tpr[selected_idx]:.4f} <br> Filter Rate: {tnr[selected_idx]:.4f}",
             showarrow=False,
             yshift=30,
         )
 
-        if model_threshold != 0.174:
-            # Draw default 0.174 threshold
-            default_idx = np.argmin(np.abs(threshold - 0.174))
+        # Draw default threshold
+        if model_threshold != DEFAULT_THRESHOLD:
+            default_idx = np.searchsorted(reversed_threshold, DEFAULT_THRESHOLD, side='left')
+            default_idx = len(threshold) - default_idx
+            if default_idx == len(threshold):
+                default_idx -= 1
+
             fig.add_trace(go.Scatter(
                 x=[tnr[default_idx]],
                 y=[tpr[default_idx]],
                 mode="markers",
                 marker={"color": "black", "size": 10},
-                name=f"Default ({threshold[default_idx]:.2f})",
-                hovertext=f"Capture rate: {tpr[default_idx]}<br>Filter Rate: {tnr[default_idx]}",
+                name=f"Default ({DEFAULT_THRESHOLD:.5f})",
+                hoverinfo='text',
+                hovertext=f"Default Threshold<br>Capture rate: {tpr[default_idx]}<br>Filter Rate: {tnr[default_idx]}<br>Threshold: {DEFAULT_THRESHOLD:.5f}",
             ))
 
             fig.add_annotation(
                 x=tnr[default_idx],
                 y=tpr[default_idx],
-                text=f"{model_name} Threshold = {threshold[default_idx]:.2f} <br> Capture Rate: {tpr[default_idx]:.4f} <br> Filter Rate: {tnr[default_idx]:.4f}",
+                text=f"{model_name} Default threshold = {DEFAULT_THRESHOLD:.5f} <br> Capture Rate: {tpr[default_idx]:.4f} <br> Filter Rate: {tnr[default_idx]:.4f}",
                 showarrow=False,
                 yshift=-30,
             )
@@ -278,7 +305,7 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
         title="Capture Rate / Filter Rate Curve",
         xaxis_title="Filter Rate",
         yaxis_title="Capture Rate",
-        legend_title="Models",
+        legend_title="Legends",
         template="plotly_white",
         showlegend=True,
         xaxis={"range": [0.0, 1.05]},
@@ -362,9 +389,9 @@ def app() -> None:
                                         format_func=helper.format_model_name)
 
     with r1_col4:
-        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.174, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
     with r2_col4:
-        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, 0.174, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
+        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
 
     with r1_col5:
         if st.button("Generate new Model 1 .lrf"):
