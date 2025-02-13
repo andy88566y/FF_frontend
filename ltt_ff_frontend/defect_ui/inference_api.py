@@ -8,51 +8,6 @@ from ltt_ff_frontend.constant import DEFAULT_THRESHOLD
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
-def create_job_list(paged_statuses: dict[str, Any]) -> None:
-
-    detailed_status_df = pd.DataFrame.from_dict(paged_statuses).T
-
-    if not detailed_status_df.empty:
-
-        # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        detailed_status_df['start_time'] = pd.to_datetime(detailed_status_df['start_time'], unit='s').dt.floor('s')
-        detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-
-        # Add progress bar based on current job completion rate
-        detailed_status_df['progress_bar'] = detailed_status_df['progress']
-
-        # Convert model name to user-readable format
-        detailed_status_df['model_name'] = detailed_status_df['model_name'].apply(helper.format_model_name)
-
-        # Sort jobs by start time
-        detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
-
-        # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        detailed_status_df = detailed_status_df.rename(columns={'index': 'inference_id'})
-
-        # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        if 'end_time' in detailed_status_df.columns:
-            detailed_status_df['end_time'] = pd.to_datetime(detailed_status_df['end_time'], unit='s').dt.floor('s')
-            detailed_status_df['end_time'] = detailed_status_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-
-        # Update brief job list
-        st.session_state.status_df_inf = detailed_status_df
-
-        # Don't show progress bar in the detailed status table
-        detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
-
-        # Sort the items to show based on what may be important to user
-        st.session_state.detailed_df_inf = detailed_status_df.reindex(columns=['inference_id',
-                                                                               'status',
-                                                                               'start_time',
-                                                                               'end_time',
-                                                                               'model_name',
-                                                                               'message',
-                                                                               'lot_id',
-                                                                               'output_dir',
-                                                                               'total_images',
-                                                                               'lrf_type',])
-
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")
     st.title("False Filter Inference")
@@ -108,14 +63,18 @@ def app() -> None:
 
     st.divider()
 
+    if 'status_df_inf' not in st.session_state:
+        st.session_state.status_df_inf = pd.DataFrame()
+    if 'detailed_df_inf' not in st.session_state:
+        st.session_state.detailed_df_inf = pd.DataFrame()
+
     col1, col2 = st.columns(2, vertical_alignment='bottom')
 
     with col1:
         if st.button('Check all inference jobs'):
             page_size = 10
             current_page = 1
-            paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
-            create_job_list(paged_statuses)
+            st.session_state.status_df_inf = helper.request_paginated_inference_status(page_size, current_page)
 
     progress_column = st.column_config.ProgressColumn(
         label='progress_bar',
@@ -123,19 +82,11 @@ def app() -> None:
         max_value=100
     )
 
-    if 'status_df_inf' not in st.session_state:
-        st.session_state.status_df_inf = pd.DataFrame()
-    if 'detailed_df_inf' not in st.session_state:
-        st.session_state.detailed_df_inf = pd.DataFrame()
-
     # Pagination settings
     with col2:
-        if not st.session_state.status_df_inf.empty:
-            page_size = 10
-
-            current_page = st.number_input('Page number', min_value=1, value=1, step=1)
-            paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
-            create_job_list(paged_statuses)
+        page_size = 10
+        current_page = st.number_input('Page number', min_value=1, value=1, step=1)
+        st.session_state.status_df_inf = helper.request_paginated_inference_status(page_size, current_page)
 
     st.header('All inference jobs') if not st.session_state.status_df_inf.empty else st.write('')
 
@@ -146,14 +97,15 @@ def app() -> None:
         on_select = 'rerun',
         selection_mode = 'multi-row',
         use_container_width=True,
-        column_config={'progress_bar': progress_column}
+        column_config={'progress': progress_column}
     ) if not st.session_state.status_df_inf.empty else st.write('')
 
     if event_inf and event_inf.selection:
     # Check if the 'row' value's list is not empty
         if event_inf.selection['rows']:
-            # Extract the selected rows based on the indices
-            selected_indices = [st.session_state.status_df_inf.index[i] for i in event_inf.selection['rows']]
-            selected_rows = st.session_state.detailed_df_inf.loc[selected_indices]
-            transposed_detail = selected_rows.T
-            st.dataframe(transposed_detail, use_container_width=True)
+            # Get list of inference_id for all selected inference jobs
+            selected_inference_id = [st.session_state.status_df_inf.iloc[i]['inference_id'] for i in event_inf.selection['rows']]
+
+            # Get detailed statuses for each inference job and combine into one df
+            st.session_state.detailed_df_inf = helper.request_inference_statuses(selected_inference_id)
+            st.dataframe(st.session_state.detailed_df_inf, use_container_width=True)
