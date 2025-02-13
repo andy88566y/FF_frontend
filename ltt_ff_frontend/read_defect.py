@@ -2,6 +2,7 @@
 
 import os
 import re
+from typing import Any
 
 from loguru import logger
 
@@ -180,7 +181,7 @@ def get_lrf_type(lrf_path: str) -> str:
         return 'base'
 
 
-def lrf_parser(lrf_path: str) -> list[dict[str, str]]:
+def read_defects(lrf_path: str) -> dict[str, Any]:
     logger.info(f"Reading LRF file from {lrf_path}")
 
     lrf_type = get_lrf_type(lrf_path)
