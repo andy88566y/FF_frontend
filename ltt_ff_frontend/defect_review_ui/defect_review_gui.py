@@ -1,5 +1,5 @@
-import os
 import base64
+import os
 
 import streamlit as st
 from loguru import logger

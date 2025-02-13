@@ -1,5 +1,5 @@
-from typing import Any
 import os
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -7,8 +7,8 @@ import plotly.graph_objects as go
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 from ltt_ff_frontend.constant import DEFAULT_THRESHOLD
+from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
 DEFECT_COLOR_MAPPING = {
