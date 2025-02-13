@@ -1,16 +1,16 @@
 import random
 
 import matplotlib
+import matplotlib.pyplot as plt
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
-import matplotlib.pyplot as plt
-from sklearn.cluster import DBSCAN
 from loguru import logger
+from sklearn.cluster import DBSCAN
 
-from ltt_ff_frontend.read_defect import read_defects
 from ltt_ff_frontend.defect_review_ui import detail_view
 from ltt_ff_frontend.defect_ui.defect_ui_helper import get_probability
+from ltt_ff_frontend.read_defect import read_defects
 
 
 # Cache the read_defects function

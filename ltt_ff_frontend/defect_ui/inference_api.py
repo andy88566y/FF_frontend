@@ -4,11 +4,11 @@ import pandas as pd
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 from ltt_ff_frontend.constant import DEFAULT_THRESHOLD
+from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
-def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
+def create_job_list(paged_statuses: dict[str, Any]) -> None:
 
     detailed_status_df = pd.DataFrame.from_dict(paged_statuses).T
 
@@ -19,7 +19,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
         detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         # Add progress bar based on current job completion rate
-        detailed_status_df['progress_bar'] = detailed_status_df['status'].apply(lambda x: helper.return_status_style(x))
+        detailed_status_df['progress_bar'] = detailed_status_df['progress']
 
         # Convert model name to user-readable format
         detailed_status_df['model_name'] = detailed_status_df['model_name'].apply(helper.format_model_name)
@@ -36,7 +36,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
             detailed_status_df['end_time'] = detailed_status_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         # Update brief job list
-        st.session_state.status_df_inf = detailed_status_df[brief]
+        st.session_state.status_df_inf = detailed_status_df
 
         # Don't show progress bar in the detailed status table
         detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
@@ -110,15 +110,12 @@ def app() -> None:
 
     col1, col2 = st.columns(2, vertical_alignment='bottom')
 
-    # headers required for the brief job descriptions
-    brief = ['inference_id', 'status','progress_bar', 'total_images']
-
     with col1:
         if st.button('Check all inference jobs'):
             page_size = 10
             current_page = 1
             paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
-            create_job_list(paged_statuses, brief)
+            create_job_list(paged_statuses)
 
     progress_column = st.column_config.ProgressColumn(
         label='progress_bar',
@@ -138,7 +135,7 @@ def app() -> None:
 
             current_page = st.number_input('Page number', min_value=1, value=1, step=1)
             paged_statuses = helper.request_paginated_inference_status(page_size, current_page)
-            create_job_list(paged_statuses, brief)
+            create_job_list(paged_statuses)
 
     st.header('All inference jobs') if not st.session_state.status_df_inf.empty else st.write('')
 

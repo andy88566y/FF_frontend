@@ -1,5 +1,5 @@
-from typing import Any
 from pprint import pformat
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -8,7 +8,8 @@ from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
-def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
+
+def create_job_list(paged_statuses: dict[str, Any]) -> None:
 
     detailed_status_df = pd.DataFrame.from_dict(paged_statuses).T
 
@@ -19,17 +20,11 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
         detailed_status_df['start_time'] = detailed_status_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         # Calculate progress for each job
-        detailed_status_df['progress_bar'] = detailed_status_df.apply(lambda row: helper.return_finetune_status_style(row['status'], row['current_epoch'], row['total_epochs']), axis=1)
+        detailed_status_df['progress_bar'] = detailed_status_df['progress']
 
         # Convert model name to user-readable format
         detailed_status_df['base_model_name'] = detailed_status_df['base_model_name'].apply(helper.format_model_name)
         detailed_status_df['output_model_name'] = detailed_status_df['output_model_name'].apply(helper.format_model_name)
-
-        # Add model name details to detailed status table
-        detailed_status_df['site'] = detailed_status_df['base_model_name'].apply(lambda x: helper.filter_details(x, 'site'))
-        detailed_status_df['tool'] = detailed_status_df['base_model_name'].apply(lambda x: helper.filter_details(x, 'tool'))
-        detailed_status_df['tech_layer'] = detailed_status_df['base_model_name'].apply(lambda x: helper.filter_details(x, 'tech_layer'))
-        detailed_status_df['layer_group'] = detailed_status_df['base_model_name'].apply(lambda x: helper.filter_details(x, 'layer_group'))
 
         # Sort jobs by start time
         detailed_status_df = detailed_status_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
@@ -51,7 +46,7 @@ def create_job_list(paged_statuses: dict[str, Any], brief: list[str]) -> None:
             detailed_status_df['debug'] = detailed_status_df['debug'].map(lambda x: pformat(x))
 
         # Update brief job list
-        st.session_state.status_df_fin = detailed_status_df[brief]
+        st.session_state.status_df_fin = detailed_status_df
 
         # Don't show progress bar in the detailed status table
         detailed_status_df = detailed_status_df.drop(columns=['progress_bar'])
@@ -154,7 +149,7 @@ def app() -> None:
             page_size = 10
             current_page = 1
             paged_statuses = helper.request_paginated_finetuning_status(page_size, current_page)
-            create_job_list(paged_statuses, brief)
+            create_job_list(paged_statuses)
 
     progress_column = st.column_config.ProgressColumn(
         label='progress_bar',
@@ -171,10 +166,9 @@ def app() -> None:
     with col2:
         if not st.session_state.status_df_fin.empty:
             page_size = 10
-
             current_page = st.number_input('Page number', min_value=1, value=1, step=1)
             paged_statuses = helper.request_paginated_finetuning_status(page_size, current_page)
-            create_job_list(paged_statuses, brief)
+            create_job_list(paged_statuses)
 
     st.header('All fine-tuning jobs')  if not st.session_state.status_df_fin.empty else st.write('')
 
