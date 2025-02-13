@@ -30,38 +30,28 @@ def app():
         encoded_image_dir_as_bytes = str.encode(encoded_image_dir_as_str)
         decoded_image_dir_as_bytes = base64.urlsafe_b64decode(encoded_image_dir_as_bytes)
         decoded_image_dir_as_str = decoded_image_dir_as_bytes.decode()
-        st.session_state.image_dir = decoded_image_dir_as_str
     if isinstance(encoded_lrf_path_as_str, str):
         encoded_lrf_path_as_bytes = str.encode(encoded_lrf_path_as_str)
         decoded_lrf_path_as_bytes = base64.urlsafe_b64decode(encoded_lrf_path_as_bytes)
         decoded_lrf_path_as_str = decoded_lrf_path_as_bytes.decode()
-        st.session_state.lrf_path = decoded_lrf_path_as_str
 
+    # If text input fields are not empty, assign values to url params
     col1, col2 = st.columns([1, 1])
     with col1:
         text_input_image_dir = st.text_input(label='Image Directory', value=st.session_state.image_dir)
+        if text_input_image_dir:
+            st.query_params.image_dir = base64.urlsafe_b64encode(str.encode(text_input_image_dir)).decode()
     with col2:
         text_input_lrf_path = st.text_input(label='.lrf Path', value=st.session_state.lrf_path)
+        if text_input_lrf_path:
+            st.query_params.lrf_path = base64.urlsafe_b64encode(str.encode(text_input_lrf_path)).decode()
 
     if not text_input_image_dir or not text_input_lrf_path:
         st.caption("Please input an Image Directory and an .lrf path to begin reviewing defects.")
 
-    # Use the decoded image_dir and lrf_path if they are valid.
-    # Otherwise, use the input from the text fields + encode them and store in query_params.
-    if decoded_image_dir_as_str and decoded_lrf_path_as_str:
-        if not os.path.isdir(decoded_image_dir_as_str):
-            raise ValueError(f'Image directory in URL is invalid: {decoded_image_dir_as_str}')
-
-        if not os.path.exists(decoded_lrf_path_as_str):
-            raise ValueError(f'.lrf Path in URL is invalid: {decoded_lrf_path_as_str}')
-
-        if not check_matching_lot_id(decoded_image_dir_as_str, decoded_lrf_path_as_str):
-            raise ValueError(f'Lot IDs do not match: {decoded_image_dir_as_str} and {decoded_lrf_path_as_str}')
-
-        logger.info('URL params successfully parsed.')
-        list_view.app(decoded_image_dir_as_str, decoded_lrf_path_as_str)
-
-    elif text_input_image_dir and text_input_lrf_path:
+    # Use input from text fields if they exist
+    # Otherwise, assign URL params to session state and refresh
+    if text_input_image_dir and text_input_lrf_path:
         if not os.path.isdir(text_input_image_dir):
             raise ValueError(f'Input Image directory in text field is invalid: {text_input_image_dir}')
 
@@ -69,9 +59,22 @@ def app():
             raise ValueError(f'Input .lrf Path in text field is invalid: {text_input_lrf_path}')
 
         if not check_matching_lot_id(text_input_image_dir, text_input_lrf_path):
-            raise ValueError(f'Lot IDs do not match: {text_input_image_dir} and {text_input_lrf_path}')
+            raise ValueError(f'Text input Lot IDs do not match: {text_input_image_dir} and {text_input_lrf_path}')
 
-        st.query_params.image_dir = base64.urlsafe_b64encode(str.encode(text_input_image_dir)).decode()
-        st.query_params.lrf_path = base64.urlsafe_b64encode(str.encode(text_input_lrf_path)).decode()
         logger.info('Input field params encoded and stored in URL.')
         list_view.app(text_input_image_dir, text_input_lrf_path)
+
+    elif decoded_image_dir_as_str and decoded_lrf_path_as_str:
+        if not os.path.isdir(decoded_image_dir_as_str):
+            raise ValueError(f'Image directory in URL is invalid: {decoded_image_dir_as_str}')
+
+        if not os.path.exists(decoded_lrf_path_as_str):
+            raise ValueError(f'.lrf Path in URL is invalid: {decoded_lrf_path_as_str}')
+
+        if not check_matching_lot_id(decoded_image_dir_as_str, decoded_lrf_path_as_str):
+            raise ValueError(f'URL Lot IDs do not match: {decoded_image_dir_as_str} and {decoded_lrf_path_as_str}')
+
+        logger.info('URL params successfully parsed.')
+        st.session_state.image_dir = decoded_image_dir_as_str
+        st.session_state.lrf_path = decoded_lrf_path_as_str
+        st.rerun()
