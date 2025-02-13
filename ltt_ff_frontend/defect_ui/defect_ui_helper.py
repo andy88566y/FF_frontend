@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 from typing import Any
 
 import numpy as np
@@ -491,3 +492,20 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
             logger.info(f'Status of finetuning request for {training_job}: {paged_statuses[training_job]}')
 
         return paged_statuses
+
+def check_matching_lot_id(image_dir: str, lrf_path: str) -> bool:
+    '''
+    Extract lot ID from image_dir, and try to find it in the lrf filename.
+    Currently unable to extra lot ID from lrf_path to do an exact match,
+    as too many underscores are used as separators.
+
+    Args:
+        image_dir: Image directory containing the "Images" folder
+        lrf_path: Absolute path to the .lrf file.
+
+    Returns true if the lot ID found in image_dir is also found in lrf_path.
+    Otherwise, it returns false.
+    '''
+    image_dir_lot_id = os.path.basename(image_dir)
+    lrf_filename = os.path.basename(lrf_path)
+    return re.search(image_dir_lot_id, lrf_filename)
