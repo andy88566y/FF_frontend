@@ -2,7 +2,7 @@
 
 import os
 import re
-from typing import Any
+from typing import Optional, Any
 
 from loguru import logger
 
@@ -161,24 +161,44 @@ CLASSTYPE_MAPPING = {
 }
 
 
-def get_lrf_type(lrf_path: str) -> str:
-
+def get_lrf_type(lrf_path: str, lot_id: Optional[str] = None) -> str:
     logger.info(f'Getting lrf type from {lrf_path}')
-
     lrf_string = os.path.basename(lrf_path)
-    if re.search(r".lrf$", lrf_string):
-        lrf_string = re.sub(r".lrf$", "", lrf_string)
 
-    if lrf_string.endswith(("_ADD", "_ADC", "_classified")):
-        lrf_type = lrf_string.split('_')[-1]
-        logger.success(f'{os.path.basename(lrf_path)} is a [{lrf_type}] lrf file.')
-        return lrf_type
-    elif re.search(r'_filtered_\d{6}$', lrf_string) is not None:
-        logger.success(f'{os.path.basename(lrf_path)} is a [filtered] lrf file.')
-        return 'filtered'
+    # lrf filename format: "<optional_prefix>_<lot_id>_<lrf_type>.lrf"
+    # Check lot_id in lrf
+    if lot_id is not None:
+        special_types = ['filtered', 'base']
+        lrf_types_str = '|'.join([k for k in CLASSTYPE_MAPPING.keys() if k not in special_types])
+        lrf_suffix_pattern = f"{lot_id}(_({lrf_types_str}|filtered_(\d{6}|top\d{3}))){{0,1}}\.lrf$"
+        lrf_type_str = re.search(lrf_suffix_pattern, lrf_string)
+        if lrf_type_str is None:
+            logger.warning(f'{lrf_string} is invalid lrf filename.')
+            return None
+        else:
+            lrf_type = lrf_type_str.group(0).split(lot_id)[-1].split('.')[0].split("_")[1]
+            if lrf_type in CLASSTYPE_MAPPING.keys():
+                logger.success(f'{lrf_string} is a [{lrf_type}] lrf file.')
+                return lrf_type
+            else:
+                logger.success(f'{lrf_string} is a [base] lrf file.')
+                return 'base'
     else:
-        logger.success(f'{os.path.basename(lrf_path)} is a [base] lrf file.')
-        return 'base'
+        special_types = ['filtered', 'base']
+        lrf_types_str = '|'.join([k for k in CLASSTYPE_MAPPING.keys() if k not in special_types])
+        lrf_suffix_pattern = f"(_({lrf_types_str}|filtered_(\d{6}|top\d{3}))){{0,1}}\.lrf$"
+        lrf_type_str = re.search(lrf_suffix_pattern, lrf_string)
+        if lrf_type_str is None:
+            logger.warning(f'{lrf_string} is invalid lrf filename.')
+            return None
+        else:
+            if lrf_type_str.group(1) == "":
+                logger.success(f'Assuming {lrf_string} is a [base] lrf file as no lot_id is given to check.')
+                return 'base'
+            else:
+                lrf_type = lrf_type_str.group(1).split("_")[1]
+                logger.success(f'{lrf_string} is a [{lrf_type}] lrf file.')
+                return lrf_type
 
 
 def read_defects(lrf_path: str) -> dict[str, Any]:
