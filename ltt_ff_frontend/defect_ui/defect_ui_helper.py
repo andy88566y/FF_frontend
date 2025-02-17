@@ -638,6 +638,9 @@ def check_valid_lrf_in_yaml(yaml_config: dict) -> bool:
     if lrf_type is None:
         logger.error("INVALID_LRF_NAME", "Invalid lrf filename. LRF did NOT follow `<optional_prefix>_<lot_id>_<lrf_type>.lrf` format")
         raise ValueError("INVALID_LRF_NAME", "Invalid lrf filename. LRF did NOT follow `<optional_prefix>_<lot_id>_<lrf_type>.lrf` format")
+    elif lrf_type == 'base':
+        logger.error('Cannot use unlabeled .lrf for finetuning!')
+        raise ValueError('Cannot use unlabeled .lrf for finetuning!')
 
     return True
 
