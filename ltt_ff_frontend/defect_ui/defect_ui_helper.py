@@ -11,6 +11,7 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.constant import ALLOWED_LRF_TYPES, API_ROOT, TIMEOUT
+from ltt_ff_frontend.read_defect import get_lrf_type
 
 
 def gap(size: int) -> None:
@@ -77,6 +78,38 @@ def request_lrf(output_dir: str,
 
     if status == 'started':
         logger.info(".lrf generation requested successfully!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+
+    return r
+
+
+def request_top_k_lrf(output_dir: str,
+                      lot_id: str,
+                      model_name: str,
+                      top_k: int) -> requests.Response:
+    '''
+    Call FalseFilter API to generate an .lrf with top K defects
+
+    Args:
+        output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
+        lot_id: Name of the lot
+        model_name: Name of the inference model.
+        top_k: The top k number of defects will be labeled as defects.
+
+    Returns the reponse of the API request.
+    '''
+    r = requests.post(API_ROOT+'generate_top_k_lrf', json={
+                        "output_dir": output_dir,
+                        "lot_id": lot_id,
+                        "model_name": model_name,
+                        "top_k": top_k,
+                    }, timeout=TIMEOUT)
+
+    status = r.json()['status']
+
+    if status == 'started':
+        logger.info("Top k .lrf generation requested successfully!")
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
 
@@ -597,25 +630,16 @@ def check_valid_lrf_in_yaml(yaml_config: dict) -> bool:
     '''
     # Extract all lrf paths from the yaml config
     lrf_paths = [batch['lrf_path'] for batch in yaml_config['data_paths']]
+    lot_ids = [batch['lot_id'] for batch in yaml_config['data_paths']]
 
-    for lrf_path in lrf_paths:
-        lrf_string = os.path.basename(lrf_path)
+    for lrf_path, lot_id in zip(lrf_paths, lot_ids):
+        lrf_type = get_lrf_type(os.path.basename(lrf_path), lot_id)
 
-        # Check .lrf file extension
-        if re.search(r".lrf$", lrf_string):
-            lrf_string = re.sub(r".lrf$", "", lrf_string)
-        else:
-            logger.error(f'Invalid lrf path found in .yaml config file: {lrf_path}. Check file extension.')
-            raise ValueError(f'Invalid lrf path found in .yaml config file: {lrf_path}. Check file extension.')
+    if lrf_type is None:
+        logger.error("INVALID_LRF_NAME", "Invalid lrf filename. LRF did NOT follow `<optional_prefix>_<lot_id>_<lrf_type>.lrf` format")
+        raise ValueError("INVALID_LRF_NAME", "Invalid lrf filename. LRF did NOT follow `<optional_prefix>_<lot_id>_<lrf_type>.lrf` format")
 
-        # Check invalid lrf types (lrf is not an allowed type and lrf is not 'filtered' type)
-        if not lrf_string.endswith(tuple(ALLOWED_LRF_TYPES)) and re.search(r'_filtered_\d{6}$', lrf_string) is None:
-            logger.error(f'''Invalid lrf path found in .yaml config file: {lrf_path}.
-                         Check that it belongs to one of these types: {ALLOWED_LRF_TYPES}''')
-            raise ValueError(f'''Invalid lrf path found in .yaml config file: {lrf_path}.
-                         Check that it belongs to one of these types: {ALLOWED_LRF_TYPES}''')
-
-        return True
+    return True
 
 def check_matching_lot_id(image_dir: str, lrf_path: str) -> bool:
     '''
