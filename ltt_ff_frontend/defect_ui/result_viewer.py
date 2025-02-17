@@ -390,6 +390,7 @@ def app() -> None:
 
     with r1_col4:
         rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+
     with r2_col4:
         rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
 
@@ -412,6 +413,13 @@ def app() -> None:
                 # TODO: Check file generated
                 st.success(f'New .lrf file (threshold: {rv_m1_threshold}) generated at {rv_m1_output_dir}!')
                 logger.info(f'New .lrf file (threshold: {rv_m1_threshold}) generated at {rv_m1_output_dir}!')
+
+        if st.button("Generate Model 1 .lrf with top 150 defects"):
+            helper.request_top_k_lrf(output_dir=rv_m1_output_dir,
+                                     lot_id=rv_m1_lot_id,
+                                     model_name=rv_m1_model_name,
+                                     top_k=150)
+
     with r2_col5:
         if st.button("Generate new Model 2 .lrf"):
 
@@ -431,6 +439,12 @@ def app() -> None:
                 # TODO: Check file generated
                 st.success(f'New .lrf file (threshold: {rv_m2_threshold}) generated at {rv_m2_output_dir}!')
                 logger.info(f'New .lrf file (threshold: {rv_m2_threshold}) generated at {rv_m2_output_dir}!')
+
+        if st.button("Generate Model 2 .lrf with top 150 defects"):
+            helper.request_top_k_lrf(output_dir=rv_m2_output_dir,
+                                     lot_id=rv_m2_lot_id,
+                                     model_name=rv_m2_model_name,
+                                     top_k=150)
 
     st.divider()
 
@@ -488,6 +502,13 @@ def app() -> None:
                 if set(model_1_raw_data[2]) == {-1}:
                     # All data is unlabeled
                     st.markdown("##### All data is unlabeled! Skipping chart.")
+
+                    #If no ROC, just calculate filter rate
+                    defect_list, prob_list, _ = model_1_raw_data
+                    total_defects = len(defect_list)
+                    filtered_count = len([p for p in prob_list if p < rv_m1_threshold])
+                    st.success(f'False Filter Rate is {filtered_count/total_defects:.4f} at selected threshold ({rv_m1_threshold:.5f})')
+
                 else:
                     model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
                     st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold)]))

@@ -176,8 +176,10 @@ def get_lrf_type(lrf_path: str, lot_id: Optional[str] = None) -> str:
             logger.warning(f'{lrf_string} is invalid lrf filename.')
             return None
         else:
-            lrf_type = lrf_type_str.group(0).split(lot_id)[-1].split('.')[0].split("_")[1]
-            if lrf_type in CLASSTYPE_MAPPING.keys():
+            # Cannot split _ here as base lrf does not have any underscores
+            lrf_type = lrf_type_str.group(0).split(lot_id)[-1].split('.')[0]
+
+            if "_" in lrf_type and lrf_type.split("_")[1] in CLASSTYPE_MAPPING.keys():
                 logger.success(f'{lrf_string} is a [{lrf_type}] lrf file.')
                 return lrf_type
             else:
@@ -188,11 +190,12 @@ def get_lrf_type(lrf_path: str, lot_id: Optional[str] = None) -> str:
         lrf_types_str = '|'.join([k for k in CLASSTYPE_MAPPING.keys() if k not in special_types])
         lrf_suffix_pattern = f"(_({lrf_types_str}|filtered_(\d{6}|top\d{3}))){{0,1}}\.lrf$"
         lrf_type_str = re.search(lrf_suffix_pattern, lrf_string)
+
         if lrf_type_str is None:
             logger.warning(f'{lrf_string} is invalid lrf filename.')
             return None
         else:
-            if lrf_type_str.group(1) == "":
+            if lrf_type_str.group(1) is None:
                 logger.success(f'Assuming {lrf_string} is a [base] lrf file as no lot_id is given to check.')
                 return 'base'
             else:
