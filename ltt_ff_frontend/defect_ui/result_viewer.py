@@ -502,6 +502,13 @@ def app() -> None:
                 if set(model_1_raw_data[2]) == {-1}:
                     # All data is unlabeled
                     st.markdown("##### All data is unlabeled! Skipping chart.")
+
+                    #If no ROC, just calculate filter rate
+                    defect_list, prob_list, _ = model_1_raw_data
+                    total_defects = len(defect_list)
+                    filtered_count = len([p for p in prob_list if p < rv_m1_threshold])
+                    st.success(f'False Filter Rate is {filtered_count/total_defects:.4f} at selected threshold ({rv_m1_threshold:.5f})')
+
                 else:
                     model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
                     st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold)]))
