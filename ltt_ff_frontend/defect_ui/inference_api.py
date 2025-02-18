@@ -2,7 +2,6 @@ import pandas as pd
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import DEFAULT_THRESHOLD
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
@@ -13,10 +12,10 @@ def app() -> None:
 
     r1_col1, r1_col2, r1_col3 = st.columns([3, 2, 2])
     with r1_col1:
-        inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0,
-                                        format_func=helper.format_model_name)
+        inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0, format_func=helper.format_model_name)
     with r1_col2:
-        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
+        model_threshold = helper.get_model_threshold(model_name=inf_base_model)
+        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_threshold, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
         st.caption(":red[If Overwrite is set to true, all existing files in Result Directory will be removed.]")
