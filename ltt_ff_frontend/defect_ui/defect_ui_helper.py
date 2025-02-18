@@ -69,17 +69,12 @@ def get_model_threshold(model_name: str) -> float:
         return model_threshold
 
 
-def request_lrf(output_dir: str,
-                lot_id: str,
-                model_name: str,
-                confidence_threshold: float) -> requests.Response:
+def request_lrf(output_dir: str, confidence_threshold: float) -> requests.Response:
     '''
     Calls FalseFilter API with use_cache=True.
 
     Args:
         output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
-        lot_id: Name of the lot
-        model_name: Name of the inference model.
         confidence_threshold: Images with defect probability lower than confidence threshold
                                 is considered defective.
 
@@ -87,8 +82,6 @@ def request_lrf(output_dir: str,
     '''
     r = requests.post(API_ROOT+'generate_lrf', json={
                         "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
                         "threshold": confidence_threshold,
                     }, timeout=TIMEOUT)
 
@@ -102,25 +95,18 @@ def request_lrf(output_dir: str,
     return r
 
 
-def request_top_k_lrf(output_dir: str,
-                      lot_id: str,
-                      model_name: str,
-                      top_k: int) -> requests.Response:
+def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
     '''
     Call FalseFilter API to generate an .lrf with top K defects
 
     Args:
         output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
-        lot_id: Name of the lot
-        model_name: Name of the inference model.
         top_k: The top k number of defects will be labeled as defects.
 
     Returns the reponse of the API request.
     '''
     r = requests.post(API_ROOT+'generate_top_k_lrf', json={
                         "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
                         "top_k": top_k,
                     }, timeout=TIMEOUT)
 
@@ -591,22 +577,18 @@ def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
 
 
 @st.cache_data(ttl='1s')
-def get_defect_id(output_dir: str, lot_id: str, model_name: str) -> list[int]:
+def get_defect_id(output_dir: str) -> list[int]:
     '''
     Get list of defect IDs from a database.
 
     Args:
         output_dir: Root output directory where inference results were stored.
-        lot_id: Name of the lot of defect images.
-        model_name: Name of model used to run inference.
 
         Returns:
             A list of the defect IDs of a lot of images.
     '''
     r = requests.get(API_ROOT+'get_defect_id', json={
                         "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
                     }, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
@@ -618,14 +600,12 @@ def get_defect_id(output_dir: str, lot_id: str, model_name: str) -> list[int]:
 
 
 @st.cache_data(ttl='1s')
-def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[float]:
+def get_probability(output_dir: str, defect_id: list[int]) -> list[float]:
     """
     Read a list of the defect probabilities from a database.
 
     Args:
         output_dir: Root output directory where inference results were stored.
-        lot_id: Name of the lot of defect images.
-        model_name: Name of model used to run inference.
         defect_id: ID of the defect images
 
     Returns:
@@ -633,8 +613,6 @@ def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: li
     """
     r = requests.get(API_ROOT+'get_probability', json={
                         "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
                         "defect_id_list": defect_id,
                     }, timeout=TIMEOUT)
 
@@ -647,14 +625,12 @@ def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: li
 
 
 @st.cache_data(ttl='1s')
-def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[int]:
+def get_answer(output_dir: str, defect_id: list[int]) -> list[int]:
     """
     Read a list of the ground truths from a database.
 
     Args:
         output_dir: Root output directory where inference results were stored.
-        lot_id: Name of the lot of defect images.
-        model_name: Name of model used to run inference.
         defect_id: ID of the defect images
 
     Returns:
@@ -662,8 +638,6 @@ def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[in
     """
     r = requests.get(API_ROOT+'get_answer', json={
                         "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
                         "defect_id_list": defect_id,
                     }, timeout=TIMEOUT)
 

@@ -17,10 +17,10 @@ DEFECT_COLOR_MAPPING = {
     "UNK": "blue",
 }
 
-def get_model_data(output_dir: str, lot_id: str, model_name: str):
-    defect_id_list = helper.get_defect_id(output_dir, lot_id, model_name)
-    probability_list = helper.get_probability(output_dir, lot_id, model_name, defect_id_list)
-    answer_list = helper.get_answer(output_dir, lot_id, model_name, defect_id_list)
+def get_model_data(output_dir: str):
+    defect_id_list = helper.get_defect_id(output_dir)
+    probability_list = helper.get_probability(output_dir, defect_id_list)
+    answer_list = helper.get_answer(output_dir, defect_id_list)
     return (defect_id_list, probability_list, answer_list)
 
 
@@ -401,8 +401,7 @@ def app() -> None:
                 logger.error('Missing Model 1 Result Directory or Lot ID.')
                 st.error('Missing Model 1 Result Directory or Lot ID.')
 
-            request = helper.request_lrf(output_dir=rv_m1_output_dir, lot_id=rv_m1_lot_id, model_name=rv_m1_model_name,
-                                         confidence_threshold=rv_m1_threshold)
+            request = helper.request_lrf(output_dir=rv_m1_output_dir, confidence_threshold=rv_m1_threshold)
 
             if request.json().get('status') == 'error':
                 code = request.json().get('code')
@@ -415,10 +414,7 @@ def app() -> None:
                 logger.info(f'New .lrf file (threshold: {rv_m1_threshold}) generated at {rv_m1_output_dir}!')
 
         if st.button("Generate Model 1 .lrf with top 150 defects"):
-            helper.request_top_k_lrf(output_dir=rv_m1_output_dir,
-                                     lot_id=rv_m1_lot_id,
-                                     model_name=rv_m1_model_name,
-                                     top_k=150)
+            helper.request_top_k_lrf(output_dir=rv_m1_output_dir, top_k=150)
 
     with r2_col5:
         if st.button("Generate new Model 2 .lrf"):
@@ -427,8 +423,7 @@ def app() -> None:
                 logger.error('Missing Model 2 Result Directory or Lot ID.')
                 st.error('Missing Model 2 Result Directory or Lot ID.')
 
-            request = helper.request_lrf(output_dir=rv_m2_output_dir, lot_id=rv_m2_lot_id, model_name=rv_m2_model_name,
-                                         confidence_threshold=rv_m2_threshold)
+            request = helper.request_lrf(output_dir=rv_m2_output_dir, confidence_threshold=rv_m2_threshold)
 
             if request.json().get('status') == 'error':
                 code = request.json().get('code')
@@ -441,10 +436,7 @@ def app() -> None:
                 logger.info(f'New .lrf file (threshold: {rv_m2_threshold}) generated at {rv_m2_output_dir}!')
 
         if st.button("Generate Model 2 .lrf with top 150 defects"):
-            helper.request_top_k_lrf(output_dir=rv_m2_output_dir,
-                                     lot_id=rv_m2_lot_id,
-                                     model_name=rv_m2_model_name,
-                                     top_k=150)
+            helper.request_top_k_lrf(output_dir=rv_m2_output_dir, top_k=150)
 
     st.divider()
 
@@ -461,8 +453,8 @@ def app() -> None:
                 return
 
             # Draw 2D comparison chart
-            model_1_raw_data = get_model_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name)
-            model_2_raw_data = get_model_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name)
+            model_1_raw_data = get_model_data(rv_m1_output_dir)
+            model_2_raw_data = get_model_data(rv_m2_output_dir)
 
             with vr1_col1:
                 st.plotly_chart(generate_2D_plot(model_1_raw_data, model_2_raw_data, rv_m1_threshold, rv_m2_threshold))
@@ -492,7 +484,7 @@ def app() -> None:
 
 
             # Draw 1D comparison chart
-            model_1_raw_data = get_model_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name)
+            model_1_raw_data = get_model_data(rv_m1_output_dir)
 
             with vr1_col1:
                 st.plotly_chart(generate_1D_plot(model_1_raw_data, rv_m1_threshold))
