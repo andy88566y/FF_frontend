@@ -1,4 +1,3 @@
-import glob
 import os
 import re
 from pprint import pformat
@@ -10,7 +9,7 @@ import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import ALLOWED_LRF_TYPES, API_ROOT, TIMEOUT
+from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
 from ltt_ff_frontend.read_defect import get_lrf_type
 
 
@@ -51,6 +50,23 @@ def get_base_models() -> list[str]:
         base_model_list = r.json()['model_list']
         logger.info(f'List of base models: {base_model_list}')
         return base_model_list
+
+
+@st.cache_data(ttl='300s')
+def get_model_threshold(model_name: str) -> float:
+    '''
+    Return model threshold for selected model
+    '''
+    params = {"model_name": model_name}
+    r = requests.get(f'{API_ROOT}get_model_threshold', params=params, timeout=TIMEOUT)
+
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return []
+    else:
+        model_threshold = r.json()['model_threshold']
+        logger.info(f'Model threshold for {model_name}: {model_threshold}')
+        return model_threshold
 
 
 def request_lrf(output_dir: str,

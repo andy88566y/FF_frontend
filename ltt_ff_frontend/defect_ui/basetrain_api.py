@@ -69,7 +69,7 @@ def app() -> None:
             logger.info("All lrf_paths in .yaml config file are valid!")
         st.json(ft_config)
 
-    if st.button("Start Fine-Tuning Job", type="primary"):
+    if st.button("Start Base-Training Job", type="primary"):
 
         # Validate user input first
         required_input = [ft_site, ft_tool, ft_techlayer, ft_layergroup, ft_configfile]
