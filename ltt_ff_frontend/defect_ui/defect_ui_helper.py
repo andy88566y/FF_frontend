@@ -25,6 +25,8 @@ def gap(size: int) -> None:
 
 
 def format_model_name(name: str) -> str:
+    if name is None:
+        return "SCRATCH"
     # For base model name (e.g. base/LTT_SW#x9u#N3#M0-M2#20250124T000000Z#55032dae#55032dae.encrypted.pth)
     if '/' in name:
         model_type, model_name = name.split("/")
@@ -297,6 +299,45 @@ def request_finetune(base_model: str,
     return r
 
 
+def request_basetrain(model_naming: tuple[str, str, str, str], multilot_config: dict,
+                      channel_size: tuple[int, int, int], kernel_size: tuple[int, int, int],
+                      epochs: int, lr: float) -> requests.Response:
+    '''
+    Calls FFA model base-training.
+
+    Args:
+        model_naming: Details to be used for re-trained model (site, tool, tech layer, layer group)
+        multilot_config: Dict containing training data info (lot id, lrf path, image dir)
+        channel_size, kernel_size: tuple of model structure config
+        epochs: Number of training epochs.
+        lr: Learning rate.
+
+    Returns the reponse of the API request.
+    '''
+    # TODO: Check multilot_config is valid structure
+
+    r = requests.post(API_ROOT + 'basetrain', json={
+        "batch_size": 32,
+        "epochs": epochs,
+        "learning_rate": lr,
+        "model_naming": model_naming,
+        "training_info": multilot_config,
+        "model_params": {
+            "channel_size": list(channel_size),
+            "kernel_size": list(kernel_size),
+        },
+    }, timeout=TIMEOUT)
+
+    status = r.json()['status']
+
+    if status == 'started':
+        logger.info("Model base-training started running successfully!")
+    else:
+        logger.error(f"Error occurred when calling base-training API: {r.json()['message']}")
+
+    return r
+
+
 @st.cache_data(ttl='1s')
 def request_paginated_finetuning_status(page_size: int, current_page: int) -> dict[str, Any]:
     '''
@@ -428,6 +469,7 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
         'start_time',
         'end_time',
         'base_model_name',
+        'model_params',
         'site',
         'tool',
         'tech_layer',
