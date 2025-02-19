@@ -62,7 +62,7 @@ def get_model_threshold(model_name: str) -> float:
 
     if r.json()['status'] == 'error':
         logger.error(r.json()['message'])
-        return []
+        return 0.0
     else:
         model_threshold = r.json()['model_threshold']
         logger.info(f'Model threshold for {model_name}: {model_threshold}')
