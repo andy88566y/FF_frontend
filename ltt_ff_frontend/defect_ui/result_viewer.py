@@ -1,4 +1,3 @@
-import os
 from typing import Any
 
 import numpy as np
@@ -17,11 +16,17 @@ DEFECT_COLOR_MAPPING = {
     "UNK": "blue",
 }
 
+
 def get_model_data(output_dir: str):
-    defect_id_list = helper.get_defect_id(output_dir)
-    probability_list = helper.get_probability(output_dir, defect_id_list)
-    answer_list = helper.get_answer(output_dir, defect_id_list)
-    return (defect_id_list, probability_list, answer_list)
+    try:
+        db_metadata = helper.get_db_metadata(output_dir)
+        defect_id_list = helper.get_defect_id(output_dir)
+        probability_list = helper.get_probability(output_dir, defect_id_list)
+        answer_list = helper.get_answer(output_dir, defect_id_list)
+        return db_metadata, (defect_id_list, probability_list, answer_list)
+    except Exception as e:
+        logger.warning(f"Error getting model data from {output_dir}! {e}")
+        return None, None
 
 
 def generate_1D_plot(m1_data, m1_threshold: float):
@@ -142,6 +147,18 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
         line={"color": "Gray", "width": 1, "dash": "dash"},
     )
 
+    # add performance hint (upper left: red, bottom right: green)
+    fig.add_shape(
+        type="path",
+        path="M 0 0 L 0 1 L 1 1 Z",
+        line_width=0, fillcolor="lightpink", opacity=0.3
+    )
+    fig.add_shape(
+        type="path",
+        path="M 0 0 L 1 0 L 1 1 Z",
+        line_width=0, fillcolor="palegreen", opacity=0.3
+    )
+
     # Add side histograms
     fig.add_trace(
         go.Histogram(
@@ -190,8 +207,8 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
     fig.update_layout(
         title="Model Comparision Chart",
         autosize=False,
-        xaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model 1"},
-        yaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model 2"},
+        xaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model 1 (Base)"},
+        yaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model 2 (Candidate)"},
         xaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model 2"},
         yaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model 1"},
         height=600,
@@ -361,149 +378,210 @@ def plot_prc(prc_data: list[tuple[str, Any, float]]):
     return fig
 
 
+def gen_lrf(model_id, output_dir, gen_lrf_type, threshold=None, top_k=None):
+    if gen_lrf_type == "top_k":
+        if top_k is not None and 1 <= top_k <= 999:
+            if st.button(f"Generate new Model {model_id} lrf"):
+                request = helper.request_top_k_lrf(output_dir=output_dir, top_k=top_k)
+
+                if request.json().get('status') == 'error':
+                    code = request.json().get('code')
+                    message = request.json().get('message')
+                    st.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+                    logger.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+                else:
+                    st.success(f'New .lrf file (top_k: {top_k}) generated at {output_dir}!')
+                    logger.info(f'New .lrf file (top_k: {top_k}) generated at {output_dir}!')
+        else:
+            st.error(f"Top-k setting: {top_k} is invalid. Should be between 1 and 999 !")
+    elif gen_lrf_type == "threshold":
+        if threshold is not None and 0.0 <= threshold <= 1.0:
+            if st.button(f"Generate new Model {model_id} lrf"):
+                request = helper.request_threshold_lrf(output_dir=output_dir, confidence_threshold=threshold)
+
+                if request.json().get('status') == 'error':
+                    code = request.json().get('code')
+                    message = request.json().get('message')
+                    st.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+                    logger.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
+                else:
+                    st.success(f'New .lrf file (threshold: {threshold}) generated at {output_dir}!')
+                    logger.info(f'New .lrf file (threshold: {threshold}) generated at {output_dir}!')
+        else:
+            st.error(f"Threshold setting: {threshold} is invalid. Should be between 0.0 and 1.0 !")
+    else:
+        raise NotImplementedError(f"gen_lrf_type {gen_lrf_type} is not implemented.")
+
+
 def app() -> None:
     logger.debug("Loading Result Viewer...")
     st.title("False Filter Result Viewer")
-    st.caption("Visualize False Filter Result (Model 2 fields are optional)")
+    st.caption("Visualize False Filter Result [Model 1 - Base] [Model 2 - Candidate (optional)]")
 
-    r1_col1, r1_col2, r1_col3, r1_col4, r1_col5 = st.columns([3, 2, 2, 2, 2])
-    r2_col1, r2_col2, r2_col3, r2_col4, r2_col5 = st.columns([3, 2, 2, 2, 2])
+    r1_col1, r1_col2 = st.columns([2, 2])
 
     output_dir_default = "/mnt/dbpc/xxx"
-
     with r1_col1:
-        rv_m1_output_dir = st.text_input("Model 1 Result Directory", value=output_dir_default)
-    with r2_col1:
-        rv_m2_output_dir = st.text_input("Model 2 Result Directory", value=output_dir_default)
-
+        rv_m1_output_dir = st.text_input("Model 1 (Base) Result Directory", value=output_dir_default)
     with r1_col2:
-        rv_m1_lot_id = st.text_input("Model 1 Lot ID", value="")
-    with r2_col2:
-        rv_m2_lot_id = st.text_input("Model 2 Lot ID", value="")
-
-    with r1_col3:
-        rv_m1_model_name = st.selectbox("Model 1 Model Name", options=helper.get_base_models(), index=0,
-                                        format_func=helper.format_model_name)
-    with r2_col3:
-        rv_m2_model_name = st.selectbox("Model 2 Model Name", options=helper.get_base_models(), index=0,
-                                        format_func=helper.format_model_name)
-
-    with r1_col4:
-        rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
-
-    with r2_col4:
-        rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, DEFAULT_THRESHOLD, 0.00001, format="%.5f", help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
-
-    with r1_col5:
-        if st.button("Generate new Model 1 .lrf"):
-
-            if rv_m1_output_dir == '' or rv_m1_lot_id == '':
-                logger.error('Missing Model 1 Result Directory or Lot ID.')
-                st.error('Missing Model 1 Result Directory or Lot ID.')
-
-            request = helper.request_lrf(output_dir=rv_m1_output_dir, confidence_threshold=rv_m1_threshold)
-
-            if request.json().get('status') == 'error':
-                code = request.json().get('code')
-                message = request.json().get('message')
-                st.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
-                logger.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
-            else:
-                # TODO: Check file generated
-                st.success(f'New .lrf file (threshold: {rv_m1_threshold}) generated at {rv_m1_output_dir}!')
-                logger.info(f'New .lrf file (threshold: {rv_m1_threshold}) generated at {rv_m1_output_dir}!')
-
-        if st.button("Generate Model 1 .lrf with top 150 defects"):
-            helper.request_top_k_lrf(output_dir=rv_m1_output_dir, top_k=150)
-
-    with r2_col5:
-        if st.button("Generate new Model 2 .lrf"):
-
-            if rv_m2_output_dir == '' or rv_m2_lot_id == '':
-                logger.error('Missing Model 2 Result Directory or Lot ID.')
-                st.error('Missing Model 2 Result Directory or Lot ID.')
-
-            request = helper.request_lrf(output_dir=rv_m2_output_dir, confidence_threshold=rv_m2_threshold)
-
-            if request.json().get('status') == 'error':
-                code = request.json().get('code')
-                message = request.json().get('message')
-                st.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
-                logger.error(f'.lrf file not generated!\nError code: {code}\nError message: {message}')
-            else:
-                # TODO: Check file generated
-                st.success(f'New .lrf file (threshold: {rv_m2_threshold}) generated at {rv_m2_output_dir}!')
-                logger.info(f'New .lrf file (threshold: {rv_m2_threshold}) generated at {rv_m2_output_dir}!')
-
-        if st.button("Generate Model 2 .lrf with top 150 defects"):
-            helper.request_top_k_lrf(output_dir=rv_m2_output_dir, top_k=150)
+        rv_m2_output_dir = st.text_input("Model 2 (Candidate) Result Directory", value=output_dir_default)
 
     st.divider()
 
-    if st.button("Visualize Result", type="primary"):
+    r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([2, 3, 1, 2])
 
-        vr1_col1, vr1_col2 = st.columns(2)
+    vr1_col1, vr1_col2, vr1_col3, vr1_col4, vr1_col5 = st.columns([1, 2, 3, 2, 2])
+    vr2_col1, vr2_col2, vr2_col3, vr2_col4, vr2_col5 = st.columns([1, 2, 3, 2, 2])
+    vr3_col1, vr3_col2 = st.columns(2)
+
+    with r2_col3:
+        st_gen_lrf_type = st.segmented_control("lrf Genreation Option", ["threshold", "top_k"], default="threshold")
+    with r2_col4:
+        st.text("[Note] Top-K option would use threshold from inference result DB for 1D/2D charts and CR-FR chart below.")
+
+    with r2_col1:
+        if st.button("Visualize Result", type="primary"):
+            st.rerun()
 
         invalid_input = [output_dir_default, '']
 
-        if rv_m1_output_dir not in invalid_input and rv_m2_output_dir not in invalid_input and rv_m1_lot_id not in invalid_input and rv_m2_lot_id not in invalid_input:
+        if rv_m1_output_dir not in invalid_input and rv_m2_output_dir not in invalid_input:
+            model_1_metadata, model_1_raw_data = get_model_data(rv_m1_output_dir)
+            model_2_metadata, model_2_raw_data = get_model_data(rv_m2_output_dir)
 
-            if rv_m1_lot_id != rv_m2_lot_id:
-                st.error(f'Lot IDs do not match!  \nModel 1 lot ID: {rv_m1_lot_id}  \nModel 2 lot ID: {rv_m2_lot_id}')
-                return
+            if model_1_metadata is None:
+                with r2_col2:
+                    st.error(f"Error getting result data from {rv_m1_output_dir}")
+                    return
+
+            if model_2_metadata is None:
+                with r2_col2:
+                    st.error(f"Error getting result data from {rv_m2_output_dir}")
+                    return
+
+            if model_1_metadata['lot_id'] != model_2_metadata['lot_id']:
+                with r2_col2:
+                    st.error(f"Lot IDs do not match!  \nModel 1 lot ID: {model_1_metadata['lot_id']}  \nModel 2 lot ID: {model_2_metadata['lot_id']}")
+                    return
+
+            # Show result database details
+            with vr1_col1:
+                st.text("Model 1 (Base)")
+            with vr2_col1:
+                st.text("Model 2 (Candidate)")
+            with vr1_col2:
+                st.text(f"Lot ID:\n{model_1_metadata['lot_id']}")
+            with vr2_col2:
+                st.text(f"Lot ID:\n{model_2_metadata['lot_id']}")
+            with vr1_col3:
+                st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata['model_name'])}")
+            with vr2_col3:
+                st.text(f"Inference Model:\n{helper.format_model_name(model_2_metadata['model_name'])}")
+
+            if st_gen_lrf_type == "top_k":
+                with vr1_col4:
+                    rv_m1_topk = st.number_input("Top k", 0, 999, 150, 1,
+                                                help="Top-k defects ranked by Probabilities will be considered as defects.", key='m1_topk')
+                with vr2_col4:
+                    rv_m2_topk = st.number_input("Top k", 0, 999, 150, 1,
+                                                help="Top-k defects ranked by Probabilities will be considered as defects.", key='m2_topk')
+                with vr1_col5:
+                    gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, top_k=rv_m1_topk)
+                with vr2_col5:
+                    gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, top_k=rv_m2_topk)
+
+                # TODO: Make this work with charts below instead of using default values
+                rv_m1_threshold = model_1_metadata['model_threshold']
+                rv_m2_threshold = model_2_metadata['model_threshold']
+            else:
+                with vr1_col4:
+                    rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
+                                                    help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+                with vr2_col4:
+                    rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_2_metadata['model_threshold'], 0.00001, format="%.5f",
+                                                    help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
+                with vr1_col5:
+                    gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
+                with vr2_col5:
+                    gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, threshold=rv_m2_threshold)
 
             # Draw 2D comparison chart
-            model_1_raw_data = get_model_data(rv_m1_output_dir)
-            model_2_raw_data = get_model_data(rv_m2_output_dir)
-
-            with vr1_col1:
+            with vr3_col1:
                 st.plotly_chart(generate_2D_plot(model_1_raw_data, model_2_raw_data, rv_m1_threshold, rv_m2_threshold))
 
-            with vr1_col2:
+            with vr3_col2:
                 # TODO: This should be done somewhere else
                 if set(model_1_raw_data[2]) == {-1} or set(model_2_raw_data[2]) == {-1}:
                     # All data is unlabeled
                     st.markdown("##### All data is unlabeled! Skipping chart.")
                 else:
+                    model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
+                    model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)
+                    st.plotly_chart(plot_roc([
+                        ("Model 1", model_1_roc_data, rv_m1_threshold),
+                        ("Model 2", model_2_roc_data, rv_m2_threshold),
+                    ]))
 
-                    model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
-                    model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
-                    st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold), ("Model 2", model_2_roc_data, rv_m2_threshold)]))
+                    # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, return_curve=True)
+                    # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, return_curve=True)
+                    # st.plotly_chart(plot_prc([
+                    #     ("Model 1", model_1_prc_data, rv_m1_threshold),
+                    #     ("Model 2", model_2_prc_data, rv_m2_threshold),
+                    # ]))
 
-                    # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
-                    # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, rv_m2_lot_id, rv_m2_model_name, return_curve=True)
-                    # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold), ("Model 2", model_2_prc_data, rv_m2_threshold)]))
+        elif rv_m1_output_dir not in invalid_input:
+            model_1_metadata, model_1_raw_data = get_model_data(rv_m1_output_dir)
 
-        else:
-            if rv_m1_output_dir == '':
-                st.error(f'Model 1 Result Directory input field is empty!')
-                return
-            elif rv_m1_lot_id == '':
-                st.error(f'Model 1 Lot ID input field is empty!')
-                return
+            if model_1_metadata is None:
+                with r2_col2:
+                    st.error(f"Error getting result data from {rv_m1_output_dir}")
+                    return
 
+            # Show result database details
+            with vr1_col1:
+                st.text("Model 1 (Base)")
+            with vr1_col2:
+                st.text(f"Lot ID:\n{model_1_metadata['lot_id']}")
+            with vr1_col3:
+                st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata['model_name'])}")
+
+            if st_gen_lrf_type == "top_k":
+                with vr1_col4:
+                    rv_m1_topk = st.number_input("Top k", 0, 999, 150, 1,
+                                                help="Top-k defects ranked by Probabilities will be considered as defects.", key='m1_topk')
+                with vr1_col5:
+                    gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, top_k=rv_m1_topk)
+
+                # TODO: Make this work with charts below instead of using default values
+                rv_m1_threshold = model_1_metadata['model_threshold']
+            else:
+                with vr1_col4:
+                    rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
+                                                    help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+                with vr1_col5:
+                    gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
 
             # Draw 1D comparison chart
-            model_1_raw_data = get_model_data(rv_m1_output_dir)
-
-            with vr1_col1:
+            with vr3_col1:
                 st.plotly_chart(generate_1D_plot(model_1_raw_data, rv_m1_threshold))
 
-            with vr1_col2:
+            with vr3_col2:
                 # TODO: This should be done somewhere else
                 if set(model_1_raw_data[2]) == {-1}:
                     # All data is unlabeled
                     st.markdown("##### All data is unlabeled! Skipping chart.")
 
-                    #If no ROC, just calculate filter rate
+                    # If no ROC, just calculate filter rate
                     defect_list, prob_list, _ = model_1_raw_data
                     total_defects = len(defect_list)
                     filtered_count = len([p for p in prob_list if p < rv_m1_threshold])
                     st.success(f'False Filter Rate is {filtered_count/total_defects:.4f} at selected threshold ({rv_m1_threshold:.5f})')
 
                 else:
-                    model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                    model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
                     st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold)]))
 
-                    # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, rv_m1_lot_id, rv_m1_model_name, return_curve=True)
+                    # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, return_curve=True)
                     # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold)]))
+        else:
+            pass

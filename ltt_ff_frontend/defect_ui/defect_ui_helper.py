@@ -29,14 +29,16 @@ def format_model_name(name: str) -> str:
         return "SCRATCH"
     # For base model name (e.g. base/LTT_SW#x9u#N3#M0-M2#20250124T000000Z#55032dae#55032dae.encrypted.pth)
     if '/' in name:
-        model_type, model_name = name.split("/")
+        model_paths = name.split("/")
+        model_type = model_paths[-2]
+        model_name = model_paths[-1]
         return f"[{model_type}] {model_name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
     # For output model name (e.g. 13feb_minye#x9u#tl#lg20250213T151435Z#55032dae#5fb1017f)
     else:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl='10s')
 def get_base_models() -> list[str]:
     '''
     Returns a list of all available models to be used for inference or fine-tuning.
@@ -69,7 +71,7 @@ def get_model_threshold(model_name: str) -> float:
         return model_threshold
 
 
-def request_lrf(output_dir: str, confidence_threshold: float) -> requests.Response:
+def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> requests.Response:
     '''
     Calls FalseFilter API with use_cache=True.
 
@@ -528,55 +530,27 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
     return sorted_finetuning_statuses_df
 
 
-@st.cache_data(ttl='1s')
-def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+@st.cache_data(ttl='10s')
+def get_db_metadata(output_dir: str) -> dict[str, Any]:
     '''
-    Get the data needed to draw a PRC curve.
+    Get Result DB metadata.
 
     Args:
-        output_dir: Root output directory of inference resuits.
-        lot_id: Name of the lof of defect images.
-        model_name: Name of inference results.
-        return_curve: If false, just return the area under the curve (AUPRC)
+        output_dir: Root output directory where inference results were stored.
+
+        Returns:
+            A dictionary of result database metadata
     '''
-    r = requests.get(API_ROOT+'get_prc_data', json={
-                        "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
-                        "return_curve": return_curve,
-                    }, timeout=TIMEOUT)
+    r = requests.get(API_ROOT+'result/get_db_metadata', params={"output_dir": output_dir}, timeout=TIMEOUT)
 
-    prc_data_list = r.json()['prc_data']
-    prc_data_ndarray = tuple(np.array(data_list) for data_list in prc_data_list)
-
-    return prc_data_ndarray
+    if r.json()['status'] == 'completed':
+        return r.json()['db_metadata']
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-@st.cache_data(ttl='1s')
-def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    '''
-    Get the data needed to draw an ROC curve.
-
-    Args:
-        output_dir: Root output directory of inference resuits.
-        lot_id: Name of the lof of defect images.
-        model_name: Name of inference results.
-        return_curve: If false, just return the area under the curve (AUROC)
-    '''
-    r = requests.get(API_ROOT+'get_roc_data', json={
-                        "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
-                        "return_curve": return_curve,
-                    }, timeout=TIMEOUT)
-
-    roc_data_list = r.json()['roc_data']
-    roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
-
-    return roc_data_ndarray
-
-
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl='10s')
 def get_defect_id(output_dir: str) -> list[int]:
     '''
     Get list of defect IDs from a database.
@@ -587,19 +561,53 @@ def get_defect_id(output_dir: str) -> list[int]:
         Returns:
             A list of the defect IDs of a lot of images.
     '''
-    r = requests.get(API_ROOT+'get_defect_id', json={
-                        "output_dir": output_dir,
-                    }, timeout=TIMEOUT)
+    r = requests.get(API_ROOT+'result/get_defect_id', params={"output_dir": output_dir}, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
-        logger.info("DB read started running successfully!")
         return r.json()['defect_id_list']
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
+@st.cache_data(ttl='10s')
+def get_prc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    '''
+    Get the data needed to draw a PRC curve.
 
-@st.cache_data(ttl='1s')
+    Args:
+        output_dir: Root output directory of inference resuits.
+        lot_id: Name of the lof of defect images.
+        model_name: Name of inference results.
+        return_curve: If false, just return the area under the curve (AUPRC)
+    '''
+    r = requests.get(API_ROOT+'result/get_prc_data', params={"output_dir": output_dir, "return_curve": return_curve}, timeout=TIMEOUT)
+
+    prc_data_list = r.json()['prc_data']
+    prc_data_ndarray = tuple(np.array(data_list) for data_list in prc_data_list)
+
+    return prc_data_ndarray
+
+
+@st.cache_data(ttl='10s')
+def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    '''
+    Get the data needed to draw an ROC curve.
+
+    Args:
+        output_dir: Root output directory of inference resuits.
+        lot_id: Name of the lof of defect images.
+        model_name: Name of inference results.
+        return_curve: If false, just return the area under the curve (AUROC)
+    '''
+    r = requests.get(API_ROOT+'result/get_roc_data', params={"output_dir": output_dir, "return_curve": return_curve}, timeout=TIMEOUT)
+
+    roc_data_list = r.json()['roc_data']
+    roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
+
+    return roc_data_ndarray
+
+
+@st.cache_data(ttl='10s')
 def get_probability(output_dir: str, defect_id: list[int]) -> list[float]:
     """
     Read a list of the defect probabilities from a database.
@@ -611,20 +619,16 @@ def get_probability(output_dir: str, defect_id: list[int]) -> list[float]:
     Returns:
         A list of the defect probabilities of a lot of images.
     """
-    r = requests.get(API_ROOT+'get_probability', json={
-                        "output_dir": output_dir,
-                        "defect_id_list": defect_id,
-                    }, timeout=TIMEOUT)
+    r = requests.get(API_ROOT+'result/get_probability', json={"output_dir": output_dir, "defect_id_list": defect_id}, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
-        logger.info("DB read started running successfully!")
         return r.json()['probability_list']
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl='10s')
 def get_answer(output_dir: str, defect_id: list[int]) -> list[int]:
     """
     Read a list of the ground truths from a database.
@@ -636,13 +640,9 @@ def get_answer(output_dir: str, defect_id: list[int]) -> list[int]:
     Returns:
         A list of the ground truths of a lot of images.
     """
-    r = requests.get(API_ROOT+'get_answer', json={
-                        "output_dir": output_dir,
-                        "defect_id_list": defect_id,
-                    }, timeout=TIMEOUT)
+    r = requests.get(API_ROOT+'result/get_answer', json={"output_dir": output_dir, "defect_id_list": defect_id}, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
-        logger.info("DB read started running successfully!")
         return r.json()['answer_list']
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
