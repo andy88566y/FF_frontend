@@ -1,5 +1,5 @@
+import base64
 import os
-import re
 from pprint import pformat
 from typing import Any
 
@@ -247,6 +247,15 @@ def request_inference_statuses(inference_id_list: list[str]) -> pd.DataFrame:
     return format_inference_status(pd.DataFrame.from_dict(detailed_inference_statuses).T).T
 
 
+def format_url(params: dict[str, str]):
+    # TODO: Get correct base url
+    base_url = "http://xxx:6501"
+    param_strs = []
+    for k, v in params.items():
+        param_strs.append(f"{k}={base64.urlsafe_b64encode(str.encode(v)).decode()}")
+    return f"{base_url}/?{'&'.join(param_strs)}"
+
+
 def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
     '''
     Format and sort the detailed inference status dataframe.
@@ -273,6 +282,11 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
             inference_status['end_time'] = pd.to_datetime(inference_status['end_time'], unit='s').dt.floor('s')
             inference_status['end_time'] = inference_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
+        # TODO: Make hyper-link work
+        # inference_status['Review Link'] = inference_status[["output_dir", "image_dir"]].apply(
+        #     lambda x: format_url({'result_dir': x['output_dir'], 'image_dir': x['image_dir']}), axis=1
+        # )
+
     # Change ordering
     sorted_inference_statuses_df = inference_status.reindex(columns=[
         'status',
@@ -280,6 +294,7 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
         'start_time',
         'end_time',
         'lot_id',
+        # 'Review Link',
         'total_images',
         'image_dir',
         'lrf_path',
@@ -570,7 +585,7 @@ def get_defect_id(output_dir: str) -> list[int]:
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-@st.cache_data(ttl='10s')
+@st.cache_data(ttl='1s')
 def get_topk_model_threshold(output_dir: str, top_k: int = 150) -> float:
     '''
     Return model threshold for selected model
@@ -585,6 +600,53 @@ def get_topk_model_threshold(output_dir: str, top_k: int = 150) -> float:
         model_threshold = r.json()['threshold']
         logger.info(f'Model threshold for `{output_dir}` top_k={top_k}: {model_threshold}')
         return model_threshold
+
+
+# TODO: Split this into smaller functions
+@st.cache_data(ttl='30s')
+def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -> list[dict[str, Any]]:
+    '''
+    Return lrf data with selected columns
+    '''
+    params = {"output_dir": output_dir, "cols": ",".join(cols)}
+    r = requests.get(f'{API_ROOT}result/get_lrf_data', params=params, timeout=TIMEOUT)
+    if r.json()['status'] == 'error':
+        logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
+    else:
+        lrf_data = r.json()['lrf_data']
+        logger.info(f'LRF data of {len(lrf_data)} defects loaded from `{output_dir}`')
+
+    r = requests.get(API_ROOT+'result/get_answer', json={"output_dir": output_dir}, timeout=TIMEOUT)
+    if r.json()['status'] == 'error':
+        logger.error(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
+    else:
+        answer_list = r.json()['answer_list']
+        if len(lrf_data) != len(answer_list):
+            logger.error(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
+            raise ValueError(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
+        lrf_data_with_ans = []
+        for data, ans in zip(lrf_data, answer_list):
+            lrf_data_with_ans.append({**data, "Ans": ans})
+
+    if include_prob:
+        r = requests.get(API_ROOT+'result/get_probability', json={"output_dir": output_dir}, timeout=TIMEOUT)
+
+        if r.json()['status'] == 'error':
+            logger.error(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
+            raise ValueError(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
+        else:
+            probs = r.json()['probability_list']
+            if len(lrf_data_with_ans) != len(probs):
+                logger.error(f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}")
+                raise ValueError(f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}")
+            lrf_data_with_prob = []
+            for data, prob in zip(lrf_data_with_ans, probs):
+                lrf_data_with_prob.append({**data, "Probability": prob})
+            return lrf_data_with_prob
+    else:
+        return lrf_data_with_ans
 
 
 @st.cache_data(ttl='10s')
@@ -693,21 +755,3 @@ def check_valid_lrf_in_yaml(yaml_config: dict) -> bool:
         raise ValueError('Cannot use unlabeled .lrf for finetuning!')
 
     return True
-
-
-def check_matching_lot_id(image_dir: str, lrf_path: str) -> bool:
-    '''
-    Extract lot ID from image_dir, and try to find it in the lrf filename.
-    Currently unable to extra lot ID from lrf_path to do an exact match,
-    as too many underscores are used as separators.
-
-    Args:
-        image_dir: Image directory containing the "Images" folder
-        lrf_path: Absolute path to the .lrf file.
-
-    Returns true if the lot ID found in image_dir is also found in lrf_path.
-    Otherwise, it returns false.
-    '''
-    image_dir_lot_id = os.path.basename(image_dir)
-    lrf_filename = os.path.basename(lrf_path)
-    return re.search(image_dir_lot_id, lrf_filename)

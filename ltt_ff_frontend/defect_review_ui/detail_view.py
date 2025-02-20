@@ -129,7 +129,7 @@ def create_chart(df, domain, range_colors):
     )
     return chart
 
-def app(selected_row, selected_folder):
+def app(selected_row, image_dir):
     st.subheader(f"Defect {selected_row.No.values[0]}")
 
     # Create a single row with three columns for X, Y, and ClassType
@@ -142,13 +142,13 @@ def app(selected_row, selected_folder):
         class_type_int = int(selected_row.ClassType.values[0])
         st.write(f"**Class Type:** {class_type_int}")
 
-    st.subheader("InstantReview",divider="gray")
+    st.subheader("InstantReview", divider="gray")
+
     # Create three columns
     col1, col2, col3 = st.columns(3)
 
     # Construct the file paths_Rt
-    # base_path = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}/Images/InstantReviewRt/"
-    base_path = f"{selected_folder}/Images/InstantReviewRt/"
+    base_path = f"{image_dir}/Images/InstantReviewRt/"
     no = selected_row.No.values[0]
     type_options = ["L", "L_p", "U", "U_p"]
 
@@ -164,8 +164,7 @@ def app(selected_row, selected_folder):
             break
 
     # Construct the file paths_T
-    # base_path_T = f"/mnt/fs0/x9u_detection_result/{selected_folder}/{selected_folder}/Images/InstantReviewT/"
-    base_path_T = f"{selected_folder}/Images/InstantReviewT/"
+    base_path_T = f"{image_dir}/Images/InstantReviewT/"
     type_options = ["L", "L_p", "U", "U_p"]
     ref_image_path_T = f"{base_path_T}{no}.png"
     diff_image_path_T = f"{base_path_T}{no}D.png"
@@ -188,7 +187,7 @@ def app(selected_row, selected_folder):
     images = [ref_image, test_image, diff_image, ref_image_T, test_image_T, diff_image_T]
 
     # Create a subplot with shared axes
-    #TODO: Movement along the Y-axis will update synchronously, but movement along the X-axis will not.
+    # TODO: Movement along the Y-axis will update synchronously, but movement along the X-axis will not.
     fig = make_subplots(rows=2, cols=3, shared_xaxes=True, shared_yaxes=True, vertical_spacing=0.10,
                         subplot_titles=("Reference Image Rt", "Test Image Rt", "Difference Rt",
                                         "Reference Image T", "Test Image T", "Difference T"))

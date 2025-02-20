@@ -9,19 +9,13 @@ from loguru import logger
 from sklearn.cluster import DBSCAN
 
 from ltt_ff_frontend.defect_review_ui import detail_view
-from ltt_ff_frontend.defect_ui.defect_ui_helper import get_probability
-from ltt_ff_frontend.read_defect import read_defects
-
-
-# Cache the read_defects function
-@st.cache_data(ttl='300s')
-def cached_read_defects(lrf_path):
-    return read_defects(lrf_path)
+from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip('#')
     return [int(hex_color[i:i+2], 16) for i in (0, 2, 4)] + [160]
+
 
 # Function to generate a list of colors for a given number of clusters
 def generate_colors(num_clusters):
@@ -34,38 +28,35 @@ def generate_colors(num_clusters):
     random.shuffle(colors)
     return colors
 
+
 # define callback when threshold changes
 def reload_data(df):
-    threshold = st.session_state['prob_threshold']
-    df["D/ND"] = df["Probability"] > threshold
-    df["D/ND"] = df["D/ND"].apply(lambda x: 'T' if x else 'F')
-    df['C/NC'] = ((df['D/ND'] == 'T') & (df['ClassType'] == 1)) | ((df['D/ND'] == 'F') & (df['ClassType'] != 1))
-    df["C/NC"] = df["C/NC"].apply(lambda x: 'T' if x else 'F')
+    # Add "D/ND" column based on the threshold (Defect/Not defect)
+    df["D/ND"] = df["Probability"] >= st.session_state.prob_threshold
+    # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
+    df['C/NC'] = df[["Ans", "D/ND"]].apply(lambda x: 'UNK' if x["Ans"] == 'UNK' else (x["Ans"] == 'T') == x["D/ND"], axis=1)
+
+    # Convert back "D/ND" "C/NC" column to T/F
+    df["D/ND"] = df["D/ND"].apply(lambda x: 'UNK' if x == 'UNK' else 'T' if x else 'F')
+    df["C/NC"] = df["C/NC"].apply(lambda x: 'UNK' if x == 'UNK' else 'T' if x else 'F')
 
     # Select only the columns I want to display
-    selected_columns = ["X", "Y", "X_norm", "Y_norm", "ClassType", "Cluster", "Probability", "D/ND", "C/NC", "No"]
+    selected_columns = ["X", "Y", "X_norm", "Y_norm", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "No", "Cluster"]
     st.session_state.filtered_df = df[selected_columns]
 
 
-def app(selected_folder, lrf_path):
-    defects = cached_read_defects(lrf_path)
+def app(result_dir, image_dir):
+    defects = helper.get_lrf_data(result_dir, cols=["No", "X", "Y", "ClassType"], include_prob=True)
+    db_metadata = helper.get_db_metadata(result_dir)
 
     # Extract relevant columns and convert "X" and "Y" to floats
     defect_data = [
-        {"No": defect["No"], "X": float(defect["X"]), "Y": float(defect["Y"]), "ClassType": defect["ClassType"]}
-        for defect in defects.values()
+        {
+            "No": defect["No"], "X": float(defect["X"]), "Y": float(defect["Y"]),
+            "ClassType": defect["ClassType"], "Ans": defect["Ans"], "Probability": defect["Probability"]
+        }
+        for defect in defects
     ]
-
-    # # Get defect IDs
-    # defect_ids = [defect["No"] for defect in defect_data]
-
-    # Get probabilities
-    # probabilities = get_probability("/mnt/fs0/xxx", "xxx", "xxx", defect_ids)
-    probabilities = [-1]*len(defect_data)
-
-    # Add probabilities to defect_data
-    for defect, probability in zip(defect_data, probabilities):
-        defect["Probability"] = probability
 
     # Convert to DataFrame
     df = pd.DataFrame(defect_data)
@@ -73,6 +64,14 @@ def app(selected_folder, lrf_path):
     # Set the "No" column as the index
     df.set_index("No", inplace=True)
     df['No'] = df.index
+
+    # Ensure all columns have consistent data types
+    df["No"] = df["No"].astype(int)
+    df["X"] = df["X"].astype(float)
+    df["Y"] = df["Y"].astype(float)
+    df["ClassType"] = df["ClassType"].astype(int)
+    df["Ans"] = df["Ans"].astype(int)
+    df["Probability"] = df["Probability"].astype(float)
 
     # Initialize session state for selected index
     if "selected_row_index" not in st.session_state:
@@ -84,31 +83,24 @@ def app(selected_folder, lrf_path):
     if 'selection_source' not in st.session_state:
         st.session_state.selection_source = ''
     # Initialize session state for selected folder
-    if 'selected_folder' not in st.session_state:
-        st.session_state.selected_folder = ''
+    if 'result_dir' not in st.session_state:
+        st.session_state.result_dir = ''
     # Initialize session state for probability threshold
     if 'prob_threshold' not in st.session_state:
-        st.session_state.prob_threshold = 0.174
+        st.session_state.prob_threshold = db_metadata['model_threshold']
     # Ensure color_option is set in session state
     if "color_option" not in st.session_state:
-        st.session_state.color_option = "Cluster"
-
-    # Ensure all columns have consistent data types
-    df["No"] = df["No"].astype(int)
-    df["X"] = df["X"].astype(float)
-    df["Y"] = df["Y"].astype(float)
-    df["ClassType"] = df["ClassType"].astype(int)
-    df["Probability"] = df["Probability"].astype(float)
+        st.session_state.color_option = "ClassType"
 
     # Add "D/ND" column based on the threshold (Defect/Not defect)
-    df["D/ND"] = df["Probability"] > st.session_state.prob_threshold
-    # Convert "D/ND" column to T/F
-    df["D/ND"] = df["D/ND"].apply(lambda x: 'T' if x else 'F')
+    df["D/ND"] = df["Probability"] >= st.session_state.prob_threshold
     # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
-    # TODO: need to switch to lrf classtype mapping instead of hardcoding
-    df['C/NC'] = ((df['D/ND'] == 'T') & (df['ClassType'] == 1)) | ((df['D/ND'] == 'F') & (df['ClassType'] != 1))
-    # Convert "C/NC" column to T/F
-    df["C/NC"] = df["C/NC"].apply(lambda x: 'T' if x else 'F')
+    df['C/NC'] = df[["Ans", "D/ND"]].apply(lambda x: -1 if x["Ans"] == -1 else x["Ans"] == x["D/ND"], axis=1)
+
+    # Convert "Ans" "D/ND" "C/NC" column to T/F
+    df["Ans"] = df["Ans"].apply(lambda x: 'UNK' if x == -1 else 'T' if x else 'F')
+    df["D/ND"] = df["D/ND"].apply(lambda x: 'UNK' if x == -1 else 'T' if x else 'F')
+    df["C/NC"] = df["C/NC"].apply(lambda x: 'UNK' if x == -1 else 'T' if x else 'F')
 
     # Normalize coordinates
     x_min, x_max = df["X"].min(), df["X"].max()
@@ -132,16 +124,16 @@ def app(selected_folder, lrf_path):
         st.session_state.filtered_df = df
 
     # Reset session state values when changing folder
-    previous_selected_folder = st.session_state.get("selected_folder", None)
-    if previous_selected_folder != selected_folder:
+    previous_result_dir = st.session_state.get("result_dir", None)
+    if previous_result_dir != result_dir:
         st.session_state.filter_column = df.columns[0]
         st.session_state.filter_value = ''
         st.session_state.filtered_df = df
         st.session_state.selection_source = ''
-        st.session_state.selected_folder = selected_folder
+        st.session_state.result_dir = result_dir
 
-    # Create three columsn (prob threshold, filter options, message to show filtered values)
-    threshold_col, filter_options_col, filter_value_col, filter_message_col = st.columns([1, 1, 1, 1])
+    # Create three columns (prob threshold, filter options, message to show filtered values)
+    threshold_col, filter_options_col, filter_value_col, filter_message_col = st.columns([1, 1, 2, 1])
 
     # Add threshold selection
     with threshold_col:
@@ -158,7 +150,7 @@ def app(selected_folder, lrf_path):
     # Add filter options
     with filter_options_col:
         # Define the columns I want to display
-        specific_columns = ["X", "Y", "ClassType", "Cluster", "D/ND", "C/NC"]
+        specific_columns = ["X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster"]
         # Filter the DataFrame columns to only include the specific columns
         filtered_columns = [col for col in df.columns if col in specific_columns]
 
@@ -171,18 +163,18 @@ def app(selected_folder, lrf_path):
 
     # Add filter value text input, confirm button, and cancel button
     with filter_value_col:
-        filter_value_input_col, confirm_col, cancel_col = st.columns([3, 1, 1])
+        filter_value_input_col, confirm_col, cancel_col = st.columns([2, 1, 1])
         with filter_value_input_col:
             st.session_state.filter_value = st.text_input(
                 label="Filter value",
                 value=st.session_state.filter_value,
             )
         with confirm_col:
-            if st.button(label="", icon=":material/check:", use_container_width=True):
+            if st.button(label="Apply Filter", icon=":material/check:", use_container_width=True):
                 st.session_state.filtered_df = df[df[st.session_state.filter_column].astype(str) == st.session_state.filter_value]
                 # st.session_state.filtered_df.set_index("No", inplace=True)
         with cancel_col:
-            if st.button("", icon=":material/close:", use_container_width=True):
+            if st.button(label="Remove Filter", icon=":material/close:", use_container_width=True):
                 st.session_state.filter_column = df.columns[0]
                 st.session_state.filter_value = ''
                 st.session_state.filtered_df = df
@@ -203,7 +195,7 @@ def app(selected_folder, lrf_path):
         st.subheader("List View")
 
         # Select only the columns I want to display
-        selected_columns = ["X", "Y", "ClassType", "Cluster", "Probability", "D/ND", "C/NC"]
+        selected_columns = ["X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster"]
         listview_df = st.session_state.filtered_df[selected_columns]
 
         event = st.dataframe(
@@ -247,15 +239,15 @@ def app(selected_folder, lrf_path):
         color_option = st.session_state.color_option
         # Define a color mapping for each ClassType and Cluster
         classType_mapping = {
-            1: "#55ff7f",  # green
-            2: "#0000ff",  # Blue
-            "default": "#ffff00"  # Yellow
+            "T": "#ff0000",  # red
+            "F": "#55ff7f",  # green
+            "UNK": "#808080"  # grey
         }
         cluster_colors = generate_colors(total_clusters)
 
         # Apply the color mapping based on the selected option
         if color_option == "ClassType":
-            st.session_state.filtered_df["color"] = st.session_state.filtered_df["ClassType"].map(lambda x: hex_to_rgb(classType_mapping.get(x, "#ffff00")))
+            st.session_state.filtered_df["color"] = st.session_state.filtered_df["Ans"].map(lambda x: hex_to_rgb(classType_mapping.get(x, "#808080")))
         else:
             st.session_state.filtered_df["color"] = st.session_state.filtered_df["Cluster"].map(lambda x: hex_to_rgb("#808080") if x == -1 else hex_to_rgb(cluster_colors[x % len(cluster_colors)]))
 
@@ -332,4 +324,4 @@ def app(selected_folder, lrf_path):
         selected_data = df[df['No'] == defect_number]
 
     if selected_data is not None:
-        detail_view.app(selected_data,selected_folder)
+        detail_view.app(selected_data, image_dir)
