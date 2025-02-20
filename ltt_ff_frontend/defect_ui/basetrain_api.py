@@ -65,8 +65,7 @@ def app() -> None:
 
     if ft_configfile is not None:
         ft_config = yaml.load(ft_configfile, Loader=yaml.Loader)
-        if helper.check_valid_lrf_in_yaml(ft_config):
-            logger.info("All lrf_paths in .yaml config file are valid!")
+        # TODO: Validate yaml file format from backend and pass error message
         st.json(ft_config)
 
     if st.button("Start Base-Training Job", type="primary"):

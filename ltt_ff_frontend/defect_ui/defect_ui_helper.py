@@ -10,7 +10,6 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
-from ltt_ff_frontend.read_defect import get_lrf_type
 
 
 def gap(size: int) -> None:
@@ -727,31 +726,3 @@ def get_answer(output_dir: str, defect_id: list[int]) -> list[int]:
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
-
-
-def check_valid_lrf_in_yaml(yaml_config: dict) -> bool:
-    '''
-    Ensures all .lrf files listed in the yaml config file are valid
-    (i.e. exists, has correct file extension, is lableled)
-
-    Args:
-        yaml_config: Dict containing training info such as lrf path, lot id, training image dir
-
-    Returns true if there are no invalid lrf files found (check passed), and returns false if
-    an invalid lrf file is found (check failed).
-    '''
-    # Extract all lrf paths from the yaml config
-    lrf_paths = [batch['lrf_path'] for batch in yaml_config['data_paths']]
-    lot_ids = [batch['lot_id'] for batch in yaml_config['data_paths']]
-
-    for lrf_path, lot_id in zip(lrf_paths, lot_ids):
-        lrf_type = get_lrf_type(os.path.basename(lrf_path), lot_id)
-
-    if lrf_type is None:
-        logger.error("INVALID_LRF_NAME", "Invalid lrf filename. LRF did NOT follow `<optional_prefix>_<lot_id>_<lrf_type>.lrf` format")
-        raise ValueError("INVALID_LRF_NAME", "Invalid lrf filename. LRF did NOT follow `<optional_prefix>_<lot_id>_<lrf_type>.lrf` format")
-    elif lrf_type == 'base':
-        logger.error('Cannot use unlabeled .lrf for finetuning!')
-        raise ValueError('Cannot use unlabeled .lrf for finetuning!')
-
-    return True
