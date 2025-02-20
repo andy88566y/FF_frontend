@@ -6,7 +6,6 @@ import plotly.graph_objects as go
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import DEFAULT_THRESHOLD
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
@@ -222,11 +221,11 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
     return fig
 
 
-def plot_roc(roc_data: list[tuple[str, Any, float]]):
+def plot_roc(roc_data: list[tuple[str, Any, float, float]]):
     fig = go.Figure()
 
     for curve_data in roc_data:
-        model_name, data, model_threshold = curve_data
+        model_name, data, selected_threshold, inference_threshold = curve_data
         fpr, tpr, threshold = data
         tnr = 1 - fpr
 
@@ -268,7 +267,7 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
         # Search for the marker whose threshold is equal or smaller than selected threshold.
         # Note: need to reverse because threshold is from 1 to 0.
         reversed_threshold = threshold[::-1]
-        selected_idx = np.searchsorted(reversed_threshold, model_threshold, side='left')
+        selected_idx = np.searchsorted(reversed_threshold, selected_threshold, side='left')
         selected_idx = len(threshold) - selected_idx
         if selected_idx == len(threshold):
             selected_idx -= 1
@@ -279,41 +278,41 @@ def plot_roc(roc_data: list[tuple[str, Any, float]]):
             y=[tpr[selected_idx]],
             mode="markers",
             marker={"color": "red", "size": 10},
-            name=f"Selected Threshold ({model_threshold:.5f})",
+            name=f"Selected Threshold ({selected_threshold:.5f})",
             hoverinfo='text',
-            hovertext=f"Selected Threshold<br>Capture rate: {tpr[selected_idx]}<br>Filter Rate: {tnr[selected_idx]}<br>Threshold: {model_threshold:.5f}",
+            hovertext=f"Selected Threshold<br>Capture rate: {tpr[selected_idx]}<br>Filter Rate: {tnr[selected_idx]}<br>Threshold: {selected_threshold:.5f}",
         ))
 
         # Add annotation above current selected model threshold
         fig.add_annotation(
             x=tnr[selected_idx],
             y=tpr[selected_idx],
-            text=f"{model_name} Threshold = {model_threshold:.5f} <br> Capture Rate: {tpr[selected_idx]:.4f} <br> Filter Rate: {tnr[selected_idx]:.4f}",
+            text=f"{model_name} Threshold = {selected_threshold:.5f} <br> Capture Rate: {tpr[selected_idx]:.4f} <br> Filter Rate: {tnr[selected_idx]:.4f}",
             showarrow=False,
             yshift=30,
         )
 
-        # Draw default threshold
-        if model_threshold != DEFAULT_THRESHOLD:
-            default_idx = np.searchsorted(reversed_threshold, DEFAULT_THRESHOLD, side='left')
-            default_idx = len(threshold) - default_idx
-            if default_idx == len(threshold):
-                default_idx -= 1
+        # Draw inference threshold
+        if selected_threshold != inference_threshold:
+            infer_idx = np.searchsorted(reversed_threshold, inference_threshold, side='left')
+            infer_idx = len(threshold) - infer_idx
+            if infer_idx == len(threshold):
+                infer_idx -= 1
 
             fig.add_trace(go.Scatter(
-                x=[tnr[default_idx]],
-                y=[tpr[default_idx]],
+                x=[tnr[infer_idx]],
+                y=[tpr[infer_idx]],
                 mode="markers",
                 marker={"color": "black", "size": 10},
-                name=f"Default ({DEFAULT_THRESHOLD:.5f})",
+                name=f"Inference ({inference_threshold:.5f})",
                 hoverinfo='text',
-                hovertext=f"Default Threshold<br>Capture rate: {tpr[default_idx]}<br>Filter Rate: {tnr[default_idx]}<br>Threshold: {DEFAULT_THRESHOLD:.5f}",
+                hovertext=f"Inference Threshold<br>Capture rate: {tpr[infer_idx]}<br>Filter Rate: {tnr[infer_idx]}<br>Threshold: {inference_threshold:.5f}",
             ))
 
             fig.add_annotation(
-                x=tnr[default_idx],
-                y=tpr[default_idx],
-                text=f"{model_name} Default threshold = {DEFAULT_THRESHOLD:.5f} <br> Capture Rate: {tpr[default_idx]:.4f} <br> Filter Rate: {tnr[default_idx]:.4f}",
+                x=tnr[infer_idx],
+                y=tpr[infer_idx],
+                text=f"{model_name} Inference threshold = {inference_threshold:.5f} <br> Capture Rate: {tpr[infer_idx]:.4f} <br> Filter Rate: {tnr[infer_idx]:.4f}",
                 showarrow=False,
                 yshift=-30,
             )
@@ -418,170 +417,164 @@ def app() -> None:
     st.title("False Filter Result Viewer")
     st.caption("Visualize False Filter Result [Model 1 - Base] [Model 2 - Candidate (optional)]")
 
-    r1_col1, r1_col2 = st.columns([2, 2])
+    r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 2])
 
     output_dir_default = "/mnt/dbpc/xxx"
     with r1_col1:
         rv_m1_output_dir = st.text_input("Model 1 (Base) Result Directory", value=output_dir_default)
     with r1_col2:
         rv_m2_output_dir = st.text_input("Model 2 (Candidate) Result Directory", value=output_dir_default)
+    with r1_col3:
+        st_gen_lrf_type = st.segmented_control("lrf Genreation Option", ["threshold", "top_k"], default="threshold")
 
     st.divider()
 
-    r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([2, 3, 1, 2])
+    r2_col1, _r2_col2 = st.columns([3, 2])
 
     vr1_col1, vr1_col2, vr1_col3, vr1_col4, vr1_col5 = st.columns([1, 2, 3, 2, 2])
     vr2_col1, vr2_col2, vr2_col3, vr2_col4, vr2_col5 = st.columns([1, 2, 3, 2, 2])
+
+    st.divider()
+
     vr3_col1, vr3_col2 = st.columns(2)
 
-    with r2_col3:
-        st_gen_lrf_type = st.segmented_control("lrf Genreation Option", ["threshold", "top_k"], default="threshold")
-    with r2_col4:
-        st.text("[Note] Top-K option would use threshold from inference result DB for 1D/2D charts and CR-FR chart below.")
+    invalid_input = [output_dir_default, '']
 
-    with r2_col1:
-        if st.button("Visualize Result", type="primary"):
-            st.rerun()
+    if rv_m1_output_dir not in invalid_input and rv_m2_output_dir not in invalid_input:
+        model_1_metadata, model_1_raw_data = get_model_data(rv_m1_output_dir)
+        model_2_metadata, model_2_raw_data = get_model_data(rv_m2_output_dir)
 
-        invalid_input = [output_dir_default, '']
+        if model_1_metadata is None:
+            with r2_col1:
+                st.error(f"Error getting result data from {rv_m1_output_dir}")
+                return
 
-        if rv_m1_output_dir not in invalid_input and rv_m2_output_dir not in invalid_input:
-            model_1_metadata, model_1_raw_data = get_model_data(rv_m1_output_dir)
-            model_2_metadata, model_2_raw_data = get_model_data(rv_m2_output_dir)
+        if model_2_metadata is None:
+            with r2_col1:
+                st.error(f"Error getting result data from {rv_m2_output_dir}")
+                return
 
-            if model_1_metadata is None:
-                with r2_col2:
-                    st.error(f"Error getting result data from {rv_m1_output_dir}")
-                    return
+        if model_1_metadata['lot_id'] != model_2_metadata['lot_id']:
+            with r2_col1:
+                st.error(f"Lot IDs do not match!  \nModel 1 lot ID: {model_1_metadata['lot_id']}  \nModel 2 lot ID: {model_2_metadata['lot_id']}")
+                return
 
-            if model_2_metadata is None:
-                with r2_col2:
-                    st.error(f"Error getting result data from {rv_m2_output_dir}")
-                    return
+        # Show result database details
+        with vr1_col1:
+            st.text("Model 1 (Base)")
+        with vr2_col1:
+            st.text("Model 2 (Candidate)")
+        with vr1_col2:
+            st.text(f"Lot ID:\n{model_1_metadata['lot_id']}")
+        with vr2_col2:
+            st.text(f"Lot ID:\n{model_2_metadata['lot_id']}")
+        with vr1_col3:
+            st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata['model_name'])}")
+        with vr2_col3:
+            st.text(f"Inference Model:\n{helper.format_model_name(model_2_metadata['model_name'])}")
 
-            if model_1_metadata['lot_id'] != model_2_metadata['lot_id']:
-                with r2_col2:
-                    st.error(f"Lot IDs do not match!  \nModel 1 lot ID: {model_1_metadata['lot_id']}  \nModel 2 lot ID: {model_2_metadata['lot_id']}")
-                    return
+        if st_gen_lrf_type == "top_k":
+            with vr1_col4:
+                rv_m1_topk = st.number_input("Top k", 0, 999, 150, 1,
+                                             help="Top-k defects ranked by Probabilities will be considered as defects.", key='m1_topk')
+            with vr2_col4:
+                rv_m2_topk = st.number_input("Top k", 0, 999, 150, 1,
+                                             help="Top-k defects ranked by Probabilities will be considered as defects.", key='m2_topk')
+            with vr1_col5:
+                gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, top_k=rv_m1_topk)
+            with vr2_col5:
+                gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, top_k=rv_m2_topk)
 
-            # Show result database details
-            with vr1_col1:
-                st.text("Model 1 (Base)")
-            with vr2_col1:
-                st.text("Model 2 (Candidate)")
-            with vr1_col2:
-                st.text(f"Lot ID:\n{model_1_metadata['lot_id']}")
-            with vr2_col2:
-                st.text(f"Lot ID:\n{model_2_metadata['lot_id']}")
-            with vr1_col3:
-                st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata['model_name'])}")
-            with vr2_col3:
-                st.text(f"Inference Model:\n{helper.format_model_name(model_2_metadata['model_name'])}")
-
-            if st_gen_lrf_type == "top_k":
-                with vr1_col4:
-                    rv_m1_topk = st.number_input("Top k", 0, 999, 150, 1,
-                                                help="Top-k defects ranked by Probabilities will be considered as defects.", key='m1_topk')
-                with vr2_col4:
-                    rv_m2_topk = st.number_input("Top k", 0, 999, 150, 1,
-                                                help="Top-k defects ranked by Probabilities will be considered as defects.", key='m2_topk')
-                with vr1_col5:
-                    gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, top_k=rv_m1_topk)
-                with vr2_col5:
-                    gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, top_k=rv_m2_topk)
-
-                # TODO: Make this work with charts below instead of using default values
-                rv_m1_threshold = model_1_metadata['model_threshold']
-                rv_m2_threshold = model_2_metadata['model_threshold']
-            else:
-                with vr1_col4:
-                    rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
-                                                    help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
-                with vr2_col4:
-                    rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_2_metadata['model_threshold'], 0.00001, format="%.5f",
-                                                    help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
-                with vr1_col5:
-                    gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
-                with vr2_col5:
-                    gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, threshold=rv_m2_threshold)
-
-            # Draw 2D comparison chart
-            with vr3_col1:
-                st.plotly_chart(generate_2D_plot(model_1_raw_data, model_2_raw_data, rv_m1_threshold, rv_m2_threshold))
-
-            with vr3_col2:
-                # TODO: This should be done somewhere else
-                if set(model_1_raw_data[2]) == {-1} or set(model_2_raw_data[2]) == {-1}:
-                    # All data is unlabeled
-                    st.markdown("##### All data is unlabeled! Skipping chart.")
-                else:
-                    model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
-                    model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)
-                    st.plotly_chart(plot_roc([
-                        ("Model 1", model_1_roc_data, rv_m1_threshold),
-                        ("Model 2", model_2_roc_data, rv_m2_threshold),
-                    ]))
-
-                    # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, return_curve=True)
-                    # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, return_curve=True)
-                    # st.plotly_chart(plot_prc([
-                    #     ("Model 1", model_1_prc_data, rv_m1_threshold),
-                    #     ("Model 2", model_2_prc_data, rv_m2_threshold),
-                    # ]))
-
-        elif rv_m1_output_dir not in invalid_input:
-            model_1_metadata, model_1_raw_data = get_model_data(rv_m1_output_dir)
-
-            if model_1_metadata is None:
-                with r2_col2:
-                    st.error(f"Error getting result data from {rv_m1_output_dir}")
-                    return
-
-            # Show result database details
-            with vr1_col1:
-                st.text("Model 1 (Base)")
-            with vr1_col2:
-                st.text(f"Lot ID:\n{model_1_metadata['lot_id']}")
-            with vr1_col3:
-                st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata['model_name'])}")
-
-            if st_gen_lrf_type == "top_k":
-                with vr1_col4:
-                    rv_m1_topk = st.number_input("Top k", 0, 999, 150, 1,
-                                                help="Top-k defects ranked by Probabilities will be considered as defects.", key='m1_topk')
-                with vr1_col5:
-                    gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, top_k=rv_m1_topk)
-
-                # TODO: Make this work with charts below instead of using default values
-                rv_m1_threshold = model_1_metadata['model_threshold']
-            else:
-                with vr1_col4:
-                    rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
-                                                    help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
-                with vr1_col5:
-                    gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
-
-            # Draw 1D comparison chart
-            with vr3_col1:
-                st.plotly_chart(generate_1D_plot(model_1_raw_data, rv_m1_threshold))
-
-            with vr3_col2:
-                # TODO: This should be done somewhere else
-                if set(model_1_raw_data[2]) == {-1}:
-                    # All data is unlabeled
-                    st.markdown("##### All data is unlabeled! Skipping chart.")
-
-                    # If no ROC, just calculate filter rate
-                    defect_list, prob_list, _ = model_1_raw_data
-                    total_defects = len(defect_list)
-                    filtered_count = len([p for p in prob_list if p < rv_m1_threshold])
-                    st.success(f'False Filter Rate is {filtered_count/total_defects:.4f} at selected threshold ({rv_m1_threshold:.5f})')
-
-                else:
-                    model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
-                    st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold)]))
-
-                    # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, return_curve=True)
-                    # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold)]))
+            rv_m1_threshold = helper.get_topk_model_threshold(rv_m1_output_dir, rv_m1_topk)
+            rv_m2_threshold = helper.get_topk_model_threshold(rv_m2_output_dir, rv_m2_topk)
         else:
-            pass
+            with vr1_col4:
+                rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
+                                                help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+            with vr2_col4:
+                rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_2_metadata['model_threshold'], 0.00001, format="%.5f",
+                                                help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
+            with vr1_col5:
+                gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
+            with vr2_col5:
+                gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, threshold=rv_m2_threshold)
+
+        # Draw 2D comparison chart
+        with vr3_col1:
+            st.plotly_chart(generate_2D_plot(model_1_raw_data, model_2_raw_data, rv_m1_threshold, rv_m2_threshold))
+
+        with vr3_col2:
+            # TODO: This should be done somewhere else
+            if set(model_1_raw_data[2]) == {-1} or set(model_2_raw_data[2]) == {-1}:
+                # All data is unlabeled
+                st.markdown("##### All data is unlabeled! Skipping chart.")
+            else:
+                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
+                model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)
+                st.plotly_chart(plot_roc([
+                    ("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold']),
+                    ("Model 2", model_2_roc_data, rv_m2_threshold, model_2_metadata['model_threshold']),
+                ]))
+
+                # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, return_curve=True)
+                # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, return_curve=True)
+                # st.plotly_chart(plot_prc([
+                #     ("Model 1", model_1_prc_data, rv_m1_threshold),
+                #     ("Model 2", model_2_prc_data, rv_m2_threshold),
+                # ]))
+
+    elif rv_m1_output_dir not in invalid_input:
+        model_1_metadata, model_1_raw_data = get_model_data(rv_m1_output_dir)
+
+        if model_1_metadata is None:
+            with r2_col1:
+                st.error(f"Error getting result data from {rv_m1_output_dir}")
+                return
+
+        # Show result database details
+        with vr1_col1:
+            st.text("Model 1 (Base)")
+        with vr1_col2:
+            st.text(f"Lot ID:\n{model_1_metadata['lot_id']}")
+        with vr1_col3:
+            st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata['model_name'])}")
+
+        if st_gen_lrf_type == "top_k":
+            with vr1_col4:
+                rv_m1_topk = st.number_input("Top k", 0, 999, 150, 1,
+                                            help="Top-k defects ranked by Probabilities will be considered as defects.", key='m1_topk')
+            with vr1_col5:
+                gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, top_k=rv_m1_topk)
+
+            rv_m1_threshold = helper.get_topk_model_threshold(rv_m1_output_dir, rv_m1_topk)
+        else:
+            with vr1_col4:
+                rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
+                                                help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+            with vr1_col5:
+                gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
+
+        # Draw 1D comparison chart
+        with vr3_col1:
+            st.plotly_chart(generate_1D_plot(model_1_raw_data, rv_m1_threshold))
+
+        with vr3_col2:
+            # TODO: This should be done somewhere else
+            if set(model_1_raw_data[2]) == {-1}:
+                # All data is unlabeled
+                st.markdown("##### All data is unlabeled! Skipping chart.")
+
+                # If no ROC, just calculate filter rate
+                defect_list, prob_list, _ = model_1_raw_data
+                total_defects = len(defect_list)
+                filtered_count = len([p for p in prob_list if p < rv_m1_threshold])
+                st.success(f'False Filter Rate is {filtered_count/total_defects:.4f} at selected threshold ({rv_m1_threshold:.5f})')
+
+            else:
+                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
+                st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold'])]))
+
+                # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, return_curve=True)
+                # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold)]))
+    else:
+        pass

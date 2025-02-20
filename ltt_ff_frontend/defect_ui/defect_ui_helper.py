@@ -569,6 +569,24 @@ def get_defect_id(output_dir: str) -> list[int]:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
+
+@st.cache_data(ttl='10s')
+def get_topk_model_threshold(output_dir: str, top_k: int = 150) -> float:
+    '''
+    Return model threshold for selected model
+    '''
+    params = {"output_dir": output_dir, "top_k": top_k}
+    r = requests.get(f'{API_ROOT}result/get_topk_threshold', params=params, timeout=TIMEOUT)
+
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return 0.0
+    else:
+        model_threshold = r.json()['threshold']
+        logger.info(f'Model threshold for `{output_dir}` top_k={top_k}: {model_threshold}')
+        return model_threshold
+
+
 @st.cache_data(ttl='10s')
 def get_prc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     '''
@@ -675,6 +693,7 @@ def check_valid_lrf_in_yaml(yaml_config: dict) -> bool:
         raise ValueError('Cannot use unlabeled .lrf for finetuning!')
 
     return True
+
 
 def check_matching_lot_id(image_dir: str, lrf_path: str) -> bool:
     '''
