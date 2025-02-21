@@ -1,5 +1,5 @@
+import base64
 import os
-import re
 from pprint import pformat
 from typing import Any
 
@@ -10,7 +10,6 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
-from ltt_ff_frontend.read_defect import get_lrf_type
 
 
 def gap(size: int) -> None:
@@ -29,14 +28,16 @@ def format_model_name(name: str) -> str:
         return "SCRATCH"
     # For base model name (e.g. base/LTT_SW#x9u#N3#M0-M2#20250124T000000Z#55032dae#55032dae.encrypted.pth)
     if '/' in name:
-        model_type, model_name = name.split("/")
+        model_paths = name.split("/")
+        model_type = model_paths[-2]
+        model_name = model_paths[-1]
         return f"[{model_type}] {model_name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
     # For output model name (e.g. 13feb_minye#x9u#tl#lg20250213T151435Z#55032dae#5fb1017f)
     else:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl='10s')
 def get_base_models() -> list[str]:
     '''
     Returns a list of all available models to be used for inference or fine-tuning.
@@ -62,24 +63,19 @@ def get_model_threshold(model_name: str) -> float:
 
     if r.json()['status'] == 'error':
         logger.error(r.json()['message'])
-        return []
+        return 0.0
     else:
         model_threshold = r.json()['model_threshold']
         logger.info(f'Model threshold for {model_name}: {model_threshold}')
         return model_threshold
 
 
-def request_lrf(output_dir: str,
-                lot_id: str,
-                model_name: str,
-                confidence_threshold: float) -> requests.Response:
+def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> requests.Response:
     '''
     Calls FalseFilter API with use_cache=True.
 
     Args:
         output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
-        lot_id: Name of the lot
-        model_name: Name of the inference model.
         confidence_threshold: Images with defect probability lower than confidence threshold
                                 is considered defective.
 
@@ -87,8 +83,6 @@ def request_lrf(output_dir: str,
     '''
     r = requests.post(API_ROOT+'generate_lrf', json={
                         "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
                         "threshold": confidence_threshold,
                     }, timeout=TIMEOUT)
 
@@ -102,25 +96,18 @@ def request_lrf(output_dir: str,
     return r
 
 
-def request_top_k_lrf(output_dir: str,
-                      lot_id: str,
-                      model_name: str,
-                      top_k: int) -> requests.Response:
+def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
     '''
     Call FalseFilter API to generate an .lrf with top K defects
 
     Args:
         output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
-        lot_id: Name of the lot
-        model_name: Name of the inference model.
         top_k: The top k number of defects will be labeled as defects.
 
     Returns the reponse of the API request.
     '''
     r = requests.post(API_ROOT+'generate_top_k_lrf', json={
                         "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
                         "top_k": top_k,
                     }, timeout=TIMEOUT)
 
@@ -259,6 +246,15 @@ def request_inference_statuses(inference_id_list: list[str]) -> pd.DataFrame:
     return format_inference_status(pd.DataFrame.from_dict(detailed_inference_statuses).T).T
 
 
+def format_url(params: dict[str, str]):
+    # TODO: Get correct base url
+    base_url = "http://xxx:6501"
+    param_strs = []
+    for k, v in params.items():
+        param_strs.append(f"{k}={base64.urlsafe_b64encode(str.encode(v)).decode()}")
+    return f"{base_url}/?{'&'.join(param_strs)}"
+
+
 def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
     '''
     Format and sort the detailed inference status dataframe.
@@ -285,6 +281,11 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
             inference_status['end_time'] = pd.to_datetime(inference_status['end_time'], unit='s').dt.floor('s')
             inference_status['end_time'] = inference_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
+        # TODO: Make hyper-link work
+        # inference_status['Review Link'] = inference_status[["output_dir", "image_dir"]].apply(
+        #     lambda x: format_url({'result_dir': x['output_dir'], 'image_dir': x['image_dir']}), axis=1
+        # )
+
     # Change ordering
     sorted_inference_statuses_df = inference_status.reindex(columns=[
         'status',
@@ -292,6 +293,7 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
         'start_time',
         'end_time',
         'lot_id',
+        # 'Review Link',
         'total_images',
         'image_dir',
         'lrf_path',
@@ -542,8 +544,112 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
     return sorted_finetuning_statuses_df
 
 
+@st.cache_data(ttl='10s')
+def get_db_metadata(output_dir: str) -> dict[str, Any]:
+    '''
+    Get Result DB metadata.
+
+    Args:
+        output_dir: Root output directory where inference results were stored.
+
+        Returns:
+            A dictionary of result database metadata
+    '''
+    r = requests.get(API_ROOT+'result/get_db_metadata', params={"output_dir": output_dir}, timeout=TIMEOUT)
+
+    if r.json()['status'] == 'completed':
+        return r.json()['db_metadata']
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
+@st.cache_data(ttl='10s')
+def get_defect_id(output_dir: str) -> list[int]:
+    '''
+    Get list of defect IDs from a database.
+
+    Args:
+        output_dir: Root output directory where inference results were stored.
+
+        Returns:
+            A list of the defect IDs of a lot of images.
+    '''
+    r = requests.get(API_ROOT+'result/get_defect_id', params={"output_dir": output_dir}, timeout=TIMEOUT)
+
+    if r.json()['status'] == 'completed':
+        return r.json()['defect_id_list']
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
 @st.cache_data(ttl='1s')
-def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_topk_model_threshold(output_dir: str, top_k: int = 150) -> float:
+    '''
+    Return model threshold for selected model
+    '''
+    params = {"output_dir": output_dir, "top_k": top_k}
+    r = requests.get(f'{API_ROOT}result/get_topk_threshold', params=params, timeout=TIMEOUT)
+
+    if r.json()['status'] == 'error':
+        logger.error(r.json()['message'])
+        return 0.0
+    else:
+        model_threshold = r.json()['threshold']
+        logger.info(f'Model threshold for `{output_dir}` top_k={top_k}: {model_threshold}')
+        return model_threshold
+
+
+# TODO: Split this into smaller functions
+@st.cache_data(ttl='30s')
+def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -> list[dict[str, Any]]:
+    '''
+    Return lrf data with selected columns
+    '''
+    params = {"output_dir": output_dir, "cols": ",".join(cols)}
+    r = requests.get(f'{API_ROOT}result/get_lrf_data', params=params, timeout=TIMEOUT)
+    if r.json()['status'] == 'error':
+        logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
+    else:
+        lrf_data = r.json()['lrf_data']
+        logger.info(f'LRF data of {len(lrf_data)} defects loaded from `{output_dir}`')
+
+    r = requests.get(API_ROOT+'result/get_answer', json={"output_dir": output_dir}, timeout=TIMEOUT)
+    if r.json()['status'] == 'error':
+        logger.error(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
+    else:
+        answer_list = r.json()['answer_list']
+        if len(lrf_data) != len(answer_list):
+            logger.error(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
+            raise ValueError(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
+        lrf_data_with_ans = []
+        for data, ans in zip(lrf_data, answer_list):
+            lrf_data_with_ans.append({**data, "Ans": ans})
+
+    if include_prob:
+        r = requests.get(API_ROOT+'result/get_probability', json={"output_dir": output_dir}, timeout=TIMEOUT)
+
+        if r.json()['status'] == 'error':
+            logger.error(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
+            raise ValueError(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
+        else:
+            probs = r.json()['probability_list']
+            if len(lrf_data_with_ans) != len(probs):
+                logger.error(f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}")
+                raise ValueError(f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}")
+            lrf_data_with_prob = []
+            for data, prob in zip(lrf_data_with_ans, probs):
+                lrf_data_with_prob.append({**data, "Probability": prob})
+            return lrf_data_with_prob
+    else:
+        return lrf_data_with_ans
+
+
+@st.cache_data(ttl='10s')
+def get_prc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     '''
     Get the data needed to draw a PRC curve.
 
@@ -553,12 +659,7 @@ def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
         model_name: Name of inference results.
         return_curve: If false, just return the area under the curve (AUPRC)
     '''
-    r = requests.get(API_ROOT+'get_prc_data', json={
-                        "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
-                        "return_curve": return_curve,
-                    }, timeout=TIMEOUT)
+    r = requests.get(API_ROOT+'result/get_prc_data', params={"output_dir": output_dir, "return_curve": return_curve}, timeout=TIMEOUT)
 
     prc_data_list = r.json()['prc_data']
     prc_data_ndarray = tuple(np.array(data_list) for data_list in prc_data_list)
@@ -566,8 +667,8 @@ def get_prc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
     return prc_data_ndarray
 
 
-@st.cache_data(ttl='1s')
-def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+@st.cache_data(ttl='10s')
+def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     '''
     Get the data needed to draw an ROC curve.
 
@@ -577,12 +678,7 @@ def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
         model_name: Name of inference results.
         return_curve: If false, just return the area under the curve (AUROC)
     '''
-    r = requests.get(API_ROOT+'get_roc_data', json={
-                        "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
-                        "return_curve": return_curve,
-                    }, timeout=TIMEOUT)
+    r = requests.get(API_ROOT+'result/get_roc_data', params={"output_dir": output_dir, "return_curve": return_curve}, timeout=TIMEOUT)
 
     roc_data_list = r.json()['roc_data']
     roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
@@ -590,131 +686,43 @@ def get_roc_data(output_dir: str, lot_id: str, model_name:str, return_curve: boo
     return roc_data_ndarray
 
 
-@st.cache_data(ttl='1s')
-def get_defect_id(output_dir: str, lot_id: str, model_name: str) -> list[int]:
-    '''
-    Get list of defect IDs from a database.
-
-    Args:
-        output_dir: Root output directory where inference results were stored.
-        lot_id: Name of the lot of defect images.
-        model_name: Name of model used to run inference.
-
-        Returns:
-            A list of the defect IDs of a lot of images.
-    '''
-    r = requests.get(API_ROOT+'get_defect_id', json={
-                        "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
-                    }, timeout=TIMEOUT)
-
-    if r.json()['status'] == 'completed':
-        logger.info("DB read started running successfully!")
-        return r.json()['defect_id_list']
-    else:
-        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
-        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
-
-
-@st.cache_data(ttl='1s')
-def get_probability(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[float]:
+@st.cache_data(ttl='10s')
+def get_probability(output_dir: str, defect_id: list[int]) -> list[float]:
     """
     Read a list of the defect probabilities from a database.
 
     Args:
         output_dir: Root output directory where inference results were stored.
-        lot_id: Name of the lot of defect images.
-        model_name: Name of model used to run inference.
         defect_id: ID of the defect images
 
     Returns:
         A list of the defect probabilities of a lot of images.
     """
-    r = requests.get(API_ROOT+'get_probability', json={
-                        "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
-                        "defect_id_list": defect_id,
-                    }, timeout=TIMEOUT)
+    r = requests.get(API_ROOT+'result/get_probability', json={"output_dir": output_dir, "defect_id_list": defect_id}, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
-        logger.info("DB read started running successfully!")
         return r.json()['probability_list']
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-@st.cache_data(ttl='1s')
-def get_answer(output_dir: str, lot_id: str, model_name: str, defect_id: list[int]) -> list[int]:
+@st.cache_data(ttl='10s')
+def get_answer(output_dir: str, defect_id: list[int]) -> list[int]:
     """
     Read a list of the ground truths from a database.
 
     Args:
         output_dir: Root output directory where inference results were stored.
-        lot_id: Name of the lot of defect images.
-        model_name: Name of model used to run inference.
         defect_id: ID of the defect images
 
     Returns:
         A list of the ground truths of a lot of images.
     """
-    r = requests.get(API_ROOT+'get_answer', json={
-                        "output_dir": output_dir,
-                        "lot_id": lot_id,
-                        "model_name": model_name,
-                        "defect_id_list": defect_id,
-                    }, timeout=TIMEOUT)
+    r = requests.get(API_ROOT+'result/get_answer', json={"output_dir": output_dir, "defect_id_list": defect_id}, timeout=TIMEOUT)
 
     if r.json()['status'] == 'completed':
-        logger.info("DB read started running successfully!")
         return r.json()['answer_list']
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
-
-
-def check_valid_lrf_in_yaml(yaml_config: dict) -> bool:
-    '''
-    Ensures all .lrf files listed in the yaml config file are valid
-    (i.e. exists, has correct file extension, is lableled)
-
-    Args:
-        yaml_config: Dict containing training info such as lrf path, lot id, training image dir
-
-    Returns true if there are no invalid lrf files found (check passed), and returns false if
-    an invalid lrf file is found (check failed).
-    '''
-    # Extract all lrf paths from the yaml config
-    lrf_paths = [batch['lrf_path'] for batch in yaml_config['data_paths']]
-    lot_ids = [batch['lot_id'] for batch in yaml_config['data_paths']]
-
-    for lrf_path, lot_id in zip(lrf_paths, lot_ids):
-        lrf_type = get_lrf_type(os.path.basename(lrf_path), lot_id)
-
-    if lrf_type is None:
-        logger.error("INVALID_LRF_NAME", "Invalid lrf filename. LRF did NOT follow `<optional_prefix>_<lot_id>_<lrf_type>.lrf` format")
-        raise ValueError("INVALID_LRF_NAME", "Invalid lrf filename. LRF did NOT follow `<optional_prefix>_<lot_id>_<lrf_type>.lrf` format")
-    elif lrf_type == 'base':
-        logger.error('Cannot use unlabeled .lrf for finetuning!')
-        raise ValueError('Cannot use unlabeled .lrf for finetuning!')
-
-    return True
-
-def check_matching_lot_id(image_dir: str, lrf_path: str) -> bool:
-    '''
-    Extract lot ID from image_dir, and try to find it in the lrf filename.
-    Currently unable to extra lot ID from lrf_path to do an exact match,
-    as too many underscores are used as separators.
-
-    Args:
-        image_dir: Image directory containing the "Images" folder
-        lrf_path: Absolute path to the .lrf file.
-
-    Returns true if the lot ID found in image_dir is also found in lrf_path.
-    Otherwise, it returns false.
-    '''
-    image_dir_lot_id = os.path.basename(image_dir)
-    lrf_filename = os.path.basename(lrf_path)
-    return re.search(image_dir_lot_id, lrf_filename)
