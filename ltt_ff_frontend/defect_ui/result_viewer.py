@@ -427,6 +427,10 @@ def app() -> None:
     with r1_col3:
         st_gen_lrf_type = st.segmented_control("lrf Genreation Option", ["threshold", "top_k"], default="threshold")
 
+    if st_gen_lrf_type is None:
+        st.error("lrf Genreation Option can not be None!")
+        return
+
     st.divider()
 
     r2_col1, _r2_col2 = st.columns([3, 2])
