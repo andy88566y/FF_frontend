@@ -425,10 +425,10 @@ def app() -> None:
     with r1_col2:
         rv_m2_output_dir = st.text_input("Model 2 (Candidate) Result Directory", value=output_dir_default)
     with r1_col3:
-        st_gen_lrf_type = st.segmented_control("lrf Genreation Option", ["threshold", "top_k"], default="threshold")
+        st_gen_lrf_type = st.segmented_control("lrf Generation Option", ["threshold", "top_k"], default="threshold")
 
     if st_gen_lrf_type is None:
-        st.error("lrf Genreation Option can not be None!")
+        st.error("lrf Generation Option can not be None!")
         return
 
     st.divider()
