@@ -60,6 +60,10 @@ def app():
         logger.info('Input field params encoded and stored in URL.')
         list_view.app(text_input_result_dir, text_input_image_dir)
 
+    # hotfix for endless rerun bug
+    elif text_input_result_dir or text_input_image_dir:
+        pass
+
     elif decoded_result_dir_as_str and decoded_image_dir_as_str:
         if not os.path.exists(decoded_result_dir_as_str):
             raise ValueError(f'Result directory in URL is invalid: {decoded_result_dir_as_str}')
