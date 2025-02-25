@@ -75,3 +75,6 @@ def app():
         st.session_state.result_dir = decoded_result_dir_as_str
         st.session_state.image_dir = decoded_image_dir_as_str
         st.rerun()
+
+    else:
+        pass
