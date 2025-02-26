@@ -512,6 +512,18 @@ def app() -> None:
             if set(model_1_raw_data[2]) == {-1} or set(model_2_raw_data[2]) == {-1}:
                 # All data is unlabeled
                 st.markdown("##### All data is unlabeled! Skipping chart.")
+
+                # If all data is unlabeled, just calculate the filter rates
+                defect_list_1, prob_list_1, _ = model_1_raw_data
+                total_defects_1 = len(defect_list_1)
+                filtered_count_1 = len([p for p in prob_list_1 if p < rv_m1_threshold])
+                st.success(f'Model 1: False Filter Rate is {filtered_count_1/total_defects_1:.4f} at selected threshold ({rv_m1_threshold:.5f})')
+
+                defect_list_2, prob_list_2, _ = model_2_raw_data
+                total_defects_2 = len(defect_list_2)
+                filtered_count_2 = len([p for p in prob_list_2 if p < rv_m2_threshold])
+                st.success(f'Model 2: False Filter Rate is {filtered_count_2/total_defects_2:.4f} at selected threshold ({rv_m2_threshold:.5f})')
+
             else:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
                 model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)
