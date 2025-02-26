@@ -493,11 +493,30 @@ def app() -> None:
             rv_m2_threshold = helper.get_topk_model_threshold(rv_m2_output_dir, rv_m2_topk)
         else:
             with vr1_col4:
-                rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
-                                                help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+                rv_m1_threshold = st.number_input(label="Confidence threshold:",
+                                                  value=model_1_metadata['model_threshold'],
+                                                  step=0.00001,
+                                                  format="%.5f",
+                                                  help="Probabilities above thershold will be considered as defects.",
+                                                  key='m1_threshold')
             with vr2_col4:
-                rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_2_metadata['model_threshold'], 0.00001, format="%.5f",
-                                                help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
+                rv_m2_threshold = st.number_input(label="Confidence threshold:",
+                                                  value=model_2_metadata['model_threshold'],
+                                                  step=0.00001,
+                                                  format="%.5f",
+                                                  help="Probabilities above thershold will be considered as defects.",
+                                                  key='m2_threshold')
+
+            # Validate confidence thresholds
+            if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
+                logger.error(f'Confidence threshold must be between 0.0 and 1.0! Model 1 selected confidence threshold: {rv_m1_threshold}')
+                st.error(f'Confidence threshold must be between 0.0 and 1.0! Model 1 selected confidence threshold: {rv_m1_threshold}')
+                return
+            elif rv_m2_threshold < 0.0 or rv_m2_threshold > 1.0:
+                logger.error(f'Confidence threshold must be between 0.0 and 1.0! Model 2 selected confidence threshold: {rv_m2_threshold}')
+                st.error(f'Confidence threshold must be between 0.0 and 1.0! Model 2 selected confidence threshold: {rv_m2_threshold}')
+                return
+
             with vr1_col5:
                 gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
             with vr2_col5:
@@ -565,8 +584,19 @@ def app() -> None:
             rv_m1_threshold = helper.get_topk_model_threshold(rv_m1_output_dir, rv_m1_topk)
         else:
             with vr1_col4:
-                rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
-                                                help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+                rv_m1_threshold = st.number_input(label="Confidence threshold:",
+                                                  value=model_1_metadata['model_threshold'],
+                                                  step=0.00001,
+                                                  format="%.5f",
+                                                  help="Probabilities above thershold will be considered as defects.",
+                                                  key='m1_threshold')
+
+            # Validate confidence threshold
+            if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
+                logger.error(f'Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}')
+                st.error(f'Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}')
+                return
+
             with vr1_col5:
                 gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
 
