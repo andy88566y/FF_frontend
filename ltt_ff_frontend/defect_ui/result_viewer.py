@@ -528,9 +528,9 @@ def app() -> None:
 
         with vr3_col2:
             # TODO: This should be done somewhere else
-            if set(model_1_raw_data[2]) == {-1} or set(model_2_raw_data[2]) == {-1}:
-                # All data is unlabeled
-                st.markdown("##### All data is unlabeled! Skipping chart.")
+            if set(model_1_raw_data[2]) == {-1} or set(model_2_raw_data[2]) == {-1} or set(model_1_raw_data[2]) == {0} or set(model_2_raw_data[2]) == {0}:
+                # All data is unlabeled or dataset consists of only non-defects
+                st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
 
                 # If all data is unlabeled, just calculate the filter rates
                 defect_list_1, prob_list_1, _ = model_1_raw_data
@@ -606,9 +606,9 @@ def app() -> None:
 
         with vr3_col2:
             # TODO: This should be done somewhere else
-            if set(model_1_raw_data[2]) == {-1}:
-                # All data is unlabeled
-                st.markdown("##### All data is unlabeled! Skipping chart.")
+            if set(model_1_raw_data[2]) == {-1} or set(model_1_raw_data[2]) == {0}:
+                # All data is unlabeled or dataset consists of only non-defects
+                st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
 
                 # If no ROC, just calculate filter rate
                 defect_list, prob_list, _ = model_1_raw_data

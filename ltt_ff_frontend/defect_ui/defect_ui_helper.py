@@ -670,7 +670,7 @@ def get_prc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray
 @st.cache_data(ttl='10s')
 def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     '''
-    Get the data needed to draw an ROC curve.
+    Get the data needed to draw an ROC curve (fpr, tpr, threshold)
 
     Args:
         output_dir: Root output directory of inference resuits.
