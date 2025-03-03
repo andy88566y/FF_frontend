@@ -16,7 +16,7 @@ DEFECT_COLOR_MAPPING = {
 }
 
 
-def get_model_data(output_dir: str):
+def get_model_data(output_dir: str) -> tuple[dict[str, Any], tuple[list[int], list[float], list[int]]] | tuple[None, None]:
     try:
         db_metadata = helper.get_db_metadata(output_dir)
         defect_id_list = helper.get_defect_id(output_dir)
@@ -28,7 +28,7 @@ def get_model_data(output_dir: str):
         return None, None
 
 
-def generate_1D_plot(m1_data, m1_threshold: float):
+def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_threshold: float) -> go.Figure:
     m1_defect_ids, m1_probs, m1_ans = m1_data
 
     df = pd.DataFrame(data={"Defect_ID": m1_defect_ids, "Probability": m1_probs, "LRF_Label": m1_ans})
@@ -79,7 +79,10 @@ def generate_1D_plot(m1_data, m1_threshold: float):
     return fig
 
 
-def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float):
+def generate_2D_plot(m1_data: tuple[list[int], list[float], list[int]],
+                     m2_data: tuple[list[int], list[float], list[int]],
+                     m1_threshold: float,
+                     m2_threshold: float) -> go.Figure:
     m1_defect_ids, m1_probs, m1_ans = m1_data
     m2_defect_ids, m2_probs, m2_ans = m2_data
     assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
@@ -221,7 +224,7 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
     return fig
 
 
-def plot_roc(roc_data: list[tuple[str, Any, float, float]]):
+def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float]]) -> go.Figure:
     fig = go.Figure()
 
     for curve_data in roc_data:
@@ -337,7 +340,7 @@ def plot_roc(roc_data: list[tuple[str, Any, float, float]]):
     return fig
 
 
-def plot_prc(prc_data: list[tuple[str, Any, float]]):
+def plot_prc(prc_data: list[tuple[str, Any, float]]) -> go.Figure:
     fig = go.Figure()
 
     for curve_data in prc_data:
@@ -377,7 +380,7 @@ def plot_prc(prc_data: list[tuple[str, Any, float]]):
     return fig
 
 
-def gen_lrf(model_id, output_dir, gen_lrf_type, threshold=None, top_k=None):
+def gen_lrf(model_id: str, output_dir: str, gen_lrf_type: str, threshold=None, top_k=None) -> None:
     if gen_lrf_type == "top_k":
         if top_k is not None and 1 <= top_k <= 999:
             if st.button(f"Generate new Model {model_id} lrf"):
