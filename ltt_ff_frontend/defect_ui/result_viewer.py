@@ -3,6 +3,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 import streamlit as st
 from loguru import logger
 
@@ -29,35 +30,32 @@ def get_model_data(output_dir: str) -> tuple[dict[str, Any], tuple[list[int], li
 
 
 def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_threshold: float) -> go.Figure:
+
     m1_defect_ids, m1_probs, m1_ans = m1_data
 
     df = pd.DataFrame(data={"Defect_ID": m1_defect_ids, "Probability": m1_probs, "LRF_Label": m1_ans})
+    df["Classification"] = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]]
 
-    # TODO: Change to use plotly.express and add marginal="rug"
+    # Add histogram
+    fig = px.histogram(data_frame=df,
+                       x="Probability",
+                       range_x=[0.0, 1.0],
+                       nbins=100,
+                       color="Classification",
+                       color_discrete_map={"Non-defect":DEFECT_COLOR_MAPPING["ND"],
+                                           "Defect":DEFECT_COLOR_MAPPING["D"],
+                                           "Unlabeled":DEFECT_COLOR_MAPPING["UNK"]},
+                       marginal="rug",
+                       hover_name="Classification",
+                       hover_data={
+                                   "Probability": True,
+                                   "Defect_ID": True,
+                                   "LRF_Label": False,
+                                   },
+                        labels={"LRF_Label": "Defect/non-defect",}
+                       )
 
-    fig = go.Figure()
-    fig.add_trace(
-        go.Histogram(
-            x=df[df["LRF_Label"] == 1]["Probability"],
-            marker={"color": DEFECT_COLOR_MAPPING["D"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name="Defect"
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            x=df[df["LRF_Label"] == 0]["Probability"],
-            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name="Non-Defect"
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            x=df[df["LRF_Label"] == -1]["Probability"],
-            marker={"color": DEFECT_COLOR_MAPPING["UNK"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name="No-Label"
-        )
-    )
-
+    # Add threshold line
     fig.add_shape(
         type="line",
         x0=m1_threshold,
@@ -83,6 +81,7 @@ def generate_2D_plot(m1_data: tuple[list[int], list[float], list[int]],
                      m2_data: tuple[list[int], list[float], list[int]],
                      m1_threshold: float,
                      m2_threshold: float) -> go.Figure:
+
     m1_defect_ids, m1_probs, m1_ans = m1_data
     m2_defect_ids, m2_probs, m2_ans = m2_data
     assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
@@ -91,28 +90,26 @@ def generate_2D_plot(m1_data: tuple[list[int], list[float], list[int]],
     classifications = ['Defect' if a1 == 1 and a2 == 1 else 'Non-defect' if a1 == 0 and a2 == 0 else 'No-Label' for a1, a2 in zip(m1_ans, m2_ans)]
     marker_text = [f'{defect_id}<br>{classification}' for defect_id, classification in zip(defect_ids, classifications)]
 
-    # 2D scatter plot
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=m1_probs,
-            y=m2_probs,
-            xaxis="x",
-            yaxis="y",
-            mode="markers",
-            marker={
-                "color": [
-                    DEFECT_COLOR_MAPPING["D"] if a1 == 1 and a2 == 1 else DEFECT_COLOR_MAPPING["ND"] if a1 == 0 and a2 == 0 else DEFECT_COLOR_MAPPING["UNK"]
-                    for a1, a2 in zip(m1_ans, m2_ans)
-                ],
-                "size": 5,
-            },
-            text=marker_text,
-            hoverinfo="text",
-            hovertemplate="%{text}<br>Model 1 Prob: %{x}<br>Model 2 Prob: %{y}",
-            name=""
-        )
-    )
+    df = pd.DataFrame(data={"Defect_ID": m1_defect_ids,
+                            "Probability_M1": m1_probs,
+                            "Probability_M2": m2_probs,
+                            "Classification": classifications})
+
+    fig = px.scatter(df,
+                     x="Probability_M1",
+                     y="Probability_M2",
+                     range_x=[0.0, 1.0],
+                     range_y=[0.0, 1.0],
+                     marginal_x="histogram",
+                     marginal_y="histogram",
+                     color="Classification",
+                     color_discrete_map={"Non-defect":DEFECT_COLOR_MAPPING["ND"],
+                                         "Defect":DEFECT_COLOR_MAPPING["D"],
+                                         "No-Label":DEFECT_COLOR_MAPPING["UNK"]},
+                     hover_data={
+                         "Defect_ID": True
+                     },
+                     )
 
     # Add in threshold lines
     fig.add_shape(
@@ -125,7 +122,6 @@ def generate_2D_plot(m1_data: tuple[list[int], list[float], list[int]],
         yref="paper",
         line={"color": "Red", "width": 2, "dash": "dash"},
     )
-
     fig.add_shape(
         type="line",
         x0=0,
@@ -161,64 +157,18 @@ def generate_2D_plot(m1_data: tuple[list[int], list[float], list[int]],
         line_width=0, fillcolor="palegreen", opacity=0.3
     )
 
-    # Add side histograms
-    fig.add_trace(
-        go.Histogram(
-            y=[p for p, a in zip(m2_probs, m2_ans) if a == 1], xaxis="x2",
-            marker={"color": DEFECT_COLOR_MAPPING["D"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='Defects',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            y=[p for p, a in zip(m2_probs, m2_ans) if a == 0], xaxis="x2",
-            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='Non-defects',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            y=[p for p, a in zip(m2_probs, m2_ans) if a == -1], xaxis="x2",
-            marker={"color": DEFECT_COLOR_MAPPING["UNK"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='No-Label',
-        )
-    )
-
-    fig.add_trace(
-        go.Histogram(
-            x=[p for p, a in zip(m1_probs, m1_ans) if a == 1], yaxis="y2",
-            marker={"color": DEFECT_COLOR_MAPPING["D"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='Defects',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            x=[p for p, a in zip(m1_probs, m1_ans) if a == 0], yaxis="y2",
-            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='Non-defects',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            x=[p for p, a in zip(m2_probs, m2_ans) if a == -1], yaxis="y2",
-            marker={"color": DEFECT_COLOR_MAPPING["UNK"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='No-Label',
-        )
-    )
-
     fig.update_layout(
         title="Model Comparision Chart",
-        autosize=False,
-        xaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model 1 (Base)"},
-        yaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model 2 (Candidate)"},
-        xaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model 2"},
-        yaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model 1"},
+        xaxis={"zeroline": False, "showgrid": False, "title": "Model 1 (Base)"},
+        yaxis={"zeroline": False, "showgrid": False, "title": "Model 2 (Candidate)"},
+        xaxis2={"zeroline": False, "showgrid": False, "title": "Model 2"},
+        yaxis2={"zeroline": False, "showgrid": False, "title": "Model 1"},
         height=600,
         width=600,
         bargap=0,
         barmode="stack",
         hovermode="closest",
-        showlegend=False,
+        showlegend=True,
     )
 
     return fig
