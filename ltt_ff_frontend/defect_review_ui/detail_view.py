@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import altair as alt
 import numpy as np
@@ -9,14 +10,14 @@ from PIL import Image
 from plotly.subplots import make_subplots
 
 
-def load_image(path):
+def load_image(path: str) -> Image:
     if path and os.path.exists(path):
         return Image.open(path).convert("RGBA")
     else:
         return Image.fromarray(np.zeros((256, 256, 4), dtype=np.uint8))
 
 
-def bresenham_line(x0, y0, x1, y1):
+def bresenham_line(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
     points = []
     dx = abs(x1 - x0)
     dy = abs(y1 - y0)
@@ -38,7 +39,13 @@ def bresenham_line(x0, y0, x1, y1):
 
     return points
 
-def add_shape_to_fig(fig, shape_type, x0, y0, x1, y1, title):
+def add_shape_to_fig(fig: go.Figure,
+                     shape_type: str,
+                     x0: float,
+                     y0: float,
+                     x1: float,
+                     y1: float,
+                     title: str) -> None:
     if fig is not None:
         fig.add_shape(
             type='line',
@@ -56,7 +63,11 @@ def add_shape_to_fig(fig, shape_type, x0, y0, x1, y1, title):
             margin=dict(t=30)
         )
 
-def get_pixel_values(images, selection, direction, fig2, fig3):
+def get_pixel_values(images: list[Image],
+                     selection: dict[str, Any],
+                     direction: str,
+                     fig2: go.Figure,
+                     fig3: go.Figure) -> list[np.ndarray]:
     x0, x1 = selection['box'][-1]['x'][0], selection['box'][-1]['x'][1]
     y0, y1 = selection['box'][-1]['y'][0], selection['box'][-1]['y'][1]
     pixel_values = []
@@ -99,7 +110,7 @@ def get_pixel_values(images, selection, direction, fig2, fig3):
 
     return pixel_values
 
-def create_figure(image):
+def create_figure(image: Image) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(go.Image(z=np.array(image)))
     fig.update_layout(
@@ -114,7 +125,7 @@ def create_figure(image):
     fig.update_yaxes(scaleanchor="x", scaleratio=1, range=[0, 100], autorange=True)
     return fig
 
-def create_chart(df, domain, range_colors):
+def create_chart(df: pd.DataFrame, domain: list[str], range_colors: list[str]) -> alt.Chart:
     chart = alt.Chart(df.reset_index().melt('index', var_name='Line', value_name='value')).mark_line().encode(
         x='index:Q',
         y='value:Q',
@@ -129,7 +140,7 @@ def create_chart(df, domain, range_colors):
     )
     return chart
 
-def app(selected_row, image_dir):
+def app(selected_row: pd.DataFrame, image_dir: str) -> None:
     st.subheader(f"Defect {selected_row.No.values[0]}")
 
     # Create a single row with three columns for X, Y, and ClassType

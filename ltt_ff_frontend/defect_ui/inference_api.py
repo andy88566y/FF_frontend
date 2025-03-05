@@ -15,7 +15,7 @@ def app() -> None:
         inf_base_model = st.selectbox("Base model", options=helper.get_base_models(), index=0, format_func=helper.format_model_name)
     with r1_col2:
         model_threshold = helper.get_model_threshold(model_name=inf_base_model)
-        inf_filter_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_threshold, 0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
+        inf_filter_threshold = st.number_input(label="Confidence threshold:", value=model_threshold, step=0.00001, format="%.5f", help="Probabilities above threshold will be considered as defects.")
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
         st.caption(":red[If Overwrite is set to true, all existing files in Result Directory will be removed.]")
@@ -41,6 +41,12 @@ def app() -> None:
                 logger.error('Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path.')
                 st.error('Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path.')
                 return
+
+        # Validate confidence threshold
+        if inf_filter_threshold < 0.0 or inf_filter_threshold > 1.0:
+            logger.error(f'Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {inf_filter_threshold}')
+            st.error(f'Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {inf_filter_threshold}')
+            return
 
         request = helper.request_inference(base_model=inf_base_model,
                                            lot_id=inf_lot_id,

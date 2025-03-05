@@ -3,6 +3,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 import streamlit as st
 from loguru import logger
 
@@ -16,7 +17,7 @@ DEFECT_COLOR_MAPPING = {
 }
 
 
-def get_model_data(output_dir: str):
+def get_model_data(output_dir: str) -> tuple[dict[str, Any], tuple[list[int], list[float], list[int]]] | tuple[None, None]:
     try:
         db_metadata = helper.get_db_metadata(output_dir)
         defect_id_list = helper.get_defect_id(output_dir)
@@ -28,36 +29,34 @@ def get_model_data(output_dir: str):
         return None, None
 
 
-def generate_1D_plot(m1_data, m1_threshold: float):
+def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_threshold: float) -> go.Figure:
+
     m1_defect_ids, m1_probs, m1_ans = m1_data
 
     df = pd.DataFrame(data={"Defect_ID": m1_defect_ids, "Probability": m1_probs, "LRF_Label": m1_ans})
+    df["Classification"] = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]]
 
-    # TODO: Change to use plotly.express and add marginal="rug"
+    # Add histogram
+    fig = px.histogram(data_frame=df,
+                       x="Probability",
+                       range_x=[0.0, 1.0],
+                       nbins=100,
+                       color="Classification",
+                       color_discrete_map={"Non-defect":DEFECT_COLOR_MAPPING["ND"],
+                                           "Defect":DEFECT_COLOR_MAPPING["D"],
+                                           "Unlabeled":DEFECT_COLOR_MAPPING["UNK"]},
+                       marginal="rug",
+                       hover_name="Classification",
+                       hover_data={
+                                   "Probability": True,
+                                   "Defect_ID": True,
+                                   "LRF_Label": False,
+                                   "Classification": False,
+                                   },
+                        labels={"LRF_Label": "Defect/non-defect",}
+                       )
 
-    fig = go.Figure()
-    fig.add_trace(
-        go.Histogram(
-            x=df[df["LRF_Label"] == 1]["Probability"],
-            marker={"color": DEFECT_COLOR_MAPPING["D"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name="Defect"
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            x=df[df["LRF_Label"] == 0]["Probability"],
-            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name="Non-Defect"
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            x=df[df["LRF_Label"] == -1]["Probability"],
-            marker={"color": DEFECT_COLOR_MAPPING["UNK"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name="No-Label"
-        )
-    )
-
+    # Add threshold line
     fig.add_shape(
         type="line",
         x0=m1_threshold,
@@ -79,7 +78,11 @@ def generate_1D_plot(m1_data, m1_threshold: float):
     return fig
 
 
-def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float):
+def generate_2D_plot(m1_data: tuple[list[int], list[float], list[int]],
+                     m2_data: tuple[list[int], list[float], list[int]],
+                     m1_threshold: float,
+                     m2_threshold: float) -> go.Figure:
+
     m1_defect_ids, m1_probs, m1_ans = m1_data
     m2_defect_ids, m2_probs, m2_ans = m2_data
     assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
@@ -88,28 +91,32 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
     classifications = ['Defect' if a1 == 1 and a2 == 1 else 'Non-defect' if a1 == 0 and a2 == 0 else 'No-Label' for a1, a2 in zip(m1_ans, m2_ans)]
     marker_text = [f'{defect_id}<br>{classification}' for defect_id, classification in zip(defect_ids, classifications)]
 
-    # 2D scatter plot
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=m1_probs,
-            y=m2_probs,
-            xaxis="x",
-            yaxis="y",
-            mode="markers",
-            marker={
-                "color": [
-                    DEFECT_COLOR_MAPPING["D"] if a1 == 1 and a2 == 1 else DEFECT_COLOR_MAPPING["ND"] if a1 == 0 and a2 == 0 else DEFECT_COLOR_MAPPING["UNK"]
-                    for a1, a2 in zip(m1_ans, m2_ans)
-                ],
-                "size": 5,
-            },
-            text=marker_text,
-            hoverinfo="text",
-            hovertemplate="%{text}<br>Model 1 Prob: %{x}<br>Model 2 Prob: %{y}",
-            name=""
-        )
-    )
+    df = pd.DataFrame(data={"Defect_ID": m1_defect_ids,
+                            "Probability_M1": m1_probs,
+                            "Probability_M2": m2_probs,
+                            "Classification": classifications})
+
+    fig = px.scatter(df,
+                     x="Probability_M1",
+                     y="Probability_M2",
+                     range_x=[0.0, 1.0],
+                     range_y=[0.0, 1.0],
+                     marginal_x="histogram",
+                     marginal_y="histogram",
+                     color="Classification",
+                     color_discrete_map={"Non-defect":DEFECT_COLOR_MAPPING["ND"],
+                                         "Defect":DEFECT_COLOR_MAPPING["D"],
+                                         "No-Label":DEFECT_COLOR_MAPPING["UNK"]},
+                     hover_data={
+                         "Defect_ID": True
+                     },
+                     )
+
+    # Workaround to set number of bins for the marginal histograms
+    for _, trace in enumerate(fig.data):
+        if trace.type == 'histogram':
+            trace.nbinsx = 100
+            trace.nbinsy = 100
 
     # Add in threshold lines
     fig.add_shape(
@@ -122,7 +129,6 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
         yref="paper",
         line={"color": "Red", "width": 2, "dash": "dash"},
     )
-
     fig.add_shape(
         type="line",
         x0=0,
@@ -158,70 +164,26 @@ def generate_2D_plot(m1_data, m2_data, m1_threshold: float, m2_threshold: float)
         line_width=0, fillcolor="palegreen", opacity=0.3
     )
 
-    # Add side histograms
-    fig.add_trace(
-        go.Histogram(
-            y=[p for p, a in zip(m2_probs, m2_ans) if a == 1], xaxis="x2",
-            marker={"color": DEFECT_COLOR_MAPPING["D"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='Defects',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            y=[p for p, a in zip(m2_probs, m2_ans) if a == 0], xaxis="x2",
-            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='Non-defects',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            y=[p for p, a in zip(m2_probs, m2_ans) if a == -1], xaxis="x2",
-            marker={"color": DEFECT_COLOR_MAPPING["UNK"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='No-Label',
-        )
-    )
-
-    fig.add_trace(
-        go.Histogram(
-            x=[p for p, a in zip(m1_probs, m1_ans) if a == 1], yaxis="y2",
-            marker={"color": DEFECT_COLOR_MAPPING["D"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='Defects',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            x=[p for p, a in zip(m1_probs, m1_ans) if a == 0], yaxis="y2",
-            marker={"color": DEFECT_COLOR_MAPPING["ND"]}, xbins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='Non-defects',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            x=[p for p, a in zip(m2_probs, m2_ans) if a == -1], yaxis="y2",
-            marker={"color": DEFECT_COLOR_MAPPING["UNK"]}, ybins={"start": 0.00, "end": 1.00, "size": 0.01},
-            name='No-Label',
-        )
-    )
-
     fig.update_layout(
         title="Model Comparision Chart",
-        autosize=False,
-        xaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model 1 (Base)"},
-        yaxis={"zeroline": False, "domain": [0, 0.85], "showgrid": False, "title": "Model 2 (Candidate)"},
-        xaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model 2"},
-        yaxis2={"zeroline": False, "domain": [0.85, 1], "showgrid": False, "title": "Model 1"},
+        xaxis={"zeroline": False, "showgrid": False, "title": "Model 1 (Base)"},
+        yaxis={"zeroline": False, "showgrid": False, "title": "Model 2 (Candidate)"},
+        xaxis2={"zeroline": False, "showgrid": False, "title": "Model 2 Histogram"},
+        yaxis2={"zeroline": False, "showgrid": False},
+        xaxis3={"zeroline": False, "showgrid": False},
+        yaxis3={"zeroline": False, "showgrid": False, "title": "Model 1 Histogram"},
         height=600,
         width=600,
         bargap=0,
         barmode="stack",
         hovermode="closest",
-        showlegend=False,
+        showlegend=True,
     )
 
     return fig
 
 
-def plot_roc(roc_data: list[tuple[str, Any, float, float]]):
+def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float]]) -> go.Figure:
     fig = go.Figure()
 
     for curve_data in roc_data:
@@ -337,7 +299,7 @@ def plot_roc(roc_data: list[tuple[str, Any, float, float]]):
     return fig
 
 
-def plot_prc(prc_data: list[tuple[str, Any, float]]):
+def plot_prc(prc_data: list[tuple[str, Any, float]]) -> go.Figure:
     fig = go.Figure()
 
     for curve_data in prc_data:
@@ -377,7 +339,7 @@ def plot_prc(prc_data: list[tuple[str, Any, float]]):
     return fig
 
 
-def gen_lrf(model_id, output_dir, gen_lrf_type, threshold=None, top_k=None):
+def gen_lrf(model_id: str, output_dir: str, gen_lrf_type: str, threshold=None, top_k=None) -> None:
     if gen_lrf_type == "top_k":
         if top_k is not None and 1 <= top_k <= 999:
             if st.button(f"Generate new Model {model_id} lrf"):
@@ -493,11 +455,30 @@ def app() -> None:
             rv_m2_threshold = helper.get_topk_model_threshold(rv_m2_output_dir, rv_m2_topk)
         else:
             with vr1_col4:
-                rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
-                                                help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+                rv_m1_threshold = st.number_input(label="Confidence threshold:",
+                                                  value=model_1_metadata['model_threshold'],
+                                                  step=0.00001,
+                                                  format="%.5f",
+                                                  help="Probabilities above thershold will be considered as defects.",
+                                                  key='m1_threshold')
             with vr2_col4:
-                rv_m2_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_2_metadata['model_threshold'], 0.00001, format="%.5f",
-                                                help="Probabilities above thershold will be considered as defects.", key='m2_threshold')
+                rv_m2_threshold = st.number_input(label="Confidence threshold:",
+                                                  value=model_2_metadata['model_threshold'],
+                                                  step=0.00001,
+                                                  format="%.5f",
+                                                  help="Probabilities above thershold will be considered as defects.",
+                                                  key='m2_threshold')
+
+            # Validate confidence thresholds
+            if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
+                logger.error(f'Confidence threshold must be between 0.0 and 1.0! Model 1 selected confidence threshold: {rv_m1_threshold}')
+                st.error(f'Confidence threshold must be between 0.0 and 1.0! Model 1 selected confidence threshold: {rv_m1_threshold}')
+                return
+            elif rv_m2_threshold < 0.0 or rv_m2_threshold > 1.0:
+                logger.error(f'Confidence threshold must be between 0.0 and 1.0! Model 2 selected confidence threshold: {rv_m2_threshold}')
+                st.error(f'Confidence threshold must be between 0.0 and 1.0! Model 2 selected confidence threshold: {rv_m2_threshold}')
+                return
+
             with vr1_col5:
                 gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
             with vr2_col5:
@@ -509,9 +490,21 @@ def app() -> None:
 
         with vr3_col2:
             # TODO: This should be done somewhere else
-            if set(model_1_raw_data[2]) == {-1} or set(model_2_raw_data[2]) == {-1}:
-                # All data is unlabeled
-                st.markdown("##### All data is unlabeled! Skipping chart.")
+            if 1 not in set(model_1_raw_data[2]) or 1 not in set(model_2_raw_data[2]):
+                # All data is unlabeled or dataset consists of only non-defects
+                st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
+
+                # If all data is unlabeled, just calculate the filter rates
+                defect_list_1, prob_list_1, _ = model_1_raw_data
+                total_defects_1 = len(defect_list_1)
+                filtered_count_1 = len([p for p in prob_list_1 if p < rv_m1_threshold])
+                st.success(f'Model 1: False Filter Rate is {filtered_count_1/total_defects_1:.4f} at selected threshold ({rv_m1_threshold:.5f})')
+
+                defect_list_2, prob_list_2, _ = model_2_raw_data
+                total_defects_2 = len(defect_list_2)
+                filtered_count_2 = len([p for p in prob_list_2 if p < rv_m2_threshold])
+                st.success(f'Model 2: False Filter Rate is {filtered_count_2/total_defects_2:.4f} at selected threshold ({rv_m2_threshold:.5f})')
+
             else:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
                 model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)
@@ -553,8 +546,19 @@ def app() -> None:
             rv_m1_threshold = helper.get_topk_model_threshold(rv_m1_output_dir, rv_m1_topk)
         else:
             with vr1_col4:
-                rv_m1_threshold = st.number_input("Confidence threshold:", 0.0, 1.0, model_1_metadata['model_threshold'], 0.00001, format="%.5f",
-                                                help="Probabilities above thershold will be considered as defects.", key='m1_threshold')
+                rv_m1_threshold = st.number_input(label="Confidence threshold:",
+                                                  value=model_1_metadata['model_threshold'],
+                                                  step=0.00001,
+                                                  format="%.5f",
+                                                  help="Probabilities above thershold will be considered as defects.",
+                                                  key='m1_threshold')
+
+            # Validate confidence threshold
+            if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
+                logger.error(f'Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}')
+                st.error(f'Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}')
+                return
+
             with vr1_col5:
                 gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
 
@@ -564,9 +568,9 @@ def app() -> None:
 
         with vr3_col2:
             # TODO: This should be done somewhere else
-            if set(model_1_raw_data[2]) == {-1}:
-                # All data is unlabeled
-                st.markdown("##### All data is unlabeled! Skipping chart.")
+            if 1 not in set(model_1_raw_data[2]):
+                # All data is unlabeled or dataset consists of only non-defects
+                st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
 
                 # If no ROC, just calculate filter rate
                 defect_list, prob_list, _ = model_1_raw_data

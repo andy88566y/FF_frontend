@@ -309,7 +309,7 @@ def app(result_dir, image_dir):
         defect_number = st.session_state.selected_map_index
 
     else:
-        selected_data = df[df['No'] == 1]
+        selected_data = df[df['No'] == df["No"].min()]
 
     # Parse URL to get the 'lot' parameter
     query_params = st.query_params
