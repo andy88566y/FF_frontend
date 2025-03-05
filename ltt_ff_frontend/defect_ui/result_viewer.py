@@ -51,6 +51,7 @@ def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_thres
                                    "Probability": True,
                                    "Defect_ID": True,
                                    "LRF_Label": False,
+                                   "Classification": False,
                                    },
                         labels={"LRF_Label": "Defect/non-defect",}
                        )
