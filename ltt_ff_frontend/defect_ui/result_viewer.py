@@ -112,6 +112,12 @@ def generate_2D_plot(m1_data: tuple[list[int], list[float], list[int]],
                      },
                      )
 
+    # Workaround to set number of bins for the marginal histograms
+    for _, trace in enumerate(fig.data):
+        if trace.type == 'histogram':
+            trace.nbinsx = 100
+            trace.nbinsy = 100
+
     # Add in threshold lines
     fig.add_shape(
         type="line",
@@ -162,8 +168,10 @@ def generate_2D_plot(m1_data: tuple[list[int], list[float], list[int]],
         title="Model Comparision Chart",
         xaxis={"zeroline": False, "showgrid": False, "title": "Model 1 (Base)"},
         yaxis={"zeroline": False, "showgrid": False, "title": "Model 2 (Candidate)"},
-        xaxis2={"zeroline": False, "showgrid": False, "title": "Model 2"},
-        yaxis2={"zeroline": False, "showgrid": False, "title": "Model 1"},
+        xaxis2={"zeroline": False, "showgrid": False, "title": "Model 2 Histogram"},
+        yaxis2={"zeroline": False, "showgrid": False},
+        xaxis3={"zeroline": False, "showgrid": False},
+        yaxis3={"zeroline": False, "showgrid": False, "title": "Model 1 Histogram"},
         height=600,
         width=600,
         bargap=0,
