@@ -488,15 +488,11 @@ def app() -> None:
         with vr3_col1:
             st.plotly_chart(generate_2D_plot(model_1_raw_data, model_2_raw_data, rv_m1_threshold, rv_m2_threshold))
 
-            model_1_count_col, model_2_count_col = st.columns([1, 1])
-            with model_1_count_col:
-                st.error(f"Defect count: {model_1_raw_data[2].count(1)}")
-                st.success(f"Non-defect count: {model_1_raw_data[2].count(0)}")
-                st.info(f"Unlabeled count: {model_1_raw_data[2].count(-1)}")
-            with model_2_count_col:
-                st.error(f"Defect count: {model_2_raw_data[2].count(1)}")
-                st.success(f"Non-defect count: {model_2_raw_data[2].count(0)}")
-                st.info(f"Unlabeled count: {model_2_raw_data[2].count(-1)}")
+            # Show Total/Defect/Non-defect/unlabeled count
+            st.text(f"Lot size: {len(model_1_raw_data[2])}")
+            st.error(f"Defect count: {model_1_raw_data[2].count(1)}")
+            st.success(f"Non-defect count: {model_1_raw_data[2].count(0)}")
+            st.info(f"Unlabeled count: {model_1_raw_data[2].count(-1)}")
 
         with vr3_col2:
             # TODO: This should be done somewhere else
@@ -575,6 +571,9 @@ def app() -> None:
         # Draw 1D comparison chart
         with vr3_col1:
             st.plotly_chart(generate_1D_plot(model_1_raw_data, rv_m1_threshold))
+
+            # Show Total/Defect/Non-defect/unlabeled count
+            st.text(f"Lot size: {len(model_1_raw_data[2])}")
             st.error(f"Defect count: {model_1_raw_data[2].count(1)}")
             st.success(f"Non-defect count: {model_1_raw_data[2].count(0)}")
             st.info(f"Unlabeled count: {model_1_raw_data[2].count(-1)}")
