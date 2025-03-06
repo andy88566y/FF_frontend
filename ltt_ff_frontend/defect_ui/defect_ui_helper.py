@@ -196,6 +196,9 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
             paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
             paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
+            paged_statuses_df['runtime'] = paged_statuses_df['end_time'] - paged_statuses_df['start_time']
+            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}')
+
     # Change ordering
     sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
         'inference_id',
@@ -205,6 +208,7 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
         'total_images',
         'start_time',
         'end_time',
+        'runtime'
     ])
 
     # For columns not included above, just add them to the back.
@@ -281,6 +285,9 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
             inference_status['end_time'] = pd.to_datetime(inference_status['end_time'], unit='s').dt.floor('s')
             inference_status['end_time'] = inference_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
+            inference_status['runtime'] = inference_status['end_time'] - inference_status['start_time']
+            inference_status['runtime'] = inference_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}')
+
         # TODO: Make hyper-link work
         # inference_status['Review Link'] = inference_status[["output_dir", "image_dir"]].apply(
         #     lambda x: format_url({'result_dir': x['output_dir'], 'image_dir': x['image_dir']}), axis=1
@@ -292,9 +299,13 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
         'progress',
         'start_time',
         'end_time',
+        'runtime',
         'lot_id',
         # 'Review Link',
         'total_images',
+        'defect_count',
+        'non_defect_count',
+        'unlabeled_count',
         'image_dir',
         'lrf_path',
         'lrf_type',
@@ -426,6 +437,10 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
             paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
             paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
+            paged_statuses_df['runtime'] = paged_statuses_df['end_time'] - paged_statuses_df['start_time']
+            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}')
+
+
     # Change ordering
     sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
         'training_id',
@@ -433,6 +448,7 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
         'progress',
         'start_time',
         'end_time',
+        'runtime',
         'base_model_name',
         'site',
         'tool',
@@ -513,12 +529,16 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
             finetuning_status['end_time'] = pd.to_datetime(finetuning_status['end_time'], unit='s').dt.floor('s')
             finetuning_status['end_time'] = finetuning_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
+            finetuning_status['runtime'] = finetuning_status['end_time'] - finetuning_status['start_time']
+            finetuning_status['runtime'] = finetuning_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}')
+
     # Change ordering
     sorted_finetuning_statuses_df = finetuning_status.reindex(columns=[
         'status',
         'progress',
         'start_time',
         'end_time',
+        'runtime',
         'base_model_name',
         'model_params',
         'site',
