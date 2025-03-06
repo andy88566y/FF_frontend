@@ -196,8 +196,10 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
             paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
             paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
-            paged_statuses_df['runtime'] = paged_statuses_df['end_time'] - paged_statuses_df['start_time']
-            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}')
+            # Calculate runtime only for rows that have end_time
+            paged_statuses_df['runtime'] = paged_statuses_df.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
+            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
+
 
     # Change ordering
     sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
@@ -285,8 +287,9 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
             inference_status['end_time'] = pd.to_datetime(inference_status['end_time'], unit='s').dt.floor('s')
             inference_status['end_time'] = inference_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
-            inference_status['runtime'] = inference_status['end_time'] - inference_status['start_time']
-            inference_status['runtime'] = inference_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}')
+            # Calculate runtime only for rows that have end_time
+            inference_status['runtime'] = inference_status.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
+            inference_status['runtime'] = inference_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
 
         # TODO: Make hyper-link work
         # inference_status['Review Link'] = inference_status[["output_dir", "image_dir"]].apply(
@@ -437,8 +440,9 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
             paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
             paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
-            paged_statuses_df['runtime'] = paged_statuses_df['end_time'] - paged_statuses_df['start_time']
-            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}')
+            # Calculate runtime only for rows that have end_time
+            paged_statuses_df['runtime'] = paged_statuses_df.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
+            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
 
 
     # Change ordering
@@ -529,8 +533,9 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
             finetuning_status['end_time'] = pd.to_datetime(finetuning_status['end_time'], unit='s').dt.floor('s')
             finetuning_status['end_time'] = finetuning_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
-            finetuning_status['runtime'] = finetuning_status['end_time'] - finetuning_status['start_time']
-            finetuning_status['runtime'] = finetuning_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}')
+            # Calculate runtime only for rows that have end_time
+            finetuning_status['runtime'] = finetuning_status.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
+            finetuning_status['runtime'] = finetuning_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
 
     # Change ordering
     sorted_finetuning_statuses_df = finetuning_status.reindex(columns=[
