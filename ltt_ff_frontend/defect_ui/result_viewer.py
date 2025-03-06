@@ -402,8 +402,7 @@ def app() -> None:
 
     st.divider()
 
-    r3_col1, r3_col2,  r3_col3, r3_col4 = st.columns([2, 2, 2, 2])
-    r4_col1, r4_col2,  r4_col3, r4_col4 = st.columns([2, 2, 2, 2])
+    r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([2, 2, 2, 2])
 
     st.divider()
 
