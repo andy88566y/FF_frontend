@@ -162,6 +162,46 @@ def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: st
     return r
 
 
+def request_multilot_inference(base_model: str,
+                               multilot_config: dict,
+                               output_dir: str,
+                               inference_batch_size: int = 32,
+                               confidence_threshold: float = 0.174,
+                               overwrite: bool = False) -> requests.Response:
+    '''
+    Calls FalseFilter API to run multilot inference.
+
+    Args:
+        model_name: Name of inference model.
+        multilot_config: Dict containing lot info (lot id, lrf path, image dir)
+        output_dir: Directory to store the generated database file and filtered .lrf file.
+        inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
+        confidence_threshold: Images with defect probability higher than confidence threshold is considered defective.
+        overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
+                   If overwrite=True, the entire result directory will be cleared.
+
+    Returns the reponse of the API request.
+    '''
+    r = requests.post(API_ROOT+'multilot_inference', json={
+                        "model_name": base_model,
+                        "lot_info": multilot_config,
+                        "output_dir": output_dir,
+                        "threshold": confidence_threshold,
+                        "batch_size": inference_batch_size,
+                        "overwrite": overwrite,
+                        "use_cache": False
+                    }, timeout=TIMEOUT)
+
+    status = r.json()['status']
+
+    if status == 'started':
+        logger.info("Multilot inference started running successfully!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+
+    return r
+
+
 @st.cache_data(ttl='1s')
 def request_paginated_inference_status(page_size: int, current_page: int) -> str:
     '''

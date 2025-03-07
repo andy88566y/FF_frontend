@@ -2,7 +2,7 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.defect_review_ui import defect_review_gui
-from ltt_ff_frontend.defect_ui import basetrain_api, finetuning_api, inference_api, result_viewer
+from ltt_ff_frontend.defect_ui import basetrain_api, finetuning_api, inference_api, result_viewer, multilot_inference_api
 
 
 if __name__ == "__main__":
@@ -11,10 +11,11 @@ if __name__ == "__main__":
     page_defect_review_gui = st.Page(defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:")
     page_result_viewer = st.Page(result_viewer.app, url_path="result_viewer", title="Result Viewer", icon=":material/search_check_2:")
     page_inference_api = st.Page(inference_api.app, url_path="inference_api", title="Inference", icon=":material/content_paste_search:")
+    page_multilot_inference_api = st.Page(multilot_inference_api.app, url_path="multilot_inference_api", title="Multilot Inference", icon=":material/action_key:")
     page_finetuning_api = st.Page(finetuning_api.app, url_path="training_api", title="Fine-tuning", icon=":material/build:")
     page_basetrain_api = st.Page(basetrain_api.app, url_path="basetrain_api", title="Base-training", icon=":material/build:")
 
-    pg = st.navigation([page_defect_review_gui, page_result_viewer, page_inference_api, page_finetuning_api, page_basetrain_api])
+    pg = st.navigation([page_defect_review_gui, page_result_viewer, page_inference_api, page_multilot_inference_api, page_finetuning_api, page_basetrain_api])
 
     st.set_page_config(page_title="Lasertec Defect Filter UI",
                        page_icon=":material/manufacturing:",
