@@ -15,7 +15,7 @@ if __name__ == "__main__":
     page_finetuning_api = st.Page(finetuning_api.app, url_path="training_api", title="Fine-tuning", icon=":material/build:")
     page_basetrain_api = st.Page(basetrain_api.app, url_path="basetrain_api", title="Base-training", icon=":material/build:")
 
-    pg = st.navigation([page_defect_review_gui, page_result_viewer, page_inference_api, page_multilot_inference_api, page_finetuning_api, page_basetrain_api])
+    pg = st.navigation([page_defect_review_gui, page_result_viewer, page_inference_api, page_finetuning_api, page_basetrain_api])
 
     st.set_page_config(page_title="Lasertec Defect Filter UI",
                        page_icon=":material/manufacturing:",
