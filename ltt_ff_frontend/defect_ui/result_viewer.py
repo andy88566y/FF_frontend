@@ -50,9 +50,9 @@ def calculate_filtered_results(raw_data: tuple[list[int], list[float], list[int]
     as_is_defect_count = positive + negative + unlabeled
     to_be_defect_count = true_positive + false_positive + filtered_unlabeled_defect_count
 
-    capture_rate = 1 - (false_negative/positive) if positive > 0 else - 1
-    false_filter_rate = 1 - (false_positive/negative) if negative > 0 else -1
-    filter_rate = 1 - (to_be_defect_count/as_is_defect_count) if as_is_defect_count > 0 else 1 - (to_be_defect_count/unlabeled)
+    capture_rate = true_positive / positive if positive > 0 else - 1
+    false_filter_rate = true_negative / negative if negative > 0 else -1
+    filter_rate = 1 - (to_be_defect_count/as_is_defect_count) if as_is_defect_count > 0 else -1
 
     return {
         "as_is_defect_count": as_is_defect_count,
