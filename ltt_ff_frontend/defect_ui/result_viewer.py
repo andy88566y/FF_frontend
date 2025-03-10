@@ -29,6 +29,46 @@ def get_model_data(output_dir: str) -> tuple[dict[str, Any], tuple[list[int], li
         return None, None
 
 
+def calculate_filtered_results(raw_data: tuple[list[int], list[float], list[int]],
+                               selected_threshold: float) -> dict[str, Any]:
+    _, probability_list, answer_list = raw_data
+
+    positive = answer_list.count(1)
+    negative = answer_list.count(0)
+    unlabeled = answer_list.count(-1)
+    true_positive = sum(1 for prob, ans in zip(probability_list, answer_list)
+                         if prob >= selected_threshold and ans == 1)
+    false_positive = sum(1 for prob, ans in zip(probability_list, answer_list)
+                         if prob >= selected_threshold and ans == 0)
+    true_negative = sum(1 for prob, ans in zip(probability_list, answer_list)
+                         if prob < selected_threshold and ans == 0)
+    false_negative = sum(1 for prob, ans in zip(probability_list, answer_list)
+                         if prob < selected_threshold and ans == 1)
+    filtered_unlabeled_defect_count = sum(1 for prob, ans in zip(probability_list, answer_list)
+                                     if prob >= selected_threshold and ans == -1)
+
+    as_is_defect_count = positive + negative + unlabeled
+    to_be_defect_count = true_positive + false_positive + filtered_unlabeled_defect_count
+
+    capture_rate = true_positive / positive if positive > 0 else - 1
+    false_filter_rate = true_negative / negative if negative > 0 else -1
+    filter_rate = 1 - (to_be_defect_count/as_is_defect_count) if as_is_defect_count > 0 else -1
+
+    return {
+        "as_is_defect_count": as_is_defect_count,
+        "to_be_defect_count": to_be_defect_count,
+        "filter_rate": filter_rate,
+        "as_is_true_defect_count": positive,
+        "to_be_true_defect_count": true_positive,
+        "capture_rate": capture_rate,
+        "as_is_non_defect_count": negative,
+        "to_be_non_defect_count": false_positive,
+        "false_filter_rate": false_filter_rate,
+        "unlabeled": unlabeled,
+        "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
+    }
+
+
 def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_threshold: float) -> go.Figure:
 
     m1_defect_ids, m1_probs, m1_ans = m1_data
@@ -193,18 +233,17 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
 
         # Draw the main curve
         fig.add_trace(go.Scatter(x=tnr, y=tpr, mode="lines", name=model_name, hoverinfo='text+name',
-                                 hovertext=[f'Capture rate: {x}<br>Filter Rate: {y}<br>Threshold: {z}' for x, y, z in zip(tpr, tnr, threshold)]))
+                                 hovertext=[f'Capture rate: {x}<br>False Filter Rate: {y}<br>Threshold: {z}'
+                                            for x, y, z in zip(tpr, tnr, threshold)]))
 
         # Add a diagonal grey dotted-line
         fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode="lines", line={"dash": "dash", "color": "grey"}, name="Random"))
 
+        ##################################################################
+        # Highest FFR when CR = 100%                                     #
+        ##################################################################
         # Search for index of highest FR when CR = 1
-        cr_one_indices = np.where(tpr == 1.0)[0]
-        highest_fr_idx = cr_one_indices[0]
-        for idx in cr_one_indices:
-            if tnr[idx] > tnr[highest_fr_idx]:
-                highest_fr_idx = idx
-        logger.debug(f'Index of highest filter rate when capture rate is 100%: {highest_fr_idx}')
+        highest_fr_idx = np.where(tpr == 1.0)[0][0]
 
         # Draw highest FR when CR = 1
         fig.add_trace(go.Scatter(
@@ -212,27 +251,33 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
             y=[tpr[highest_fr_idx]],
             mode="markers",
             marker={"color": "blue", "size": 10},
-            name="Highest Filter Rate at 100% Capture Rate",
+            name="Highest False Filter Rate at 100% Capture Rate",
             hoverinfo='text',
-            hovertext=f"Highest Filter Rate at 100% Capture Rate<br> Capture rate: {tpr[highest_fr_idx]}<br>Filter Rate: {tnr[highest_fr_idx]}<br>Threshold: {threshold[highest_fr_idx]:.5f}",
+            hovertext=f"""Highest False Filter Rate at 100% Capture Rate<br>
+    Capture rate: {tpr[highest_fr_idx]}<br>
+    False Filter Rate: {tnr[highest_fr_idx]}<br>
+    Threshold: {threshold[highest_fr_idx]:.6f}""",
         ))
 
-        # Add annotation above the highest FR marker
+        # Add annotation below the highest FR marker
         fig.add_annotation(
             x=tnr[highest_fr_idx],
             y=tpr[highest_fr_idx],
-            text=f"{model_name} Threshold = {threshold[highest_fr_idx]:.5f} <br> Capture Rate: {tpr[highest_fr_idx]:.4f} <br> Filter Rate: {tnr[highest_fr_idx]:.4f}",
+            text=f"""{model_name} Threshold = {threshold[highest_fr_idx]:.6f} <br>
+    Capture Rate: {tpr[highest_fr_idx]:.4f} <br>
+    False Filter Rate: {tnr[highest_fr_idx]:.4f}""",
             showarrow=False,
             yshift=-30,
         )
 
+        ##################################################################
+        # Selected threshold                                             #
+        ##################################################################
         # Search for the marker whose threshold is equal or smaller than selected threshold.
         # Note: need to reverse because threshold is from 1 to 0.
         reversed_threshold = threshold[::-1]
         selected_idx = np.searchsorted(reversed_threshold, selected_threshold, side='left')
-        selected_idx = len(threshold) - selected_idx
-        if selected_idx == len(threshold):
-            selected_idx -= 1
+        selected_idx = len(threshold) - selected_idx - 1
 
         # Draw marker for current selected model threshold
         fig.add_trace(go.Scatter(
@@ -240,48 +285,59 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
             y=[tpr[selected_idx]],
             mode="markers",
             marker={"color": "red", "size": 10},
-            name=f"Selected Threshold ({selected_threshold:.5f})",
+            name=f"Selected Threshold ({selected_threshold:.6f})",
             hoverinfo='text',
-            hovertext=f"Selected Threshold<br>Capture rate: {tpr[selected_idx]}<br>Filter Rate: {tnr[selected_idx]}<br>Threshold: {selected_threshold:.5f}",
+            hovertext=f"""Selected Threshold<br>
+    Capture rate: {tpr[selected_idx]}<br>
+    False Filter Rate: {tnr[selected_idx]}<br>
+    Threshold: {selected_threshold:.6f}""",
         ))
 
         # Add annotation above current selected model threshold
         fig.add_annotation(
             x=tnr[selected_idx],
             y=tpr[selected_idx],
-            text=f"{model_name} Threshold = {selected_threshold:.5f} <br> Capture Rate: {tpr[selected_idx]:.4f} <br> Filter Rate: {tnr[selected_idx]:.4f}",
+            text=f"""{model_name} Threshold = {selected_threshold:.6f} <br>
+    Capture Rate: {tpr[selected_idx]:.4f} <br>
+    False Filter Rate: {tnr[selected_idx]:.4f}""",
             showarrow=False,
             yshift=30,
         )
 
+        ##################################################################
+        # Default threshold                                              #
+        ##################################################################
         # Draw inference threshold
         if selected_threshold != inference_threshold:
             infer_idx = np.searchsorted(reversed_threshold, inference_threshold, side='left')
-            infer_idx = len(threshold) - infer_idx
-            if infer_idx == len(threshold):
-                infer_idx -= 1
+            infer_idx = len(threshold) - infer_idx - 1
 
             fig.add_trace(go.Scatter(
                 x=[tnr[infer_idx]],
                 y=[tpr[infer_idx]],
                 mode="markers",
                 marker={"color": "black", "size": 10},
-                name=f"Inference ({inference_threshold:.5f})",
+                name=f"Inference ({inference_threshold:.6f})",
                 hoverinfo='text',
-                hovertext=f"Inference Threshold<br>Capture rate: {tpr[infer_idx]}<br>Filter Rate: {tnr[infer_idx]}<br>Threshold: {inference_threshold:.5f}",
+                hovertext=f"""Inference Threshold<br>
+        Capture rate: {tpr[infer_idx]}<br>
+        False Filter Rate: {tnr[infer_idx]}<br>
+        Threshold: {inference_threshold:.6f}""",
             ))
 
             fig.add_annotation(
                 x=tnr[infer_idx],
                 y=tpr[infer_idx],
-                text=f"{model_name} Inference threshold = {inference_threshold:.5f} <br> Capture Rate: {tpr[infer_idx]:.4f} <br> Filter Rate: {tnr[infer_idx]:.4f}",
+                text=f"""{model_name} Inference threshold = {inference_threshold:.6f} <br>
+        Capture Rate: {tpr[infer_idx]:.4f} <br>
+        False Filter Rate: {tnr[infer_idx]:.4f}""",
                 showarrow=False,
                 yshift=-30,
             )
 
     fig.update_layout(
-        title="Capture Rate / Filter Rate Curve",
-        xaxis_title="Filter Rate",
+        title="Capture Rate / False Filter Rate Curve",
+        xaxis_title="False Filter Rate",
         yaxis_title="Capture Rate",
         legend_title="Legends",
         template="plotly_white",
@@ -299,6 +355,7 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
     return fig
 
 
+# TODO: Might be wrong! Refer to plot_roc for correct method.
 def plot_prc(prc_data: list[tuple[str, Any, float]]) -> go.Figure:
     fig = go.Figure()
 
@@ -402,7 +459,13 @@ def app() -> None:
 
     st.divider()
 
-    r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([2, 2, 2, 2])
+    # Defining columns to display filter results (capture rate, filter rate, etc.)
+    with st.container():
+        r3_header = st.empty()
+        r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([4, 3, 3, 2])
+    with st.container():
+        r4_header = st.empty()
+        r4_col1, r4_col2, r4_col3, r4_col4 = st.columns([4, 3, 3, 2])
 
     st.divider()
 
@@ -489,14 +552,43 @@ def app() -> None:
                 gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, threshold=rv_m2_threshold)
 
         # Show Total/Defect/Non-defect/unlabeled count
+        with r3_header:
+            st.text("Model 1 results")
+        count_rate_data = calculate_filtered_results(model_1_raw_data, rv_m1_threshold)
         with r3_col1:
-            st.warning(f"As-is (total) defect count: {len(model_1_raw_data[2])}")
+            st.warning(f"""**Total defect count**: As-is {count_rate_data['as_is_defect_count']}
+                    → To-be: {count_rate_data['to_be_defect_count']}
+                    (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
         with r3_col2:
-            st.error(f"True defect count: {model_1_raw_data[2].count(1)}")
+            st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
+                    → {count_rate_data['to_be_true_defect_count']}
+                    (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
         with r3_col3:
-            st.success(f"Non-defect count: {model_1_raw_data[2].count(0)}")
+            st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
+                    → {count_rate_data['to_be_non_defect_count']}
+                    (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
         with r3_col4:
-            st.info(f"Unlabeled count: {model_1_raw_data[2].count(-1)}")
+            st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
+                    → {count_rate_data['filtered_unlabeled_defect_count']}""")
+
+        with r4_header:
+            st.text("Model 2 results")
+        count_rate_data = calculate_filtered_results(model_2_raw_data, rv_m2_threshold)
+        with r4_col1:
+            st.warning(f"""**Total defect count**: As-is: {count_rate_data['as_is_defect_count']}
+                    → To-be: {count_rate_data['to_be_defect_count']}
+                    (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
+        with r4_col2:
+            st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
+                    → {count_rate_data['to_be_true_defect_count']}
+                    (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
+        with r4_col3:
+            st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
+                    → {count_rate_data['to_be_non_defect_count']}
+                    (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
+        with r4_col4:
+            st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
+                    → {count_rate_data['filtered_unlabeled_defect_count']}""")
 
         # Draw 2D comparison chart
         with vr3_col1:
@@ -508,17 +600,6 @@ def app() -> None:
                 # All data is unlabeled or dataset consists of only non-defects
                 st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
 
-                # If all data is unlabeled, just calculate the filter rates
-                defect_list_1, prob_list_1, _ = model_1_raw_data
-                total_defects_1 = len(defect_list_1)
-                filtered_count_1 = len([p for p in prob_list_1 if p < rv_m1_threshold])
-                st.success(f'Model 1: False Filter Rate is {filtered_count_1/total_defects_1:.4f} at selected threshold ({rv_m1_threshold:.5f})')
-
-                defect_list_2, prob_list_2, _ = model_2_raw_data
-                total_defects_2 = len(defect_list_2)
-                filtered_count_2 = len([p for p in prob_list_2 if p < rv_m2_threshold])
-                st.success(f'Model 2: False Filter Rate is {filtered_count_2/total_defects_2:.4f} at selected threshold ({rv_m2_threshold:.5f})')
-
             else:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
                 model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)
@@ -526,13 +607,6 @@ def app() -> None:
                     ("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold']),
                     ("Model 2", model_2_roc_data, rv_m2_threshold, model_2_metadata['model_threshold']),
                 ]))
-
-                # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, return_curve=True)
-                # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, return_curve=True)
-                # st.plotly_chart(plot_prc([
-                #     ("Model 1", model_1_prc_data, rv_m1_threshold),
-                #     ("Model 2", model_2_prc_data, rv_m2_threshold),
-                # ]))
 
     elif rv_m1_output_dir not in invalid_input:
         model_1_metadata, model_1_raw_data = get_model_data(rv_m1_output_dir)
@@ -577,14 +651,24 @@ def app() -> None:
                 gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
 
         # Show Total/Defect/Non-defect/unlabeled count
+        with r3_header:
+            st.text("Model 1 results")
+        count_rate_data = calculate_filtered_results(model_1_raw_data, rv_m1_threshold)
         with r3_col1:
-            st.warning(f"As-is (total) defect count: {len(model_1_raw_data[2])}")
+            st.warning(f"""**Total defect count**: As-is: {count_rate_data['as_is_defect_count']}
+                    → To-be: {count_rate_data['to_be_defect_count']}
+                    (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
         with r3_col2:
-            st.error(f"True defect count: {model_1_raw_data[2].count(1)}")
+            st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
+                    → {count_rate_data['to_be_true_defect_count']}
+                    (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
         with r3_col3:
-            st.success(f"Non-defect count: {model_1_raw_data[2].count(0)}")
+            st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
+                    → {count_rate_data['to_be_non_defect_count']}
+                    (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
         with r3_col4:
-            st.info(f"Unlabeled count: {model_1_raw_data[2].count(-1)}")
+            st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
+                    → {count_rate_data['filtered_unlabeled_defect_count']}""")
 
         # Draw 1D comparison chart
         with vr3_col1:
@@ -596,17 +680,9 @@ def app() -> None:
                 # All data is unlabeled or dataset consists of only non-defects
                 st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
 
-                # If no ROC, just calculate filter rate
-                defect_list, prob_list, _ = model_1_raw_data
-                total_defects = len(defect_list)
-                filtered_count = len([p for p in prob_list if p < rv_m1_threshold])
-                st.success(f'False Filter Rate is {filtered_count/total_defects:.4f} at selected threshold ({rv_m1_threshold:.5f})')
-
             else:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
                 st.plotly_chart(plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold'])]))
 
-                # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, return_curve=True)
-                # st.plotly_chart(plot_prc([("Model 1", model_1_prc_data, rv_m1_threshold)]))
     else:
         pass
