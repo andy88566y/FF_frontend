@@ -50,7 +50,7 @@ def calculate_filtered_results(raw_data: tuple[list[int], list[float], list[int]
     as_is_defect_count = positive + negative + unlabeled
     to_be_defect_count = true_positive + false_positive + filtered_unlabeled_defect_count
 
-    capture_rate = 1 - (false_negative/positive) if positive > 0 else -1
+    capture_rate = 1 - (false_negative/positive) if positive > 0 else - 1
     false_filter_rate = 1 - (false_positive/negative) if negative > 0 else -1
     filter_rate = 1 - (to_be_defect_count/as_is_defect_count) if as_is_defect_count > 0 else 1 - (to_be_defect_count/unlabeled)
 
@@ -243,8 +243,7 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
         # Highest FFR when CR = 100%                                     #
         ##################################################################
         # Search for index of highest FR when CR = 1
-        cr_one_indices = np.where(tpr == 1.0)[0]
-        highest_fr_idx = cr_one_indices[0]
+        highest_fr_idx = np.where(tpr == 1.0)[0][0]
 
         # Draw highest FR when CR = 1
         fig.add_trace(go.Scatter(
@@ -278,7 +277,7 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
         # Note: need to reverse because threshold is from 1 to 0.
         reversed_threshold = threshold[::-1]
         selected_idx = np.searchsorted(reversed_threshold, selected_threshold, side='left')
-        selected_idx = len(threshold) - selected_idx -1
+        selected_idx = len(threshold) - selected_idx - 1
 
         # Draw marker for current selected model threshold
         fig.add_trace(go.Scatter(
@@ -461,10 +460,12 @@ def app() -> None:
     st.divider()
 
     # Defining columns to display filter results (capture rate, filter rate, etc.)
-    model_1_results_container = st.empty()
-    r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([4, 3, 3, 2])
-    model_2_results_container = st.empty()
-    r4_col1, r4_col2, r4_col3, r4_col4 = st.columns([4, 3, 3, 2])
+    with st.container():
+        r3_header = st.empty()
+        r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([4, 3, 3, 2])
+    with st.container():
+        r4_header = st.empty()
+        r4_col1, r4_col2, r4_col3, r4_col4 = st.columns([4, 3, 3, 2])
 
     st.divider()
 
@@ -551,42 +552,43 @@ def app() -> None:
                 gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, threshold=rv_m2_threshold)
 
         # Show Total/Defect/Non-defect/unlabeled count
-        with model_1_results_container:
+        with r3_header:
             st.text("Model 1 results")
-            count_rate_data = calculate_filtered_results(model_1_raw_data, rv_m1_threshold)
-            with r3_col1:
-                st.warning(f"""**Total defect count**: As-is {count_rate_data['as_is_defect_count']}
-                        → To-be: {count_rate_data['to_be_defect_count']}
-                        (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
-            with r3_col2:
-                st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
-                        → {count_rate_data['to_be_true_defect_count']}
-                        (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
-            with r3_col3:
-                st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
-                        → {count_rate_data['to_be_non_defect_count']}
-                        (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
-            with r3_col4:
-                st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
-                        → {count_rate_data['filtered_unlabeled_defect_count']}""")
-        with model_2_results_container:
+        count_rate_data = calculate_filtered_results(model_1_raw_data, rv_m1_threshold)
+        with r3_col1:
+            st.warning(f"""**Total defect count**: As-is {count_rate_data['as_is_defect_count']}
+                    → To-be: {count_rate_data['to_be_defect_count']}
+                    (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
+        with r3_col2:
+            st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
+                    → {count_rate_data['to_be_true_defect_count']}
+                    (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
+        with r3_col3:
+            st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
+                    → {count_rate_data['to_be_non_defect_count']}
+                    (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
+        with r3_col4:
+            st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
+                    → {count_rate_data['filtered_unlabeled_defect_count']}""")
+
+        with r4_header:
             st.text("Model 2 results")
-            count_rate_data = calculate_filtered_results(model_2_raw_data, rv_m2_threshold)
-            with r4_col1:
-                st.warning(f"""**Total defect count**: As-is: {count_rate_data['as_is_defect_count']}
-                        → To-be: {count_rate_data['to_be_defect_count']}
-                        (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
-            with r4_col2:
-                st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
-                        → {count_rate_data['to_be_true_defect_count']}
-                        (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
-            with r4_col3:
-                st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
-                        → {count_rate_data['to_be_non_defect_count']}
-                        (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
-            with r4_col4:
-                st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
-                        → {count_rate_data['filtered_unlabeled_defect_count']}""")
+        count_rate_data = calculate_filtered_results(model_2_raw_data, rv_m2_threshold)
+        with r4_col1:
+            st.warning(f"""**Total defect count**: As-is: {count_rate_data['as_is_defect_count']}
+                    → To-be: {count_rate_data['to_be_defect_count']}
+                    (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
+        with r4_col2:
+            st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
+                    → {count_rate_data['to_be_true_defect_count']}
+                    (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
+        with r4_col3:
+            st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
+                    → {count_rate_data['to_be_non_defect_count']}
+                    (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
+        with r4_col4:
+            st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
+                    → {count_rate_data['filtered_unlabeled_defect_count']}""")
 
         # Draw 2D comparison chart
         with vr3_col1:
@@ -605,13 +607,6 @@ def app() -> None:
                     ("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold']),
                     ("Model 2", model_2_roc_data, rv_m2_threshold, model_2_metadata['model_threshold']),
                 ]))
-
-                # model_1_prc_data = helper.get_prc_data(rv_m1_output_dir, return_curve=True)
-                # model_2_prc_data = helper.get_prc_data(rv_m2_output_dir, return_curve=True)
-                # st.plotly_chart(plot_prc([
-                #     ("Model 1", model_1_prc_data, rv_m1_threshold),
-                #     ("Model 2", model_2_prc_data, rv_m2_threshold),
-                # ]))
 
     elif rv_m1_output_dir not in invalid_input:
         model_1_metadata, model_1_raw_data = get_model_data(rv_m1_output_dir)
@@ -656,6 +651,8 @@ def app() -> None:
                 gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
 
         # Show Total/Defect/Non-defect/unlabeled count
+        with r3_header:
+            st.text("Model 1 results")
         count_rate_data = calculate_filtered_results(model_1_raw_data, rv_m1_threshold)
         with r3_col1:
             st.warning(f"""**Total defect count**: As-is: {count_rate_data['as_is_defect_count']}
