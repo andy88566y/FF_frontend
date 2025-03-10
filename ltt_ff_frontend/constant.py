@@ -3,7 +3,7 @@ TIMEOUT = 10
 OPTIMIZER_TYPE = ["Adam", "AdamW"]
 OPTIMIZER_PARAMS = {
     "Adam": {
-
+        "weight_decay": 0.0,
     },
     "AdamW": {
         "weight_decay": 0.01,
@@ -12,7 +12,7 @@ OPTIMIZER_PARAMS = {
 LOSS_TYPE = ["bce", "focal"]
 LOSS_PARAMS = {
     "bce": {
-
+        "pos_weight": None,
     },
     "focal": {
         "alpha": 0.25,
