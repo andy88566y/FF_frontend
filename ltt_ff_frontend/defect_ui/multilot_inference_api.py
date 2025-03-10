@@ -71,51 +71,51 @@ def app() -> None:
             inference_id = request.json().get('inference_id')
             st.text(f'Multilot Inference Job ID: {inference_id}')
 
-    # st.divider()
+    st.divider()
 
-    # if 'status_df_multi_inf' not in st.session_state:
-    #     st.session_state.status_df_multi_inf = pd.DataFrame()
-    # if 'detailed_df_multi_inf' not in st.session_state:
-    #     st.session_state.detailed_df_multi_inf = pd.DataFrame()
+    if 'status_df_multi_inf' not in st.session_state:
+        st.session_state.status_df_multi_inf = pd.DataFrame()
+    if 'detailed_df_multi_inf' not in st.session_state:
+        st.session_state.detailed_df_multi_inf = pd.DataFrame()
 
-    # col1, col2 = st.columns(2, vertical_alignment='bottom')
+    col1, col2 = st.columns(2, vertical_alignment='bottom')
 
-    # with col1:
-    #     if st.button('Check all multilot inference jobs'):
-    #         page_size = 10
-    #         current_page = 1
-    #         st.session_state.status_df_multi_inf = helper.request_paginated_multilot_inference_status(page_size, current_page)
+    with col1:
+        if st.button('Check all multilot inference jobs'):
+            page_size = 10
+            current_page = 1
+            st.session_state.status_df_multi_inf = helper.request_paginated_multilot_inference_status(page_size, current_page)
 
-    # progress_column = st.column_config.ProgressColumn(
-    #     label='progress_bar',
-    #     min_value=0,
-    #     max_value=100
-    # )
+    progress_column = st.column_config.ProgressColumn(
+        label='progress_bar',
+        min_value=0,
+        max_value=100
+    )
 
-    # # Pagination settings
-    # with col2:
-    #     page_size = 10
-    #     current_page = st.number_input('Page number', min_value=1, value=1, step=1)
-    #     st.session_state.status_df_multi_inf = helper.request_paginated_multilot_inference_status(page_size, current_page)
+    # Pagination settings
+    with col2:
+        page_size = 10
+        current_page = st.number_input('Page number', min_value=1, value=1, step=1)
+        st.session_state.status_df_multi_inf = helper.request_paginated_multilot_inference_status(page_size, current_page)
 
-    # st.header('All multilot inference jobs') if not st.session_state.status_df_multi_inf.empty else st.write('')
+    st.header('All multilot inference jobs') if not st.session_state.status_df_multi_inf.empty else st.write('')
 
-    # # Selection to find more detail
-    # event_multilot_inf = st.dataframe(
-    #     st.session_state.status_df_multi_inf,
-    #     key = 'statuses_multilot_inference',
-    #     on_select = 'rerun',
-    #     selection_mode = 'multi-row',
-    #     use_container_width=True,
-    #     column_config={'progress': progress_column}
-    # ) if not st.session_state.status_df_multi_inf.empty else st.write('')
+    # Selection to find more detail
+    event_multilot_inf = st.dataframe(
+        st.session_state.status_df_multi_inf,
+        key = 'statuses_multilot_inference',
+        on_select = 'rerun',
+        selection_mode = 'multi-row',
+        use_container_width=True,
+        column_config={'progress': progress_column}
+    ) if not st.session_state.status_df_multi_inf.empty else st.write('')
 
-    # if event_multilot_inf and event_multilot_inf.selection:
-    # # Check if the 'row' value's list is not empty
-    #     if event_multilot_inf.selection['rows']:
-    #         # Get list of inference_id for all selected inference jobs
-    #         selected_multilot_inference_id = [st.session_state.status_df_multi_inf.iloc[i]['multilot_inference_id'] for i in event_multilot_inf.selection['rows']]
+    if event_multilot_inf and event_multilot_inf.selection:
+    # Check if the 'row' value's list is not empty
+        if event_multilot_inf.selection['rows']:
+            # Get list of inference_id for all selected inference jobs
+            selected_multilot_inference_id = [st.session_state.status_df_multi_inf.iloc[i]['multilot_inference_id'] for i in event_multilot_inf.selection['rows']]
 
-    #         # Get detailed statuses for each inference job and combine into one df
-    #         st.session_state.detailed_df_multi_inf = helper.request_multilot_inference_statuses(selected_multilot_inference_id)
-    #         st.dataframe(st.session_state.detailed_df_multi_inf, use_container_width=True)
+            # Get detailed statuses for each inference job and combine into one df
+            st.session_state.detailed_df_multi_inf = helper.request_multilot_inference_statuses(selected_multilot_inference_id)
+            st.dataframe(st.session_state.detailed_df_multi_inf, use_container_width=True)

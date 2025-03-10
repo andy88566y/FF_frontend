@@ -262,6 +262,66 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
 
 
 @st.cache_data(ttl='1s')
+def request_paginated_multilot_inference_status(page_size: int, current_page: int) -> str:
+    '''
+    Gets pagainated multilot inference status by calling FalseFilter API
+
+    Args:
+        page_size : the number of entries to be shown on the dataframe
+        current_page : the page that is current requested
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}multilot_inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
+    paged_statuses = r.json()
+    logger.info(f'Status of multilot inference request [{current_page}, {page_size}]: {paged_statuses}')
+
+    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
+
+    if not paged_statuses_df.empty:
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        paged_statuses_df['start_time'] = pd.to_datetime(paged_statuses_df['start_time'], unit='s').dt.floor('s')
+        paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+        # Sort jobs by start time
+        paged_statuses_df = paged_statuses_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
+
+        # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
+        paged_statuses_df = paged_statuses_df.rename(columns={'index': 'multilot_inference_id'})
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        if 'end_time' in paged_statuses_df.columns:
+            paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
+            paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+            # Calculate runtime only for rows that have end_time
+            paged_statuses_df['runtime'] = paged_statuses_df.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
+            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
+
+
+    # Change ordering
+    sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
+        'inference_id',
+        'status',
+        'progress',
+        # 'lot_id',
+        # 'total_images',
+        'start_time',
+        'end_time',
+        'runtime'
+    ])
+
+    # For columns not included above, just add them to the back.
+    for column in paged_statuses_df.columns:
+        if column not in sorted_paged_statuses_df.columns:
+            sorted_paged_statuses_df[column] = paged_statuses_df[column]
+
+    logger.warning(f"request_paginated_multilot_inference_status is returning a {type(sorted_paged_statuses_df)}")
+
+    return sorted_paged_statuses_df
+
+@st.cache_data(ttl='1s')
 def request_inference_status(inference_id: str) -> requests.Response:
     '''
     Gets inference status by calling FalseFilter API
