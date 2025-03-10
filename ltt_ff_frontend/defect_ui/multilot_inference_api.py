@@ -69,7 +69,7 @@ def app() -> None:
             st.text(f'Error code: {code}\nError message: {message}')
         else:
             inference_id = request.json().get('inference_id')
-            st.text(f'Inference Job ID: {inference_id}')
+            st.text(f'Multilot Inference Job ID: {inference_id}')
 
     # st.divider()
 
