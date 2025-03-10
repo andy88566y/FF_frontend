@@ -252,11 +252,11 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
             y=[tpr[highest_fr_idx]],
             mode="markers",
             marker={"color": "blue", "size": 10},
-            name="Highest Filter Rate at 100% Capture Rate",
+            name="Highest False Filter Rate at 100% Capture Rate",
             hoverinfo='text',
-            hovertext=f"""Highest Filter Rate at 100% Capture Rate<br>
+            hovertext=f"""Highest False Filter Rate at 100% Capture Rate<br>
     Capture rate: {tpr[highest_fr_idx]}<br>
-    Filter Rate: {tnr[highest_fr_idx]}<br>
+    False Filter Rate: {tnr[highest_fr_idx]}<br>
     Threshold: {threshold[highest_fr_idx]:.6f}""",
         ))
 
@@ -266,7 +266,7 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
             y=tpr[highest_fr_idx],
             text=f"""{model_name} Threshold = {threshold[highest_fr_idx]:.6f} <br>
     Capture Rate: {tpr[highest_fr_idx]:.4f} <br>
-    Filter Rate: {tnr[highest_fr_idx]:.4f}""",
+    False Filter Rate: {tnr[highest_fr_idx]:.4f}""",
             showarrow=False,
             yshift=-30,
         )
@@ -290,7 +290,7 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
             hoverinfo='text',
             hovertext=f"""Selected Threshold<br>
     Capture rate: {tpr[selected_idx]}<br>
-    Filter Rate: {tnr[selected_idx]}<br>
+    False Filter Rate: {tnr[selected_idx]}<br>
     Threshold: {selected_threshold:.6f}""",
         ))
 
@@ -300,7 +300,7 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
             y=tpr[selected_idx],
             text=f"""{model_name} Threshold = {selected_threshold:.6f} <br>
     Capture Rate: {tpr[selected_idx]:.4f} <br>
-    Filter Rate: {tnr[selected_idx]:.4f}""",
+    False Filter Rate: {tnr[selected_idx]:.4f}""",
             showarrow=False,
             yshift=30,
         )
@@ -322,7 +322,7 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
                 hoverinfo='text',
                 hovertext=f"""Inference Threshold<br>
         Capture rate: {tpr[infer_idx]}<br>
-        Filter Rate: {tnr[infer_idx]}<br>
+        False Filter Rate: {tnr[infer_idx]}<br>
         Threshold: {inference_threshold:.6f}""",
             ))
 
@@ -331,14 +331,14 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
                 y=tpr[infer_idx],
                 text=f"""{model_name} Inference threshold = {inference_threshold:.6f} <br>
         Capture Rate: {tpr[infer_idx]:.4f} <br>
-        Filter Rateee: {tnr[infer_idx]:.4f}""",
+        False Filter Rate: {tnr[infer_idx]:.4f}""",
                 showarrow=False,
                 yshift=-30,
             )
 
     fig.update_layout(
-        title="Capture Rate / Filter Rate Curve",
-        xaxis_title="Filter Rate",
+        title="Capture Rate / False Filter Rate Curve",
+        xaxis_title="False Filter Rate",
         yaxis_title="Capture Rate",
         legend_title="Legends",
         template="plotly_white",
