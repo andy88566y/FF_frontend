@@ -370,7 +370,13 @@ def request_finetune(base_model: str,
                      model_naming: tuple[str, str, str, str],
                      multilot_config: dict,
                      epochs: int,
-                     lr: float) -> requests.Response:
+                     lr: float,
+                     optimizer_type: str,
+                     optimizer_params: dict[str, Any],
+                     loss_type: str,
+                     loss_params: dict[str, Any],
+                     lr_scheduler_type: str,
+                     lr_scheduler_params: dict[str, Any]) -> requests.Response:
     '''
     Calls FFA model fine-tuning.
 
@@ -380,6 +386,12 @@ def request_finetune(base_model: str,
         multilot_config: Dict containing training data info (lot id, lrf path, image dir)
         epochs: Number of training epochs.
         lr: Learning rate.
+        optimizer_type: Adam, AdamW, etc
+        optimizer_params: Parameters required for the selected optimizer type, if any.
+        loss_type: bce, focal, etc.
+        loss_params: Parameter required for the selected loss type, if any.
+        lr_scheduler_type: disable, plateau, etc
+        lr_scheduler_params: Parameters required for the selected lr scheduler, if any.
 
     Returns the reponse of the API request.
     '''
@@ -392,6 +404,12 @@ def request_finetune(base_model: str,
         "learning_rate": lr,
         "model_naming": model_naming,
         "training_info": multilot_config,
+        "optimizer_type": optimizer_type,
+        "optimizer_params": optimizer_params,
+        "loss_type": loss_type,
+        "loss_params": loss_params,
+        "lr_scheduler_type": lr_scheduler_type,
+        "lr_scheduler_params": lr_scheduler_params,
     }, timeout=TIMEOUT)
 
     status = r.json()['status']
@@ -404,9 +422,18 @@ def request_finetune(base_model: str,
     return r
 
 
-def request_basetrain(model_naming: tuple[str, str, str, str], multilot_config: dict,
-                      channel_size: tuple[int, int, int], kernel_size: tuple[int, int, int],
-                      epochs: int, lr: float) -> requests.Response:
+def request_basetrain(model_naming: tuple[str, str, str, str],
+                      multilot_config: dict,
+                      channel_size: tuple[int, int, int],
+                      kernel_size: tuple[int, int, int],
+                      epochs: int,
+                      lr: float,
+                      optimizer_type: str,
+                      optimizer_params: dict[str, Any],
+                      loss_type: str,
+                      loss_params: dict[str, Any],
+                      lr_scheduler_type: str,
+                      lr_scheduler_params: dict[str, Any]) -> requests.Response:
     '''
     Calls FFA model base-training.
 
@@ -416,6 +443,12 @@ def request_basetrain(model_naming: tuple[str, str, str, str], multilot_config: 
         channel_size, kernel_size: tuple of model structure config
         epochs: Number of training epochs.
         lr: Learning rate.
+        optimizer_type: Adam, AdamW, etc
+        optimizer_params: Parameters required for the selected optimizer type, if any.
+        loss_type: bce, focal, etc.
+        loss_params: Parameter required for the selected loss type, if any.
+        lr_scheduler_type: disable, plateau, etc
+        lr_scheduler_params: Parameters required for the selected lr scheduler, if any.
 
     Returns the reponse of the API request.
     '''
@@ -431,6 +464,12 @@ def request_basetrain(model_naming: tuple[str, str, str, str], multilot_config: 
             "channel_size": list(channel_size),
             "kernel_size": list(kernel_size),
         },
+        "optimizer_type": optimizer_type,
+        "optimizer_params": optimizer_params,
+        "loss_type": loss_type,
+        "loss_params": loss_params,
+        "lr_scheduler_type": lr_scheduler_type,
+        "lr_scheduler_params": lr_scheduler_params,
     }, timeout=TIMEOUT)
 
     status = r.json()['status']
@@ -595,6 +634,12 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
         'total_epochs',
         'batch_size',
         'learning_rate',
+        'optimizer_type',
+        'optimizer_params',
+        'loss_type',
+        'loss_params',
+        'lr_scheduler_type',
+        'lr_scheduler_params',
         'training_info',
         'debug',
         'message',

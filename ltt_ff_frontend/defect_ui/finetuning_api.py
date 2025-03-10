@@ -3,6 +3,14 @@ import streamlit as st
 import yaml
 from loguru import logger
 
+from ltt_ff_frontend.constant import (
+    LOSS_PARAMS,
+    LOSS_TYPE,
+    LR_SCHEDULER_PARAMS,
+    LR_SCHEDULER_TYPE,
+    OPTIMIZER_PARAMS,
+    OPTIMIZER_TYPE,
+)
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
@@ -45,6 +53,28 @@ def app() -> None:
         ft_epochs = st.number_input('Epochs', value=10)
         ft_lr = st.number_input('Learning Rate', value=0.0001, step=0.0001, format="%0.4f")
 
+        optimizer_input_params, loss_input_params, lr_scheduler_input_params = {}, {}, {}
+        ft_optimizer_type = st.selectbox(label="Optimizer", options=OPTIMIZER_TYPE, index=0)
+        for optimizer_param_name, optimizer_param_default_value in OPTIMIZER_PARAMS[ft_optimizer_type].items():
+            st.number_input(label=optimizer_param_name,
+                            value=optimizer_param_default_value,
+                            key=f"optimizer_{optimizer_param_name}")
+            optimizer_input_params[optimizer_param_name] = st.session_state[f"optimizer_{optimizer_param_name}"]
+
+        ft_loss_type = st.selectbox(label="Loss Type", options=LOSS_TYPE, index=0)
+        for loss_param_name, loss_param_default_value in LOSS_PARAMS[ft_loss_type].items():
+            st.number_input(label=loss_param_name,
+                            value=loss_param_default_value,
+                            key=f"loss_{loss_param_name}")
+            loss_input_params[loss_param_name] = st.session_state[f"loss_{loss_param_name}"]
+
+        ft_lr_scheduler_type = st.selectbox(label="LR Scheduler Type", options=LR_SCHEDULER_TYPE, index=0)
+        for lr_scheduler_param_name, lr_scheduler_param_default_value in LR_SCHEDULER_PARAMS[ft_lr_scheduler_type].items():
+            st.number_input(label=lr_scheduler_param_name,
+                            value=lr_scheduler_param_default_value,
+                            key=f"lr_scheduler_{lr_scheduler_param_name}")
+            lr_scheduler_input_params[lr_scheduler_param_name] = st.session_state[f"lr_scheduler_{lr_scheduler_param_name}"]
+
     if ft_configfile is not None:
         ft_config = yaml.load(ft_configfile, Loader=yaml.Loader)
         # TODO: Validate yaml file format from backend and pass error message
@@ -63,7 +93,15 @@ def app() -> None:
         request = helper.request_finetune(base_model=ft_base_model,
                                           model_naming=(ft_site, ft_tool, ft_techlayer, ft_layergroup),
                                           multilot_config=ft_config,
-                                          epochs=ft_epochs, lr=ft_lr)
+                                          epochs=ft_epochs,
+                                          lr=ft_lr,
+                                          optimizer_type=ft_optimizer_type,
+                                          optimizer_params=optimizer_input_params,
+                                          loss_type=ft_loss_type,
+                                          loss_params=loss_input_params,
+                                          lr_scheduler_type=ft_lr_scheduler_type,
+                                          lr_scheduler_params=lr_scheduler_input_params,
+                                          )
 
         if request.json().get('status') == 'error':
             code = request.json().get('code')
