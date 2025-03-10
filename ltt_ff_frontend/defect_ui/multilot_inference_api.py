@@ -6,7 +6,7 @@ import pandas as pd
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 def app() -> None:
-    logger.debug("Loading Inference Dashboard...")
+    logger.debug("Loading Multilot Inference Dashboard...")
     st.title("False Filter Multilot Inference")
     st.caption("Inference multiple lot data with selected model")
 
