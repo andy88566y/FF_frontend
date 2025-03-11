@@ -58,6 +58,7 @@ def app() -> None:
         for optimizer_param_name, optimizer_param_default_value in OPTIMIZER_PARAMS[ft_optimizer_type].items():
             st.number_input(label=optimizer_param_name,
                             value=optimizer_param_default_value,
+                            format="%0.2f",
                             key=f"optimizer_{optimizer_param_name}")
             optimizer_input_params[optimizer_param_name] = st.session_state[f"optimizer_{optimizer_param_name}"]
 
@@ -65,14 +66,21 @@ def app() -> None:
         for loss_param_name, loss_param_default_value in LOSS_PARAMS[ft_loss_type].items():
             st.number_input(label=loss_param_name,
                             value=loss_param_default_value,
+                            format="%0.2f",
                             key=f"loss_{loss_param_name}")
             loss_input_params[loss_param_name] = st.session_state[f"loss_{loss_param_name}"]
 
         ft_lr_scheduler_type = st.selectbox(label="LR Scheduler Type", options=LR_SCHEDULER_TYPE, index=0)
         for lr_scheduler_param_name, lr_scheduler_param_default_value in LR_SCHEDULER_PARAMS[ft_lr_scheduler_type].items():
-            st.number_input(label=lr_scheduler_param_name,
-                            value=lr_scheduler_param_default_value,
-                            key=f"lr_scheduler_{lr_scheduler_param_name}")
+            if lr_scheduler_param_name == "patience":
+                st.number_input(label=lr_scheduler_param_name,
+                                value=lr_scheduler_param_default_value,
+                                key=f"lr_scheduler_{lr_scheduler_param_name}")
+            else:
+                st.number_input(label=lr_scheduler_param_name,
+                                value=lr_scheduler_param_default_value,
+                                format="%0.6f",
+                                key=f"lr_scheduler_{lr_scheduler_param_name}")
             lr_scheduler_input_params[lr_scheduler_param_name] = st.session_state[f"lr_scheduler_{lr_scheduler_param_name}"]
 
     if ft_configfile is not None:
@@ -89,6 +97,8 @@ def app() -> None:
                 logger.error('Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file.')
                 st.error('Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file.')
                 return
+
+
 
         request = helper.request_finetune(base_model=ft_base_model,
                                           model_naming=(ft_site, ft_tool, ft_techlayer, ft_layergroup),
