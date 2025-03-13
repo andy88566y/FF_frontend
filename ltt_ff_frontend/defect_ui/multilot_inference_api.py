@@ -100,7 +100,7 @@ def app() -> None:
 
     st.header('All multilot inference jobs') if not st.session_state.status_df_multi_inf.empty else st.write('')
 
-    # Selection to find more detail
+    # Draw status overview table
     event_multilot_inf = st.dataframe(
         st.session_state.status_df_multi_inf,
         key = 'statuses_multilot_inference',

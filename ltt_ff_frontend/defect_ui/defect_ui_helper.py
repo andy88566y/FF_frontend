@@ -290,6 +290,9 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
         paged_statuses_df = paged_statuses_df.rename(columns={'index': 'multilot_inference_id'})
 
+        # Just show lot_id, don't show image_dir and lrf_path
+        paged_statuses_df['lot_info'] = pformat([data_path['lot_id'] for data_path in paged_statuses_df['lot_info'][0]['data_paths']])
+
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if 'end_time' in paged_statuses_df.columns:
             paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
@@ -302,14 +305,13 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
 
     # Change ordering
     sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
-        'inference_id',
+        'multilot_inference_id',
         'status',
         'progress',
-        # 'lot_id',
-        # 'total_images',
         'start_time',
         'end_time',
-        'runtime'
+        'runtime',
+        'lot_info',
     ])
 
     # For columns not included above, just add them to the back.
@@ -317,9 +319,8 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         if column not in sorted_paged_statuses_df.columns:
             sorted_paged_statuses_df[column] = paged_statuses_df[column]
 
-    logger.warning(f"request_paginated_multilot_inference_status is returning a {type(sorted_paged_statuses_df)}")
-
     return sorted_paged_statuses_df
+
 
 @st.cache_data(ttl='1s')
 def request_inference_status(inference_id: str) -> requests.Response:
@@ -350,6 +351,37 @@ def request_inference_statuses(inference_id_list: list[str]) -> pd.DataFrame:
         detailed_inference_statuses[inference_id] = request_inference_status(inference_id)
 
     return format_inference_status(pd.DataFrame.from_dict(detailed_inference_statuses).T).T
+
+
+@st.cache_data(ttl='1s')
+def request_multilot_inference_status(multilot_inference_id: str) -> requests.Response:
+    '''
+    Gets multilot inference status by calling FalseFilter API
+
+    Args:
+      multilot_inference_id: Name of the multilot inference job
+
+    Returns the response of the API request
+    '''
+    r = requests.get(f"{API_ROOT}multilot_inference/status/{multilot_inference_id}", timeout=TIMEOUT)
+    return r.json()
+
+
+@st.cache_data(ttl='1s')
+def request_multilot_inference_statuses(multilot_inference_id_list: list[str]) -> pd.DataFrame:
+    '''
+    Gets multilot inference status by calling FalseFilter API
+
+    Args:
+      multilot_inference_id_list: List of multilot inference id to get statuses for.
+
+    Returns the response of the API request
+    '''
+    detailed_multilot_inference_statuses = {}
+    for multilot_inference_id in multilot_inference_id_list:
+        detailed_multilot_inference_statuses[multilot_inference_id] = request_multilot_inference_status(multilot_inference_id)
+
+    return format_multilot_inference_status(pd.DataFrame.from_dict(detailed_multilot_inference_statuses).T).T
 
 
 def format_url(params: dict[str, str]):
@@ -424,6 +456,65 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
             sorted_inference_statuses_df[column] = inference_status[column]
 
     return sorted_inference_statuses_df
+
+
+def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Format and sort the detailed multilot inference status dataframe.
+
+    Args:
+        multilot_inference_status: Dataframe containing raw multilot inference job status details.
+
+    Returns a processed dataframe with adjusted timezones and formatted details.
+    '''
+    if not multilot_inference_status.empty:
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        multilot_inference_status['start_time'] = pd.to_datetime(multilot_inference_status['start_time'], unit='s').dt.floor('s')
+        multilot_inference_status['start_time'] = multilot_inference_status['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+        # Convert model name to user-readable format
+        multilot_inference_status['model_name'] = multilot_inference_status['model_name'].apply(format_model_name)
+
+        # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
+        multilot_inference_status = multilot_inference_status.rename(columns={'index': 'inference_id'})
+
+        # Convert start time from seconds to human-readable format and change timezone to UTC+8
+        if 'end_time' in multilot_inference_status.columns:
+            multilot_inference_status['end_time'] = pd.to_datetime(multilot_inference_status['end_time'], unit='s').dt.floor('s')
+            multilot_inference_status['end_time'] = multilot_inference_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+
+            # Calculate runtime only for rows that have end_time
+            multilot_inference_status['runtime'] = multilot_inference_status.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
+            multilot_inference_status['runtime'] = multilot_inference_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
+
+        # TODO: Make hyper-link work
+        # inference_status['Review Link'] = inference_status[["output_dir", "image_dir"]].apply(
+        #     lambda x: format_url({'result_dir': x['output_dir'], 'image_dir': x['image_dir']}), axis=1
+        # )
+
+    # Change ordering
+    sorted_multilot_inference_statuses_df = multilot_inference_status.reindex(columns=[
+        'status',
+        'progress',
+        'start_time',
+        'end_time',
+        'runtime',
+        'lot_info',
+        'children_job_id',
+        # 'Review Link',
+        'model_name',
+        'output_dir',
+        'message',
+        'error_message',
+    ])
+
+    # For columns not included above, just add them to the back.
+    for column in multilot_inference_status.columns:
+        if column not in sorted_multilot_inference_statuses_df.columns:
+            sorted_multilot_inference_statuses_df[column] = multilot_inference_status[column]
+
+    return sorted_multilot_inference_statuses_df
 
 
 def request_finetune(base_model: str,
