@@ -73,35 +73,31 @@ def app() -> None:
 
         optimizer_input_params, loss_input_params, lr_scheduler_input_params = {}, {}, {}
         ft_optimizer_type = st.selectbox(label="Optimizer", options=OPTIMIZER_TYPE, index=0)
-        for optimizer_param_name, optimizer_param_default_value in OPTIMIZER_PARAMS[ft_optimizer_type].items():
+        for optimizer_param_name, optimizer_param_data in OPTIMIZER_PARAMS[ft_optimizer_type].items():
+            param_default, param_accuracy = optimizer_param_data
             st.number_input(label=optimizer_param_name,
-                            value=optimizer_param_default_value,
-                            format="%0.2f",
+                            value=param_default,
+                            format=param_accuracy,
                             key=f"optimizer_{optimizer_param_name}")
             optimizer_input_params[optimizer_param_name] = st.session_state[f"optimizer_{optimizer_param_name}"]
 
         ft_loss_type = st.selectbox(label="Loss Type", options=LOSS_TYPE, index=0)
-        for loss_param_name, loss_param_default_value in LOSS_PARAMS[ft_loss_type].items():
+        for loss_param_name, loss_param_data in LOSS_PARAMS[ft_loss_type].items():
+            param_default, param_accuracy = loss_param_data
             st.number_input(label=loss_param_name,
-                            value=loss_param_default_value,
-                            format="%0.2f",
+                            value=param_default,
+                            format=param_accuracy,
                             key=f"loss_{loss_param_name}")
             loss_input_params[loss_param_name] = st.session_state[f"loss_{loss_param_name}"]
 
         ft_lr_scheduler_type = st.selectbox(label="LR Scheduler Type", options=LR_SCHEDULER_TYPE, index=0)
-        for lr_scheduler_param_name, lr_scheduler_param_default_value in LR_SCHEDULER_PARAMS[ft_lr_scheduler_type].items():
-            if lr_scheduler_param_name == "patience":
-                st.number_input(label=lr_scheduler_param_name,
-                                value=lr_scheduler_param_default_value,
-                                key=f"lr_scheduler_{lr_scheduler_param_name}")
-            else:
-                st.number_input(label=lr_scheduler_param_name,
-                                value=lr_scheduler_param_default_value,
-                                format="%0.6f",
-                                key=f"lr_scheduler_{lr_scheduler_param_name}")
+        for lr_scheduler_param_name, lr_scheduler_param_data in LR_SCHEDULER_PARAMS[ft_lr_scheduler_type].items():
+            param_default, param_accuracy = lr_scheduler_param_data
+            st.number_input(label=lr_scheduler_param_name,
+                            value=param_default,
+                            format=param_accuracy,
+                            key=f"lr_scheduler_{lr_scheduler_param_name}")
             lr_scheduler_input_params[lr_scheduler_param_name] = st.session_state[f"lr_scheduler_{lr_scheduler_param_name}"]
-
-
 
     if ft_configfile is not None:
         ft_config = yaml.load(ft_configfile, Loader=yaml.Loader)
