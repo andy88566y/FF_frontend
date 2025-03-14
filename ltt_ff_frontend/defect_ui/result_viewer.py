@@ -69,16 +69,13 @@ def calculate_filtered_results(raw_data: tuple[list[int], list[float], list[int]
     }
 
 
-def get_classtype_count(defect_list: list[dict[str, Any]]) -> dict[int, int]:
-    classtype_counter: dict[int, int] = {}
+def get_classtype_count(defect_list: list[dict[str, Any]]) -> dict[str, int]:
+    classtype_counter: dict[str, int] = {}
 
     for defect in defect_list:
         defect_string = 'Defect' if defect["Ans"] == 1 else 'Non-defect' if defect["Ans"] == 0 else "Unlabeled"
         key = f"[{defect_string}] {defect['ClassType']}"
-        if defect['ClassType'] in classtype_counter.keys():
-            classtype_counter[key] += 1
-        else:
-            classtype_counter[key] = 1
+        classtype_counter[key] = classtype_counter.get(key, 0) + 1
 
     return classtype_counter
 
