@@ -611,6 +611,7 @@ def app() -> None:
             st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
                     → {count_rate_data['filtered_unlabeled_defect_count']}""")
 
+        # TODO: Get classtype grouping from backend
         with classtype_count:
             with st.expander(label="LRF ClassType count"):
                 defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
@@ -701,6 +702,7 @@ def app() -> None:
             st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
                     → {count_rate_data['filtered_unlabeled_defect_count']}""")
 
+        # TODO: Get classtype grouping from backend
         with classtype_count:
             with st.expander(label="LRF ClassType count"):
                 defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
