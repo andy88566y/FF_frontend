@@ -225,9 +225,6 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
         paged_statuses_df['start_time'] = pd.to_datetime(paged_statuses_df['start_time'], unit='s').dt.floor('s')
         paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
-        # Sort jobs by start time
-        paged_statuses_df = paged_statuses_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
-
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
         paged_statuses_df = paged_statuses_df.rename(columns={'index': 'inference_id'})
 
@@ -283,9 +280,6 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         paged_statuses_df['start_time'] = pd.to_datetime(paged_statuses_df['start_time'], unit='s').dt.floor('s')
         paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
-
-        # Sort jobs by start time
-        paged_statuses_df = paged_statuses_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
         paged_statuses_df = paged_statuses_df.rename(columns={'index': 'multilot_inference_id'})
@@ -660,9 +654,6 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
 
         # Convert model name to user-readable format
         paged_statuses_df['base_model_name'] = paged_statuses_df['base_model_name'].apply(format_model_name)
-
-        # Sort jobs by start time
-        paged_statuses_df = paged_statuses_df.sort_values(by='start_time', ascending=False).reset_index(drop=False)
 
         # Rename index column so that detailed status table will show 'training_id' instead of 'index'
         paged_statuses_df = paged_statuses_df.rename(columns={'index': 'training_id'})
