@@ -56,27 +56,33 @@ def app() -> None:
         optimizer_input_params, loss_input_params, lr_scheduler_input_params = {}, {}, {}
         ft_optimizer_type = st.selectbox(label="Optimizer", options=OPTIMIZER_TYPE, index=0)
         for optimizer_param_name, optimizer_param_data in OPTIMIZER_PARAMS[ft_optimizer_type].items():
-            param_default, param_accuracy = optimizer_param_data
+            param_default, param_accuracy, param_min, param_max = optimizer_param_data
             st.number_input(label=optimizer_param_name,
                             value=param_default,
+                            min_value=param_min,
+                            max_value=param_max,
                             format=param_accuracy,
                             key=f"optimizer_{optimizer_param_name}")
             optimizer_input_params[optimizer_param_name] = st.session_state[f"optimizer_{optimizer_param_name}"]
 
         ft_loss_type = st.selectbox(label="Loss Type", options=LOSS_TYPE, index=0)
         for loss_param_name, loss_param_data in LOSS_PARAMS[ft_loss_type].items():
-            param_default, param_accuracy = loss_param_data
+            param_default, param_accuracy, param_min, param_max = loss_param_data
             st.number_input(label=loss_param_name,
                             value=param_default,
+                            min_value=param_min,
+                            max_value=param_max,
                             format=param_accuracy,
                             key=f"loss_{loss_param_name}")
             loss_input_params[loss_param_name] = st.session_state[f"loss_{loss_param_name}"]
 
         ft_lr_scheduler_type = st.selectbox(label="LR Scheduler Type", options=LR_SCHEDULER_TYPE, index=0)
         for lr_scheduler_param_name, lr_scheduler_param_data in LR_SCHEDULER_PARAMS[ft_lr_scheduler_type].items():
-            param_default, param_accuracy = lr_scheduler_param_data
+            param_default, param_accuracy, param_min, param_max = lr_scheduler_param_data
             st.number_input(label=lr_scheduler_param_name,
                             value=param_default,
+                            min_value=param_min,
+                            max_value=param_max,
                             format=param_accuracy,
                             key=f"lr_scheduler_{lr_scheduler_param_name}")
             lr_scheduler_input_params[lr_scheduler_param_name] = st.session_state[f"lr_scheduler_{lr_scheduler_param_name}"]
