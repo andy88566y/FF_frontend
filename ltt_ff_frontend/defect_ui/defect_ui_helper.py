@@ -445,6 +445,7 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
         'lrf_path',
         'lrf_type',
         'model_name',
+        'threshold',
         'output_dir',
         'message',
         'error_message',
@@ -504,6 +505,7 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
         'children_job_id',
         # 'Review Link',
         'model_name',
+        'threshold',
         'output_dir',
         'message',
         'error_message',
@@ -548,7 +550,7 @@ def request_finetune(base_model: str,
     '''
     # TODO: Check multilot_config is valid structure
 
-    r = requests.post(API_ROOT+'train', json={
+    r = requests.post(API_ROOT+'finetune', json={
         "base_model_name": base_model,
         "batch_size": 32,
         "epochs": epochs,
@@ -644,7 +646,7 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
 
     Returns the response of the API request
     '''
-    r = requests.get(f"{API_ROOT}train/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
+    r = requests.get(f"{API_ROOT}finetune/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
     paged_statuses = r.json()
     logger.info(f'Status of finetuning request [{current_page}, {page_size}]: {paged_statuses}')
 
@@ -708,7 +710,7 @@ def request_finetuning_status(finetuning_id: str) -> requests.Response:
 
     Returns the response of the API request
     '''
-    r = requests.get(f"{API_ROOT}train/status/{finetuning_id}", timeout=TIMEOUT)
+    r = requests.get(f"{API_ROOT}finetune/status/{finetuning_id}", timeout=TIMEOUT)
     return r.json()
 
 

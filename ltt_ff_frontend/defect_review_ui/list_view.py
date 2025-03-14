@@ -30,7 +30,7 @@ def generate_colors(num_clusters):
 
 
 # define callback when threshold changes
-def reload_data(df):
+def reload_data(df: pd.DataFrame):
     # Add "D/ND" column based on the threshold (Defect/Not defect)
     df["D/ND"] = df["Probability"] >= st.session_state.prob_threshold
     # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
@@ -45,7 +45,7 @@ def reload_data(df):
     st.session_state.filtered_df = df[selected_columns]
 
 
-def app(result_dir, image_dir):
+def app(result_dir: str, image_dir: str) -> None:
     defects = helper.get_lrf_data(result_dir, cols=["No", "X", "Y", "ClassType"], include_prob=True)
     db_metadata = helper.get_db_metadata(result_dir)
 
@@ -318,8 +318,8 @@ def app(result_dir, image_dir):
     # Find the index of the lot_name in filtered_folders
     if defect_number:
         defect_number = int(defect_number)
-        if defect_number >= len(df):
-            defect_number = 1
+        if defect_number not in df['No'].values:
+            defect_number = df['No'].min()
         st.query_params.defect_no = defect_number
         selected_data = df[df['No'] == defect_number]
 
