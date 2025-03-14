@@ -84,7 +84,7 @@ def get_classtype_count(defect_list: list[dict[str, Any]]) -> dict[int, int]:
 def get_classtype_mapping(defect_list: list[dict[str, Any]], classtype: int) -> str:
     for defect in defect_list:
         if defect['ClassType'] == classtype:
-            return 'Defect' if defect["Ans"] else 'Non-defect'
+            return 'Defect' if defect["Ans"] == 1 else 'Non-defect' if defect["Ans"] == 0 else "Unlabeled"
     return ''
 
 
@@ -510,7 +510,25 @@ def app() -> None:
 
         if model_1_metadata['lot_id'] != model_2_metadata['lot_id']:
             with r2_col1:
-                st.error(f"Lot IDs do not match!  \nModel 1 lot ID: {model_1_metadata['lot_id']}  \nModel 2 lot ID: {model_2_metadata['lot_id']}")
+                st.error(f"""Lot IDs do not match!
+                         \nModel 1 lot ID: {model_1_metadata['lot_id']}
+                         \nModel 2 lot ID: {model_2_metadata['lot_id']}""")
+                return
+
+        # Check if results for both models were calculated using the same labels
+        if model_1_raw_data[2] != model_2_raw_data[2]:
+            with r2_col1:
+                st.error(f"""Results were not calculated using the same labels. Check if the same lrf file was used.
+                         \nModel 1 LRF: {model_1_metadata['input_lrf_path']}
+                         \nModel 2 LRF: {model_2_metadata['input_lrf_path']}""")
+                return
+
+        # Check if the same lrf was used for inference
+        if model_1_metadata['input_lrf_path'] != model_2_metadata['input_lrf_path']:
+            with r2_col1:
+                st.error(f"""Different LRF files were used during inference!
+                         \nModel 1 LRF: {model_1_metadata['input_lrf_path']}
+                         \nModel 2 LRF: {model_2_metadata['input_lrf_path']}""")
                 return
 
         # Show result database details
