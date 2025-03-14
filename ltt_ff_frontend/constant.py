@@ -16,7 +16,7 @@ LOSS_PARAMS = {
     },
     "focal": {
         "alpha": (0.25, "%0.2f", 0.0, 1.0),
-        "gamma": (2.0, "%0.2f", 0.0, 1.0),
+        "gamma": (2.0, "%0.2f", 0.0, 5.0),
     },
 }
 LR_SCHEDULER_TYPE = ["disable", "plateau"]
