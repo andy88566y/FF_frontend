@@ -69,6 +69,25 @@ def calculate_filtered_results(raw_data: tuple[list[int], list[float], list[int]
     }
 
 
+def get_classtype_count(defect_list: list[dict[str, Any]]) -> dict[int, int]:
+    classtype_counter: dict[int, int] = {}
+
+    for defect in defect_list:
+        if defect['ClassType'] in classtype_counter.keys():
+            classtype_counter[defect['ClassType']] += 1
+        else:
+            classtype_counter[defect['ClassType']] = 1
+
+    return classtype_counter
+
+
+def get_classtype_mapping(defect_list: list[dict[str, Any]], classtype: int) -> str:
+    for defect in defect_list:
+        if defect['ClassType'] == classtype:
+            return 'Defect' if defect["Ans"] else 'Non-defect'
+    return ''
+
+
 def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_threshold: float) -> go.Figure:
 
     m1_defect_ids, m1_probs, m1_ans = m1_data
@@ -466,6 +485,8 @@ def app() -> None:
     with st.container():
         r4_header = st.empty()
         r4_col1, r4_col2, r4_col3, r4_col4 = st.columns([4, 3, 3, 2])
+    with st.container():
+        classtype_count = st.empty()
 
     st.divider()
 
@@ -590,6 +611,16 @@ def app() -> None:
             st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
                     → {count_rate_data['filtered_unlabeled_defect_count']}""")
 
+        with classtype_count:
+            with st.expander(label="LRF ClassType count"):
+                defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
+                                              cols=["ClassType"],
+                                              include_prob=False)
+                classtype_counter = get_classtype_count(defects)
+                st.text(f"LRF type: {model_1_metadata['input_lrf_type']}")
+                for key, count in classtype_counter.items():
+                    st.text(f"ClassType {key} ({get_classtype_mapping(defects, key)}): {count}")
+
         # Draw 2D comparison chart
         with vr3_col1:
             st.plotly_chart(generate_2D_plot(model_1_raw_data, model_2_raw_data, rv_m1_threshold, rv_m2_threshold))
@@ -669,6 +700,16 @@ def app() -> None:
         with r3_col4:
             st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
                     → {count_rate_data['filtered_unlabeled_defect_count']}""")
+
+        with classtype_count:
+            with st.expander(label="LRF ClassType count"):
+                defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
+                                              cols=["ClassType"],
+                                              include_prob=False)
+                classtype_counter = get_classtype_count(defects)
+                st.text(f"LRF type: {model_1_metadata['input_lrf_type']}")
+                for key, count in classtype_counter.items():
+                    st.text(f"ClassType {key} ({get_classtype_mapping(defects, key)}): {count}")
 
         # Draw 1D comparison chart
         with vr3_col1:
