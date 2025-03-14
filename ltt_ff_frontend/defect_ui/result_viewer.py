@@ -73,19 +73,14 @@ def get_classtype_count(defect_list: list[dict[str, Any]]) -> dict[int, int]:
     classtype_counter: dict[int, int] = {}
 
     for defect in defect_list:
+        defect_string = 'Defect' if defect["Ans"] == 1 else 'Non-defect' if defect["Ans"] == 0 else "Unlabeled"
+        key = f"[{defect_string}] {defect['ClassType']}"
         if defect['ClassType'] in classtype_counter.keys():
-            classtype_counter[defect['ClassType']] += 1
+            classtype_counter[key] += 1
         else:
-            classtype_counter[defect['ClassType']] = 1
+            classtype_counter[key] = 1
 
     return classtype_counter
-
-
-def get_classtype_mapping(defect_list: list[dict[str, Any]], classtype: int) -> str:
-    for defect in defect_list:
-        if defect['ClassType'] == classtype:
-            return 'Defect' if defect["Ans"] == 1 else 'Non-defect' if defect["Ans"] == 0 else "Unlabeled"
-    return ''
 
 
 def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_threshold: float) -> go.Figure:
@@ -638,7 +633,7 @@ def app() -> None:
                 classtype_counter = get_classtype_count(defects)
                 st.text(f"LRF type: {model_1_metadata['input_lrf_type']}")
                 for key, count in classtype_counter.items():
-                    st.text(f"ClassType {key} ({get_classtype_mapping(defects, key)}): {count}")
+                    st.text(f"{key}: {count}")
 
         # Draw 2D comparison chart
         with vr3_col1:
@@ -729,7 +724,7 @@ def app() -> None:
                 classtype_counter = get_classtype_count(defects)
                 st.text(f"LRF type: {model_1_metadata['input_lrf_type']}")
                 for key, count in classtype_counter.items():
-                    st.text(f"ClassType {key} ({get_classtype_mapping(defects, key)}): {count}")
+                    st.text(f"{key}: {count}")
 
         # Draw 1D comparison chart
         with vr3_col1:
