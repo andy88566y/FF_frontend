@@ -83,7 +83,6 @@ def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
         classification, classtype = key.split(' ')
         classtype_counter_list.append({"Classification": classification, "ClassType": classtype, "Count": value})
 
-    # TODO: sort by classtype
     # Convert to DF and rename columns (this will appear on streamlit DF)
     classtype_counter_df = pd.DataFrame.from_records(data=classtype_counter_list).sort_values(by='ClassType', ascending=True)
 
