@@ -226,7 +226,7 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
         paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        paged_statuses_df = paged_statuses_df.rename(columns={'index': 'inference_id'})
+        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="inference_id").sort_values(by='start_time', ascending=False)
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if 'end_time' in paged_statuses_df.columns:
@@ -282,7 +282,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        paged_statuses_df = paged_statuses_df.rename(columns={'index': 'multilot_inference_id'})
+        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="multilot_inference_id").sort_values(by='start_time', ascending=False)
 
         # Just show lot_id, don't show image_dir and lrf_path
         paged_statuses_df['lot_info'] = pformat([data_path['lot_id'] for data_path in paged_statuses_df['lot_info'][0]['data_paths']])
@@ -656,7 +656,7 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
         paged_statuses_df['base_model_name'] = paged_statuses_df['base_model_name'].apply(format_model_name)
 
         # Rename index column so that detailed status table will show 'training_id' instead of 'index'
-        paged_statuses_df = paged_statuses_df.rename(columns={'index': 'training_id'})
+        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="training_id").sort_values(by='start_time', ascending=False)
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if 'end_time' in paged_statuses_df.columns:

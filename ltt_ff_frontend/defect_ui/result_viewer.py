@@ -69,15 +69,24 @@ def calculate_filtered_results(raw_data: tuple[list[int], list[float], list[int]
     }
 
 
-def get_classtype_count(defect_list: list[dict[str, Any]]) -> dict[str, int]:
+def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
     classtype_counter: dict[str, int] = {}
 
+    # Leave this as dict, move to backend in the future
     for defect in defect_list:
         defect_string = 'Defect' if defect["Ans"] == 1 else 'Non-defect' if defect["Ans"] == 0 else "Unlabeled"
         key = f"[{defect_string}] {defect['ClassType']}"
         classtype_counter[key] = classtype_counter.get(key, 0) + 1
 
-    return classtype_counter
+    classtype_counter_list = []
+    for key, value in classtype_counter.items():
+        classification, classtype = key.split(' ')
+        classtype_counter_list.append({"Classification": classification, "ClassType": classtype, "Count": value})
+
+    # Convert to DF and rename columns (this will appear on streamlit DF)
+    classtype_counter_df = pd.DataFrame.from_records(data=classtype_counter_list).sort_values(by='ClassType', ascending=True)
+
+    return classtype_counter_df
 
 
 def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_threshold: float) -> go.Figure:
@@ -627,10 +636,9 @@ def app() -> None:
                 defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
                                               cols=["ClassType"],
                                               include_prob=False)
-                classtype_counter = get_classtype_count(defects)
-                st.text(f"LRF type: {model_1_metadata['input_lrf_type']}")
-                for key, count in classtype_counter.items():
-                    st.text(f"{key}: {count}")
+                classtype_counter_df = get_classtype_count(defects)
+                st.caption(f"LRF type: {model_1_metadata['input_lrf_type']}")
+                st.dataframe(data=classtype_counter_df)
 
         # Draw 2D comparison chart
         with vr3_col1:
@@ -718,10 +726,9 @@ def app() -> None:
                 defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
                                               cols=["ClassType"],
                                               include_prob=False)
-                classtype_counter = get_classtype_count(defects)
-                st.text(f"LRF type: {model_1_metadata['input_lrf_type']}")
-                for key, count in classtype_counter.items():
-                    st.text(f"{key}: {count}")
+                classtype_counter_df = get_classtype_count(defects)
+                st.caption(f"LRF type: {model_1_metadata['input_lrf_type']}")
+                st.dataframe(data=classtype_counter_df)
 
         # Draw 1D comparison chart
         with vr3_col1:
