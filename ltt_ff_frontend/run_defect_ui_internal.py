@@ -8,9 +8,9 @@ from ltt_ff_frontend.defect_ui import (
     inference_api,
     inference_recipe_api,
     multilot_inference_api,
-    result_viewer,
     result_viewer_recipe,
 )
+from ltt_ff_frontend.result_viewer import result_viewer
 
 
 if __name__ == "__main__":

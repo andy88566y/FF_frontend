@@ -12,6 +12,9 @@ from loguru import logger
 from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
 
 
+#####################################################################################################
+# Formatting                                                                                        #
+#####################################################################################################
 def gap(size: int) -> None:
     """
     Simple function to space out Streamlit UI elements.
@@ -37,6 +40,9 @@ def format_model_name(name: str) -> str:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
 
+#####################################################################################################
+# Get model information                                                                             #
+#####################################################################################################
 @st.cache_data(ttl="10s")
 def get_base_models() -> list[str]:
     """
@@ -70,6 +76,9 @@ def get_model_threshold(model_name: str) -> float:
         return model_threshold
 
 
+#####################################################################################################
+# Generate LRF                                                                                      #
+#####################################################################################################
 def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> requests.Response:
     """
     Calls FalseFilter API with use_cache=True.
@@ -129,6 +138,9 @@ def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
     return r
 
 
+#####################################################################################################
+# Inference / Multilot Inference                                                                    #
+#####################################################################################################
 def request_inference(
     image_dir: str,
     lrf_path: str,
@@ -428,15 +440,6 @@ def request_multilot_inference_statuses(multilot_inference_id_list: list[str]) -
     return format_multilot_inference_status(pd.DataFrame.from_dict(detailed_multilot_inference_statuses).T).T
 
 
-def format_url(params: dict[str, str]):
-    # TODO: Get correct base url
-    base_url = "http://xxx:6501"
-    param_strs = []
-    for k, v in params.items():
-        param_strs.append(f"{k}={base64.urlsafe_b64encode(str.encode(v)).decode()}")
-    return f"{base_url}/?{'&'.join(param_strs)}"
-
-
 def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
     """
     Format and sort the detailed inference status dataframe.
@@ -590,6 +593,9 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
     return sorted_multilot_inference_statuses_df
 
 
+#####################################################################################################
+# Finetune / Basetrain                                                                              #
+#####################################################################################################
 def request_finetune(
     base_model: str,
     model_naming: tuple[str, str, str, str],
@@ -912,6 +918,9 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
     return sorted_finetuning_statuses_df
 
 
+#####################################################################################################
+# Database                                                                                          #
+#####################################################################################################
 @st.cache_data(ttl="10s")
 def get_db_metadata(output_dir: str) -> dict[str, Any]:
     """
@@ -1149,3 +1158,12 @@ def get_predictions(
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
+def format_url(params: dict[str, str]):
+    # TODO: Get correct base url
+    base_url = "http://xxx:6501"
+    param_strs = []
+    for k, v in params.items():
+        param_strs.append(f"{k}={base64.urlsafe_b64encode(str.encode(v)).decode()}")
+    return f"{base_url}/?{'&'.join(param_strs)}"
