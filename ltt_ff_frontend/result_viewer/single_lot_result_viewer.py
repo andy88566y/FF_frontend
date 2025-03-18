@@ -4,6 +4,7 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 from ltt_ff_frontend.result_viewer import result_viewer
 
+
 def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, st_gen_lrf_type: str) -> None:
 
     # Column for printing error message
@@ -175,7 +176,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
             with st.expander(label="LRF ClassType count"):
                 defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
                                               cols=["ClassType"],
-                                              include_prob=False)
+                                              include_prob=False)[0]
                 classtype_counter_df = result_viewer.get_classtype_count(defects)
                 st.caption(f"LRF type: {model_1_metadata['input_lrf_type']}")
                 st.dataframe(data=classtype_counter_df)
@@ -191,8 +192,8 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                 st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
 
             else:
-                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
-                model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)
+                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)[0]
+                model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)[0]
                 st.plotly_chart(result_viewer.plot_roc([
                     ("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold']),
                     ("Model 2", model_2_roc_data, rv_m2_threshold, model_2_metadata['model_threshold']),
@@ -268,7 +269,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
             with st.expander(label="LRF ClassType count"):
                 defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
                                               cols=["ClassType"],
-                                              include_prob=False)
+                                              include_prob=False)[0]
                 classtype_counter_df = result_viewer.get_classtype_count(defects)
                 st.caption(f"LRF type: {model_1_metadata['input_lrf_type']}")
                 st.dataframe(data=classtype_counter_df)
@@ -284,7 +285,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                 st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
 
             else:
-                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
+                model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)[0]
                 st.plotly_chart(result_viewer.plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold'])]))
 
     else:

@@ -1,3 +1,4 @@
+import glob
 from typing import Any
 
 import numpy as np
@@ -8,7 +9,7 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
-from ltt_ff_frontend.result_viewer import single_lot_result_viewer
+from ltt_ff_frontend.result_viewer import single_lot_result_viewer, multi_lot_result_viewer
 
 
 DEFECT_COLOR_MAPPING = {
@@ -23,7 +24,19 @@ def get_model_data(
 ) -> tuple[dict[str, Any], tuple[list[int], list[float], list[int]]] | tuple[None, None]:
     try:
         db_metadata = helper.get_db_metadata(output_dir)
-        defect_id_list = helper.get_defect_id(output_dir)
+        defect_id_lists = helper.get_defect_id(output_dir)
+        probability_list = helper.get_probability(output_dir, defect_id_lists)
+        answer_list = helper.get_answer(output_dir, defect_id_lists)
+        return db_metadata[0], (defect_id_lists[0], probability_list[0], answer_list[0])
+    except Exception as e:
+        logger.warning(f"Error getting model data from {output_dir}! {e}")
+        return None, None
+
+
+def get_multilot_model_data(output_dir: str) -> tuple[list[dict[str, Any]], tuple[list[list[int]], list[list[float]], list[list[int]]]] | tuple[None, None]:
+    try:
+        db_metadata = helper.get_db_metadata(output_dir=output_dir)
+        defect_id_list = helper.get_defect_id(output_dir=output_dir)
         probability_list = helper.get_probability(output_dir, defect_id_list)
         answer_list = helper.get_answer(output_dir, defect_id_list)
         assert len(defect_id_list) == len(probability_list), f"IDs: {len(defect_id_list)} Prob: {len(probability_list)}"
@@ -510,4 +523,10 @@ def app() -> None:
 
     st.divider()
 
-    single_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
+    db_files = glob.glob(f"{rv_m1_output_dir}/*.db")
+    if len(db_files) > 1:
+        # multi_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
+        pass
+    else:
+        logger.info(f'{len(db_files)} .db files found in {rv_m1_output_dir}')
+        single_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)

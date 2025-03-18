@@ -922,7 +922,7 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
 # Database                                                                                          #
 #####################################################################################################
 @st.cache_data(ttl="10s")
-def get_db_metadata(output_dir: str) -> dict[str, Any]:
+def get_db_metadata(output_dir: str) -> list[dict[str, Any]]:
     """
     Get Result DB metadata.
 
@@ -942,7 +942,7 @@ def get_db_metadata(output_dir: str) -> dict[str, Any]:
 
 
 @st.cache_data(ttl="10s")
-def get_defect_id(output_dir: str) -> list[str]:
+def get_defect_id(output_dir: str) -> list[list[int]]:
     """
     Get list of defect IDs from a database.
 
@@ -980,7 +980,7 @@ def get_topk_model_threshold(output_dir: str, top_k: int = 150) -> float:
 
 # TODO: Split this into smaller functions
 @st.cache_data(ttl="30s")
-def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -> list[dict[str, Any]]:
+def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -> list[list[dict[str, Any]]]:
     """
     Return lrf data with selected columns
     """
@@ -990,21 +990,25 @@ def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -
         logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
         raise ValueError(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
     else:
-        lrf_data = r.json()["lrf_data"]
-        logger.info(f"LRF data of {len(lrf_data)} defects loaded from `{output_dir}`")
+        lrf_data_list = r.json()["lrf_data"]
+        for lrf_data in lrf_data_list:
+            logger.info(f"LRF data of {len(lrf_data)} defects loaded from `{output_dir}`")
 
     r = requests.get(API_ROOT + "result/get_answer", json={"output_dir": output_dir}, timeout=TIMEOUT)
     if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
         raise ValueError(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
     else:
-        answer_list = r.json()["answer_list"]
-        if len(lrf_data) != len(answer_list):
-            logger.error(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
-            raise ValueError(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
-        lrf_data_with_ans = []
-        for data, ans in zip(lrf_data, answer_list):
-            lrf_data_with_ans.append({**data, "Ans": ans})
+        answer_lists = r.json()["answer_list"]
+        lrf_data_with_ans_list = []
+        for lrf_data, answer_list in zip(lrf_data_list, answer_lists):
+            if len(lrf_data) != len(answer_list):
+                logger.error(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
+                raise ValueError(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
+            lrf_data_with_ans = []
+            for data, ans in zip(lrf_data, answer_list):
+                lrf_data_with_ans.append({**data, "Ans": ans})
+            lrf_data_with_ans_list.append(lrf_data_with_ans)
 
     if include_prob:
         r = requests.get(API_ROOT + "result/get_probability", json={"output_dir": output_dir}, timeout=TIMEOUT)
@@ -1013,20 +1017,23 @@ def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -
             logger.error(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
             raise ValueError(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
         else:
-            probs = r.json()["probability_list"]
-            if len(lrf_data_with_ans) != len(probs):
-                logger.error(
-                    f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}"
-                )
-                raise ValueError(
-                    f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}"
-                )
-            lrf_data_with_prob = []
-            for data, prob in zip(lrf_data_with_ans, probs):
-                lrf_data_with_prob.append({**data, "Probability": prob})
-            return lrf_data_with_prob
+            probability_lists = r.json()["probability_list"]
+            lrf_data_with_prob_list = []
+            for lrf_data_with_ans, probability_list in zip(lrf_data_with_ans_list, probability_lists):
+                if len(lrf_data_with_ans) != len(probability_list):
+                    logger.error(
+                        f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probability_list)}"
+                    )
+                    raise ValueError(
+                        f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probability_list)}"
+                    )
+                lrf_data_with_prob = []
+                for data, prob in zip(lrf_data_with_ans, probability_list):
+                    lrf_data_with_prob.append({**data, "Probability": prob})
+                lrf_data_with_prob_list.append(lrf_data_with_prob)
+            return lrf_data_with_prob_list
     else:
-        return lrf_data_with_ans
+        return lrf_data_with_ans_list
 
 
 @st.cache_data(ttl="10s")
@@ -1053,7 +1060,7 @@ def get_prc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray
 
 
 @st.cache_data(ttl="10s")
-def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_roc_data(output_dir: str, return_curve: bool = True) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
     """
     Get the data needed to draw an ROC curve (fpr, tpr, threshold)
 
@@ -1069,14 +1076,16 @@ def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray
         timeout=TIMEOUT,
     )
 
-    roc_data_list = r.json()["roc_data"]
-    roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
+    roc_data_lists = r.json()["roc_data"]
+    roc_data_ndarray_list = [
+        tuple(np.array(data_list) for data_list in roc_data_list) for roc_data_list in roc_data_lists
+    ]
 
-    return roc_data_ndarray
+    return roc_data_ndarray_list
 
 
 @st.cache_data(ttl="10s")
-def get_probability(output_dir: str, defect_id: list[str]) -> list[float]:
+def get_probability(output_dir: str, defect_id: list[list[int]]) -> list[list[float]]:
     """
     Read a list of the defect probabilities from a database.
 
@@ -1101,7 +1110,7 @@ def get_probability(output_dir: str, defect_id: list[str]) -> list[float]:
 
 
 @st.cache_data(ttl="10s")
-def get_answer(output_dir: str, defect_id: list[str]) -> list[int]:
+def get_answer(output_dir: str, defect_id: list[list[int]]) -> list[list[int]]:
     """
     Read a list of the ground truths from a database.
 
