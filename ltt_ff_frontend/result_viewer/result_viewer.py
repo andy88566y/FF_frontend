@@ -9,7 +9,7 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
-from ltt_ff_frontend.result_viewer import single_lot_result_viewer, multi_lot_result_viewer
+from ltt_ff_frontend.result_viewer import multi_lot_result_viewer, single_lot_result_viewer
 
 
 DEFECT_COLOR_MAPPING = {
@@ -33,7 +33,9 @@ def get_model_data(
         return None, None
 
 
-def get_multilot_model_data(output_dir: str) -> tuple[list[dict[str, Any]], tuple[list[list[int]], list[list[float]], list[list[int]]]] | tuple[None, None]:
+def get_multilot_model_data(
+    output_dir: str,
+) -> tuple[list[dict[str, Any]], tuple[list[list[int]], list[list[float]], list[list[int]]]] | tuple[None, None]:
     try:
         db_metadata = helper.get_db_metadata(output_dir=output_dir)
         defect_id_list = helper.get_defect_id(output_dir=output_dir)
@@ -157,6 +159,64 @@ def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_thres
         yref="paper",
         line={"color": "Red", "width": 2, "dash": "dash"},
     )
+
+    fig.update_layout(
+        barmode="stack",
+        xaxis_title="Probabilities",
+        yaxis_title="Frequency",
+        title="Defect Probability Distribution",
+    )
+
+    return fig
+
+
+def generate_multilot_1D_plot(
+    id_list: list[int], prob_list: list[float], ans_list: list[int], threshold_list: list[float], lot_id_list: list[str]
+) -> go.Figure:
+    df = pd.DataFrame(
+        data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
+    )
+    df["Classification"] = [
+        "Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]
+    ]
+
+    # Add histogram
+    fig = px.histogram(
+        data_frame=df,
+        x="Probability",
+        range_x=[0.0, 1.0],
+        nbins=100,
+        color="Classification",
+        color_discrete_map={
+            "Non-defect": DEFECT_COLOR_MAPPING["ND"],
+            "Defect": DEFECT_COLOR_MAPPING["D"],
+            "Unlabeled": DEFECT_COLOR_MAPPING["UNK"],
+        },
+        marginal="rug",
+        hover_name="Classification",
+        hover_data={
+            "Probability": True,
+            "Defect_ID": True,
+            "LRF_Label": False,
+            "Classification": False,
+        },
+        labels={
+            "LRF_Label": "Defect/non-defect",
+        },
+        pattern_shape="Lot ID",
+    )
+
+    # # Add threshold line
+    # fig.add_shape(
+    #     type="line",
+    #     x0=m1_threshold,
+    #     x1=m1_threshold,
+    #     y0=0,
+    #     y1=1,
+    #     xref="x",
+    #     yref="paper",
+    #     line={"color": "Red", "width": 2, "dash": "dash"},
+    # )
 
     fig.update_layout(
         barmode="stack",
@@ -424,6 +484,168 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
     return fig
 
 
+def plot_multilot_roc(
+    roc_data: list[tuple[str, list[tuple[np.ndarray, np.ndarray, np.ndarray]], list[float], list[dict[str, Any]]]],
+) -> go.Figure:
+    fig = go.Figure()
+
+    for curve_data in roc_data:
+        model_name, data_list, selected_threshold_list, model_metadata_list = curve_data
+
+        for lot_data, selected_threshold, model_metadata in zip(
+            data_list, selected_threshold_list, model_metadata_list
+        ):
+            fpr, tpr, threshold = lot_data
+            tnr = 1 - fpr
+
+            # Skip lots that do not have any true defects
+            tpr_contains_nan = any(np.isnan(value) for value in tpr)
+            if tpr_contains_nan:
+                continue
+
+            inference_threshold = model_metadata["model_threshold"]
+            lot_id = model_metadata["lot_id"]
+
+            # Draw the main curve
+            fig.add_trace(
+                go.Scatter(
+                    x=tnr,
+                    y=tpr,
+                    mode="lines",
+                    name=f"{model_name}: {lot_id}",
+                    hoverinfo="text+name",
+                    hovertext=[
+                        f"Capture rate: {x}<br>False Filter Rate: {y}<br>Threshold: {z}"
+                        for x, y, z in zip(tpr, tnr, threshold)
+                    ],
+                )
+            )
+
+            ##################################################################
+            # Highest FFR when CR = 100%                                     #
+            ##################################################################
+            # Search for index of highest FR when CR = 1
+            highest_fr_idx = np.where(tpr == 1.0)[0][0]
+
+            # Draw highest FR when CR = 1
+            fig.add_trace(
+                go.Scatter(
+                    x=[tnr[highest_fr_idx]],
+                    y=[tpr[highest_fr_idx]],
+                    mode="markers",
+                    marker={"color": "blue", "size": 10},
+                    name="Highest False Filter Rate at 100% Capture Rate",
+                    hoverinfo="text",
+                    hovertext=f"""Highest False Filter Rate at 100% Capture Rate<br>
+        Capture rate: {tpr[highest_fr_idx]}<br>
+        False Filter Rate: {tnr[highest_fr_idx]}<br>
+        Threshold: {threshold[highest_fr_idx]:.6f}""",
+                )
+            )
+
+            # Add annotation below the highest FR marker
+            fig.add_annotation(
+                x=tnr[highest_fr_idx],
+                y=tpr[highest_fr_idx],
+                text=f"""{model_name} Threshold = {threshold[highest_fr_idx]:.6f} <br>
+        Capture Rate: {tpr[highest_fr_idx]:.4f} <br>
+        False Filter Rate: {tnr[highest_fr_idx]:.4f}""",
+                showarrow=False,
+                yshift=-30,
+            )
+
+            ##################################################################
+            # Selected threshold                                             #
+            ##################################################################
+            # Search for the marker whose threshold is equal or smaller than selected threshold.
+            # Note: need to reverse because threshold is from 1 to 0.
+            reversed_threshold = threshold[::-1]
+            selected_idx = np.searchsorted(reversed_threshold, selected_threshold, side="left")
+            selected_idx = len(threshold) - selected_idx - 1
+
+            # Draw marker for current selected model threshold
+            fig.add_trace(
+                go.Scatter(
+                    x=[tnr[selected_idx]],
+                    y=[tpr[selected_idx]],
+                    mode="markers",
+                    marker={"color": "red", "size": 10},
+                    name=f"Selected Threshold ({selected_threshold:.6f})",
+                    hoverinfo="text",
+                    hovertext=f"""Selected Threshold<br>
+        Capture rate: {tpr[selected_idx]}<br>
+        False Filter Rate: {tnr[selected_idx]}<br>
+        Threshold: {selected_threshold:.6f}""",
+                )
+            )
+
+            # Add annotation above current selected model threshold
+            fig.add_annotation(
+                x=tnr[selected_idx],
+                y=tpr[selected_idx],
+                text=f"""{model_name} Threshold = {selected_threshold:.6f} <br>
+        Capture Rate: {tpr[selected_idx]:.4f} <br>
+        False Filter Rate: {tnr[selected_idx]:.4f}""",
+                showarrow=False,
+                yshift=30,
+            )
+
+            ##################################################################
+            # Default threshold                                              #
+            ##################################################################
+            # Draw inference threshold
+            if selected_threshold != inference_threshold:
+                infer_idx = np.searchsorted(reversed_threshold, inference_threshold, side="left")
+                infer_idx = len(threshold) - infer_idx - 1
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=[tnr[infer_idx]],
+                        y=[tpr[infer_idx]],
+                        mode="markers",
+                        marker={"color": "black", "size": 10},
+                        name=f"Inference ({inference_threshold:.6f})",
+                        hoverinfo="text",
+                        hovertext=f"""Inference Threshold<br>
+            Capture rate: {tpr[infer_idx]}<br>
+            False Filter Rate: {tnr[infer_idx]}<br>
+            Threshold: {inference_threshold:.6f}""",
+                    )
+                )
+
+                fig.add_annotation(
+                    x=tnr[infer_idx],
+                    y=tpr[infer_idx],
+                    text=f"""{model_name} Inference threshold = {inference_threshold:.6f} <br>
+            Capture Rate: {tpr[infer_idx]:.4f} <br>
+            False Filter Rate: {tnr[infer_idx]:.4f}""",
+                    showarrow=False,
+                    yshift=-30,
+                )
+
+    # Add a diagonal grey dotted-line
+    fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode="lines", line={"dash": "dash", "color": "grey"}, name="Random"))
+
+    fig.update_layout(
+        title="Capture Rate / False Filter Rate Curve",
+        xaxis_title="False Filter Rate",
+        yaxis_title="Capture Rate",
+        legend_title="Legends",
+        template="plotly_white",
+        showlegend=True,
+        xaxis={"range": [0.0, 1.05]},
+        yaxis={"range": [0.0, 1.05]},
+    )
+
+    # TODO: Make it square and can show properly on wide screen
+    # fig.update_yaxes(
+    #     scaleanchor="x",
+    #     scaleratio=1,
+    # )
+
+    return fig
+
+
 # TODO: Might be wrong! Refer to plot_roc for correct method.
 def plot_prc(prc_data: list[tuple[str, Any, float]]) -> go.Figure:
     fig = go.Figure()
@@ -467,11 +689,13 @@ def plot_prc(prc_data: list[tuple[str, Any, float]]) -> go.Figure:
     return fig
 
 
-def gen_lrf(model_id: str, output_dir: str, gen_lrf_type: str, threshold=None, top_k=None) -> None:
+def gen_lrf(
+    model_id: str, output_dir: str, gen_lrf_type: str, threshold=None, top_k=None, key_number: int = 0, lot_id: str = ""
+) -> None:
     if gen_lrf_type == "top_k":
         if top_k is not None and 1 <= top_k <= 999:
-            if st.button(f"Generate new Model {model_id} lrf"):
-                request = helper.request_top_k_lrf(output_dir=output_dir, top_k=top_k)
+            if st.button(label=f"Generate new Model {model_id} lrf", key=f"gen_lrf_top_k_{key_number}"):
+                request = helper.request_top_k_lrf(output_dir=output_dir, top_k=top_k, lot_id=lot_id)
 
                 if request.json().get("status") == "error":
                     code = request.json().get("code")
@@ -485,8 +709,10 @@ def gen_lrf(model_id: str, output_dir: str, gen_lrf_type: str, threshold=None, t
             st.error(f"Top-k setting: {top_k} is invalid. Should be between 1 and 999 !")
     elif gen_lrf_type == "threshold":
         if threshold is not None and 0.0 <= threshold <= 1.0:
-            if st.button(f"Generate new Model {model_id} lrf"):
-                request = helper.request_threshold_lrf(output_dir=output_dir, confidence_threshold=threshold)
+            if st.button(f"Generate new Model {model_id} lrf", key=f"gen_lrf_threshold_{key_number}"):
+                request = helper.request_threshold_lrf(
+                    output_dir=output_dir, confidence_threshold=threshold, lot_id=lot_id
+                )
 
                 if request.json().get("status") == "error":
                     code = request.json().get("code")
@@ -525,8 +751,6 @@ def app() -> None:
 
     db_files = glob.glob(f"{rv_m1_output_dir}/*.db")
     if len(db_files) > 1:
-        # multi_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
-        pass
+        multi_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
     else:
-        logger.info(f'{len(db_files)} .db files found in {rv_m1_output_dir}')
         single_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)

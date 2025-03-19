@@ -79,7 +79,7 @@ def get_model_threshold(model_name: str) -> float:
 #####################################################################################################
 # Generate LRF                                                                                      #
 #####################################################################################################
-def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> requests.Response:
+def request_threshold_lrf(output_dir: str, confidence_threshold: float, lot_id: str) -> requests.Response:
     """
     Calls FalseFilter API with use_cache=True.
 
@@ -87,6 +87,7 @@ def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> reque
         output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
         confidence_threshold: Images with defect probability lower than confidence threshold
                                 is considered defective.
+        lot_id: Name of the lot of defect images.
 
     Returns the reponse of the API request.
     """
@@ -95,6 +96,7 @@ def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> reque
         json={
             "output_dir": output_dir,
             "threshold": confidence_threshold,
+            "lot_id": lot_id,
         },
         timeout=TIMEOUT,
     )
@@ -109,7 +111,7 @@ def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> reque
     return r
 
 
-def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
+def request_top_k_lrf(output_dir: str, top_k: int, lot_id: str) -> requests.Response:
     """
     Call FalseFilter API to generate an .lrf with top K defects
 
@@ -124,6 +126,7 @@ def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
         json={
             "output_dir": output_dir,
             "top_k": top_k,
+            "lot_id": lot_id,
         },
         timeout=TIMEOUT,
     )
@@ -962,11 +965,11 @@ def get_defect_id(output_dir: str) -> list[list[int]]:
 
 
 @st.cache_data(ttl="1s")
-def get_topk_model_threshold(output_dir: str, top_k: int = 150) -> float:
+def get_topk_model_threshold(output_dir: str, top_k: int = 150, lot_id: str = "") -> float:
     """
     Return model threshold for selected model
     """
-    params = {"output_dir": output_dir, "top_k": top_k}
+    params = {"output_dir": output_dir, "top_k": top_k, "lot_id": lot_id}
     r = requests.get(f"{API_ROOT}result/get_topk_threshold", params=params, timeout=TIMEOUT)
 
     if r.json()["status"] == "error":
