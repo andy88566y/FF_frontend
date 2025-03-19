@@ -1,4 +1,5 @@
 import glob
+import re
 from typing import Any
 
 import numpy as np
@@ -17,6 +18,21 @@ DEFECT_COLOR_MAPPING = {
     "ND": "olivedrab",
     "UNK": "blue",
 }
+
+
+def get_color_map(legends_list: list[str]) -> dict[str, Any]:
+    unique_legends = set(legends_list)
+    color_map = {}
+
+    for legend in unique_legends:
+        if re.search("Non-defect", legend) is not None:
+            color_map[legend] = DEFECT_COLOR_MAPPING["ND"]
+        elif re.search("Unlabeled", legend) is not None:
+            color_map[legend] = DEFECT_COLOR_MAPPING["UNK"]
+        else:
+            color_map[legend] = DEFECT_COLOR_MAPPING["D"]
+
+    return color_map
 
 
 def get_model_data(
@@ -179,19 +195,18 @@ def generate_multilot_1D_plot(
     df["Classification"] = [
         "Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]
     ]
+    df["Legends"] = [f"{classification} {lot_id}" for classification, lot_id in zip(df["Classification"], df["Lot ID"])]
 
     # Add histogram
+    # hover_data defines which df columns will appear on the hover message
+    # label changes the column name on the hover message
     fig = px.histogram(
         data_frame=df,
         x="Probability",
         range_x=[0.0, 1.0],
         nbins=100,
-        color="Classification",
-        color_discrete_map={
-            "Non-defect": DEFECT_COLOR_MAPPING["ND"],
-            "Defect": DEFECT_COLOR_MAPPING["D"],
-            "Unlabeled": DEFECT_COLOR_MAPPING["UNK"],
-        },
+        color="Legends",
+        color_discrete_map=get_color_map(df["Legends"]),
         marginal="rug",
         hover_name="Classification",
         hover_data={
@@ -199,11 +214,12 @@ def generate_multilot_1D_plot(
             "Defect_ID": True,
             "LRF_Label": False,
             "Classification": False,
+            "Legends": False,
+            "Lot ID": True,
         },
         labels={
             "LRF_Label": "Defect/non-defect",
         },
-        pattern_shape="Lot ID",
     )
 
     # # Add threshold line
