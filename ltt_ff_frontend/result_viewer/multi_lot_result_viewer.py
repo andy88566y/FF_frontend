@@ -205,10 +205,6 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
     elif rv_m1_output_dir not in invalid_input:
         model_1_metadata, model_1_raw_data = result_viewer.get_multilot_model_data(rv_m1_output_dir)
 
-        # for x in model_1_raw_data[2]:
-        #     logger.warning(f'metadata: {x}')
-        # logger.warning(f'model_1_raw_data: {model_1_raw_data}')
-
         if model_1_metadata is None:
             with r2_col1:
                 st.error(f"Error getting result data from {rv_m1_output_dir}")
@@ -224,38 +220,42 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
             st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata[0]['model_name'])}")
 
         # Generate lrf by top k, and adjust threshold according to top k
-        rv_m1_threshold_list: list[float] = []
+        rv_m1_threshold = 1.0 # init as max value
         for index, meta in enumerate(model_1_metadata):
             # logger.warning(index)
             if st_gen_lrf_type == "top_k":
                 with vr1_col4:
-                    st.number_input(label="Top k", min_value=0, max_value=999, value=150, step=1,
-                                    help="Top-k defects ranked by Probabilities will be considered as defects.",
-                                    key=f'm1_topk_{index}')
+                    # Only show one top k number selector
+                    if index == 0:
+                        st.number_input(label="Top k", min_value=0, max_value=999, value=150, step=1,
+                                        help="Top-k defects ranked by Probabilities will be considered as defects.",
+                                        key='m1_topk')
                 with vr1_col5:
                     result_viewer.gen_lrf(model_id="1",
                                           output_dir=rv_m1_output_dir,
                                           gen_lrf_type=st_gen_lrf_type,
-                                          top_k=st.session_state[f'm1_topk_{index}'],
-                                          key_number=index,
+                                          top_k=st.session_state['m1_topk'],
+                                          key_number=index, # unique key for each gen lrf button
                                           lot_id=meta["lot_id"])
 
-                rv_m1_threshold_list.append(helper.get_topk_model_threshold(output_dir=rv_m1_output_dir,
-                                                                          top_k=st.session_state[f'm1_topk_{index}'],
-                                                                          lot_id=meta["lot_id"]))
-                logger.warning(rv_m1_threshold_list)
+                current_threshold = helper.get_topk_model_threshold(output_dir=rv_m1_output_dir,
+                                                                          top_k=st.session_state['m1_topk'],
+                                                                          lot_id=meta["lot_id"])
+
+                # Select lowest calculated threshold to draw dotted line when in top_k mode
+                if current_threshold < rv_m1_threshold:
+                    rv_m1_threshold = current_threshold
 
             # Generate lrf by threshold
             else:
                 with vr1_col4:
-                    rv_m1_threshold = st.number_input(label="Confidence threshold:",
-                                                    value=meta['model_threshold'],
-                                                    step=0.00001,
-                                                    format="%.5f",
-                                                    help="Probabilities above thershold will be considered as defects.",
-                                                    key=f'm1_threshold_{index}')
-
-                    rv_m1_threshold_list.append(rv_m1_threshold)
+                    if index == 0:
+                        rv_m1_threshold = st.number_input(label="Confidence threshold:",
+                                                        value=meta['model_threshold'],
+                                                        step=0.00001,
+                                                        format="%.5f",
+                                                        help="Probabilities above thershold will be considered as defects.",
+                                                        key=f'm1_threshold_{index}')
 
                 # Validate confidence threshold
                 if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
@@ -267,8 +267,8 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                     result_viewer.gen_lrf(model_id="1",
                                           output_dir=rv_m1_output_dir,
                                           gen_lrf_type=st_gen_lrf_type,
-                                          threshold=st.session_state[f'm1_threshold_{index}'],
-                                          key_number=index,
+                                          threshold=rv_m1_threshold,
+                                          key_number=index, # unique key for each gen lrf button
                                           lot_id=meta["lot_id"])
 
         # Show Total/Defect/Non-defect/unlabeled count
@@ -278,15 +278,9 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         with model_1_statistics.container():
             defect_id_lists, probability_lists, answer_lists = model_1_raw_data
 
-            for id_list, prob_list, ans_list, threshold, meta in zip(defect_id_lists, probability_lists, answer_lists, rv_m1_threshold_list, model_1_metadata):
-                # logger.warning(f"Length of id_list: {len(id_list)}")
-                # logger.warning(f"Length of prob_list: {len(prob_list)}")
-                # logger.warning(f"Length of ans_list: {len(ans_list)}")
-                # logger.warning(f"Threshold: {threshold}")
-                # logger.warning(f"meta: {meta}")
-
+            for id_list, prob_list, ans_list, meta in zip(defect_id_lists, probability_lists, answer_lists, model_1_metadata):
                 st.text(f"{meta['lot_id']}")
-                count_rate_data = result_viewer.calculate_filtered_results((id_list, prob_list, ans_list), threshold)
+                count_rate_data = result_viewer.calculate_filtered_results((id_list, prob_list, ans_list), rv_m1_threshold)
 
                 r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([4, 3, 3, 2])
                 with r3_col1:
@@ -321,11 +315,11 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         # Aggregate raw data lists
         aggregate_id_list, aggregate_prob_list, aggregate_ans_list, aggregate_threshold_list, aggregate_lot_id_list =  [], [], [], [], []
         m1_defect_id_lists, m1_prob_lists, m1_ans_lists = model_1_raw_data
-        for defect_id_list, prob_list, ans_list, threshold, meta in zip(m1_defect_id_lists, m1_prob_lists, m1_ans_lists, rv_m1_threshold_list, model_1_metadata):
+        for defect_id_list, prob_list, ans_list, meta in zip(m1_defect_id_lists, m1_prob_lists, m1_ans_lists, model_1_metadata):
             aggregate_id_list.extend(defect_id_list)
             aggregate_prob_list.extend(prob_list)
             aggregate_ans_list.extend(ans_list)
-            aggregate_threshold_list.extend([threshold] * len(defect_id_list))
+            aggregate_threshold_list.extend([rv_m1_threshold] * len(defect_id_list))
             aggregate_lot_id_list.extend([meta['lot_id']] * len(defect_id_list))
 
         # logger.warning(len(aggregate_id_list))
@@ -339,7 +333,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
             st.plotly_chart(result_viewer.generate_multilot_1D_plot(aggregate_id_list,
                                                                     aggregate_prob_list,
                                                                     aggregate_ans_list,
-                                                                    aggregate_threshold_list,
+                                                                    rv_m1_threshold,
                                                                     aggregate_lot_id_list))
 
         with vr3_col2:
@@ -355,7 +349,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                 #     for x in dataset:
                 #         logger.warning(x)
                 #     break
-                st.plotly_chart(result_viewer.plot_multilot_roc([("Model 1", model_1_roc_data, rv_m1_threshold_list, model_1_metadata)]))
+                st.plotly_chart(result_viewer.plot_multilot_roc([("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata)]))
 
     else:
         pass

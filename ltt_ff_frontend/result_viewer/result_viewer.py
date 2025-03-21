@@ -123,10 +123,14 @@ def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
         classification, classtype = key.split(" ")
         classtype_counter_list.append({"Classification": classification, "ClassType": classtype, "Count": value})
 
-    # Convert to DF and rename columns (this will appear on streamlit DF)
+    # Convert to DF and sort by classtype
     classtype_counter_df = pd.DataFrame.from_records(data=classtype_counter_list).sort_values(
-        by="ClassType", ascending=True
+        by="ClassType", ascending=True, key=lambda classtype: classtype.astype(int)
     )
+
+    # Reset index after sorting, and let it start from 1 instead of 0
+    classtype_counter_df.reset_index(inplace=True, drop=True)
+    classtype_counter_df.index = range(1, len(classtype_counter_df) + 1)
 
     return classtype_counter_df
 
@@ -187,7 +191,7 @@ def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_thres
 
 
 def generate_multilot_1D_plot(
-    id_list: list[int], prob_list: list[float], ans_list: list[int], threshold_list: list[float], lot_id_list: list[str]
+    id_list: list[int], prob_list: list[float], ans_list: list[int], threshold: float, lot_id_list: list[str]
 ) -> go.Figure:
     df = pd.DataFrame(
         data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
@@ -222,17 +226,17 @@ def generate_multilot_1D_plot(
         },
     )
 
-    # # Add threshold line
-    # fig.add_shape(
-    #     type="line",
-    #     x0=m1_threshold,
-    #     x1=m1_threshold,
-    #     y0=0,
-    #     y1=1,
-    #     xref="x",
-    #     yref="paper",
-    #     line={"color": "Red", "width": 2, "dash": "dash"},
-    # )
+    # Add threshold line
+    fig.add_shape(
+        type="line",
+        x0=threshold,
+        x1=threshold,
+        y0=0,
+        y1=1,
+        xref="x",
+        yref="paper",
+        line={"color": "Red", "width": 2, "dash": "dash"},
+    )
 
     fig.update_layout(
         barmode="stack",
@@ -501,16 +505,14 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
 
 
 def plot_multilot_roc(
-    roc_data: list[tuple[str, list[tuple[np.ndarray, np.ndarray, np.ndarray]], list[float], list[dict[str, Any]]]],
+    roc_data: list[tuple[str, list[tuple[np.ndarray, np.ndarray, np.ndarray]], float, list[dict[str, Any]]]],
 ) -> go.Figure:
     fig = go.Figure()
 
     for curve_data in roc_data:
-        model_name, data_list, selected_threshold_list, model_metadata_list = curve_data
+        model_name, data_list, selected_threshold, model_metadata_list = curve_data
 
-        for lot_data, selected_threshold, model_metadata in zip(
-            data_list, selected_threshold_list, model_metadata_list
-        ):
+        for lot_data, model_metadata in zip(data_list, model_metadata_list):
             fpr, tpr, threshold = lot_data
             tnr = 1 - fpr
 
