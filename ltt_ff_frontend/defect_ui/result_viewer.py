@@ -23,6 +23,8 @@ def get_model_data(output_dir: str) -> tuple[dict[str, Any], tuple[list[int], li
         defect_id_list = helper.get_defect_id(output_dir)
         probability_list = helper.get_probability(output_dir, defect_id_list)
         answer_list = helper.get_answer(output_dir, defect_id_list)
+        assert len(defect_id_list) == len(probability_list), f"IDs: {len(defect_id_list)} Prob: {len(probability_list)}"
+        assert len(defect_id_list) == len(answer_list), f"IDs: {len(defect_id_list)} Ans: {len(answer_list)}"
         return db_metadata, (defect_id_list, probability_list, answer_list)
     except Exception as e:
         logger.warning(f"Error getting model data from {output_dir}! {e}")
