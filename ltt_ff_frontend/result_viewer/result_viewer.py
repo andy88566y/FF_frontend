@@ -249,13 +249,11 @@ def generate_multilot_1D_plot(
 
 
 def generate_2D_plot(
-    m1_data: tuple[list[int], list[float], list[int]],
-    m2_data: tuple[list[int], list[float], list[int]],
-    m1_threshold: float,
-    m2_threshold: float,
+    m1_data: tuple[list[int], list[float], list[int], float, list[str]],
+    m2_data: tuple[list[int], list[float], list[int], float, list[str]],
 ) -> go.Figure:
-    m1_defect_ids, m1_probs, m1_ans = m1_data
-    m2_defect_ids, m2_probs, m2_ans = m2_data
+    m1_defect_ids, m1_probs, m1_ans, m1_threshold, m1_lot_ids = m1_data
+    m2_defect_ids, m2_probs, m2_ans, m2_threshold, m2_lot_ids = m2_data
     assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
 
     defect_ids = [f"Defect ID: {defect_id}" for defect_id in m1_defect_ids]
@@ -264,6 +262,7 @@ def generate_2D_plot(
         for a1, a2 in zip(m1_ans, m2_ans)
     ]
     marker_text = [f"{defect_id}<br>{classification}" for defect_id, classification in zip(defect_ids, classifications)]
+    legends = [f"{classification} {lot_id}" for classification, lot_id in zip(classifications, m1_lot_ids)]
 
     df = pd.DataFrame(
         data={
@@ -271,6 +270,7 @@ def generate_2D_plot(
             "Probability_M1": m1_probs,
             "Probability_M2": m2_probs,
             "Classification": classifications,
+            "Legends": legends,
         }
     )
 
@@ -282,12 +282,8 @@ def generate_2D_plot(
         range_y=[0.0, 1.0],
         marginal_x="histogram",
         marginal_y="histogram",
-        color="Classification",
-        color_discrete_map={
-            "Non-defect": DEFECT_COLOR_MAPPING["ND"],
-            "Defect": DEFECT_COLOR_MAPPING["D"],
-            "No-Label": DEFECT_COLOR_MAPPING["UNK"],
-        },
+        color="Legends",
+        color_discrete_map=get_color_map(df["Legends"]),
         hover_data={"Defect_ID": True},
     )
 

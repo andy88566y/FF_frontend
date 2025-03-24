@@ -128,9 +128,19 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                 return
 
             with vr1_col5:
-                result_viewer.gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, threshold=rv_m1_threshold)
+                result_viewer.gen_lrf(model_id="1",
+                                      output_dir=rv_m1_output_dir,
+                                      gen_lrf_type=st_gen_lrf_type,
+                                      threshold=rv_m1_threshold,
+                                      key_number=0,
+                                      lot_id=model_1_metadata["lot_id"])
             with vr2_col5:
-                result_viewer.gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, threshold=rv_m2_threshold)
+                result_viewer.gen_lrf(model_id="2",
+                                      output_dir=rv_m2_output_dir,
+                                      gen_lrf_type=st_gen_lrf_type,
+                                      threshold=rv_m2_threshold,
+                                      key_number=1,
+                                      lot_id = model_2_metadata["lot_id"])
 
         # Show Total/Defect/Non-defect/unlabeled count
         with r3_header:
@@ -183,7 +193,10 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
         # Draw 2D comparison chart
         with vr3_col1:
-            st.plotly_chart(result_viewer.generate_2D_plot(model_1_raw_data, model_2_raw_data, rv_m1_threshold, rv_m2_threshold))
+            defect_id_list_1, prob_list_1, ans_list_1 = model_1_raw_data
+            defect_id_list_2, prob_list_2, ans_list_2 = model_2_raw_data
+            st.plotly_chart(result_viewer.generate_2D_plot((defect_id_list_1, prob_list_1, ans_list_1, rv_m1_threshold, [""] * len(defect_id_list_1)),
+                                                           (defect_id_list_2, prob_list_2, ans_list_2, rv_m2_threshold, [""] * len(defect_id_list_2))))
 
         with vr3_col2:
             # TODO: This should be done somewhere else
