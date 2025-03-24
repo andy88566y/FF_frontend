@@ -186,10 +186,10 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         # TODO: Get classtype grouping from backend
         with classtype_count:
             with st.expander(label="LRF ClassType count"):
-                defect_lists_1 = helper.get_lrf_data(output_dir=rv_m1_output_dir,
+                defect_lists = helper.get_lrf_data_lists(output_dir=rv_m1_output_dir,
                                                    cols=["ClassType"],
                                                    include_prob=False)
-                for defect_list, meta in zip(defect_lists_1, model_1_metadata):
+                for defect_list, meta in zip(defect_lists, model_1_metadata):
                     classtype_counter_df = result_viewer.get_classtype_count(defect_list)
                     st.text(f"Lot ID: {meta['lot_id']}")
                     st.caption(f"LRF type: {meta['input_lrf_type']}")
@@ -299,7 +299,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         # TODO: Get classtype grouping from backend
         with classtype_count:
             with st.expander(label="LRF ClassType count"):
-                defect_lists = helper.get_lrf_data(output_dir=rv_m1_output_dir,
+                defect_lists = helper.get_lrf_data_lists(output_dir=rv_m1_output_dir,
                                                    cols=["ClassType"],
                                                    include_prob=False)
                 for defect_list, meta in zip(defect_lists, model_1_metadata):

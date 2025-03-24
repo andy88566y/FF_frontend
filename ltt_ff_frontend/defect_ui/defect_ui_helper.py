@@ -937,7 +937,7 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
 # Database                                                                                          #
 #####################################################################################################
 @st.cache_data(ttl="10s")
-def get_db_metadata(output_dir: str) -> list[dict[str, Any]]:
+def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
     """
     Get Result DB metadata.
 
@@ -947,7 +947,7 @@ def get_db_metadata(output_dir: str) -> list[dict[str, Any]]:
         Returns:
             A dictionary of result database metadata
     """
-    r = requests.get(API_ROOT + "result/get_db_metadata", params={"output_dir": output_dir}, timeout=TIMEOUT)
+    r = requests.get(API_ROOT + "result/get_db_metadata_lists", params={"output_dir": output_dir}, timeout=TIMEOUT)
 
     if r.json()["status"] == "completed":
         return r.json()["db_metadata"]
@@ -957,7 +957,7 @@ def get_db_metadata(output_dir: str) -> list[dict[str, Any]]:
 
 
 @st.cache_data(ttl="10s")
-def get_defect_id(output_dir: str) -> list[list[int]]:
+def get_defect_id_lists(output_dir: str) -> list[list[int]]:
     """
     Get list of defect IDs from a database.
 
@@ -967,7 +967,7 @@ def get_defect_id(output_dir: str) -> list[list[int]]:
         Returns:
             A list of the defect IDs of a lot of images.
     """
-    r = requests.get(API_ROOT + "result/get_defect_id", params={"output_dir": output_dir}, timeout=TIMEOUT)
+    r = requests.get(API_ROOT + "result/get_defect_id_lists", params={"output_dir": output_dir}, timeout=TIMEOUT)
 
     if r.json()["status"] == "completed":
         return r.json()["defect_id_list"]
@@ -995,12 +995,12 @@ def get_topk_model_threshold(output_dir: str, top_k: int = 150, lot_id: str = ""
 
 # TODO: Split this into smaller functions
 @st.cache_data(ttl="30s")
-def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -> list[list[dict[str, Any]]]:
+def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = False) -> list[list[dict[str, Any]]]:
     """
     Return lrf data with selected columns
     """
     params = {"output_dir": output_dir, "cols": ",".join(cols)}
-    r = requests.get(f"{API_ROOT}result/get_lrf_data", params=params, timeout=TIMEOUT)
+    r = requests.get(f"{API_ROOT}result/get_lrf_data_lists", params=params, timeout=TIMEOUT)
     if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
         raise ValueError(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")

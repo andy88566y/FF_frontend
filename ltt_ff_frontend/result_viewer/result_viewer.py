@@ -39,8 +39,8 @@ def get_model_data(
     output_dir: str,
 ) -> tuple[dict[str, Any], tuple[list[int], list[float], list[int]]] | tuple[None, None]:
     try:
-        db_metadata = helper.get_db_metadata(output_dir)
-        defect_id_lists = helper.get_defect_id(output_dir)
+        db_metadata = helper.get_db_metadata_lists(output_dir)
+        defect_id_lists = helper.get_defect_id_lists(output_dir)
         probability_list = helper.get_probability(output_dir, defect_id_lists)
         answer_list = helper.get_answer(output_dir, defect_id_lists)
         return db_metadata[0], (defect_id_lists[0], probability_list[0], answer_list[0])
@@ -53,8 +53,8 @@ def get_multilot_model_data(
     output_dir: str,
 ) -> tuple[list[dict[str, Any]], tuple[list[list[int]], list[list[float]], list[list[int]]]] | tuple[None, None]:
     try:
-        db_metadata = helper.get_db_metadata(output_dir=output_dir)
-        defect_id_list = helper.get_defect_id(output_dir=output_dir)
+        db_metadata = helper.get_db_metadata_lists(output_dir=output_dir)
+        defect_id_list = helper.get_defect_id_lists(output_dir=output_dir)
         probability_list = helper.get_probability(output_dir, defect_id_list)
         answer_list = helper.get_answer(output_dir, defect_id_list)
         assert len(defect_id_list) == len(probability_list), f"IDs: {len(defect_id_list)} Prob: {len(probability_list)}"

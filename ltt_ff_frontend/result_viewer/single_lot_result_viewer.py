@@ -184,7 +184,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         # TODO: Get classtype grouping from backend
         with classtype_count:
             with st.expander(label="LRF ClassType count"):
-                defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
+                defects = helper.get_lrf_data_lists(output_dir=rv_m1_output_dir,
                                               cols=["ClassType"],
                                               include_prob=False)[0]
                 classtype_counter_df = result_viewer.get_classtype_count(defects)
@@ -282,7 +282,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         # TODO: Get classtype grouping from backend
         with classtype_count:
             with st.expander(label="LRF ClassType count"):
-                defects = helper.get_lrf_data(output_dir=rv_m1_output_dir,
+                defects = helper.get_lrf_data_lists(output_dir=rv_m1_output_dir,
                                               cols=["ClassType"],
                                               include_prob=False)[0]
                 classtype_counter_df = result_viewer.get_classtype_count(defects)
