@@ -195,8 +195,10 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         with vr3_col1:
             defect_id_list_1, prob_list_1, ans_list_1 = model_1_raw_data
             defect_id_list_2, prob_list_2, ans_list_2 = model_2_raw_data
-            st.plotly_chart(result_viewer.generate_2D_plot((defect_id_list_1, prob_list_1, ans_list_1, rv_m1_threshold, [""] * len(defect_id_list_1)),
-                                                           (defect_id_list_2, prob_list_2, ans_list_2, rv_m2_threshold, [""] * len(defect_id_list_2))))
+            st.plotly_chart(result_viewer.generate_2D_plot((defect_id_list_1, prob_list_1, ans_list_1, [""] * len(defect_id_list_1)),
+                                                           (defect_id_list_2, prob_list_2, ans_list_2, [""] * len(defect_id_list_2)),
+                                                           rv_m1_threshold,
+                                                           rv_m2_threshold))
 
         with vr3_col2:
             # TODO: This should be done somewhere else

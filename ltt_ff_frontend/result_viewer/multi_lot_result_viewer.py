@@ -173,55 +173,15 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
         # Show Total/Defect/Non-defect/unlabeled count
         with r3_header:
-            st.text("Model 1 results")
+            st.subheader("Model 1 results")
 
         with model_1_statistics.container():
-            defect_id_lists, probability_lists, answer_lists = model_1_raw_data
-
-            for id_list, prob_list, ans_list, meta in zip(defect_id_lists, probability_lists, answer_lists, model_1_metadata):
-                st.text(f"{meta['lot_id']}")
-                count_rate_data = result_viewer.calculate_filtered_results((id_list, prob_list, ans_list), rv_m1_threshold)
-                r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([4, 3, 3, 2])
-                with r3_col1:
-                    st.warning(f"""**Total defect count**: As-is {count_rate_data['as_is_defect_count']}
-                            → To-be: {count_rate_data['to_be_defect_count']}
-                            (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
-                with r3_col2:
-                    st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
-                            → {count_rate_data['to_be_true_defect_count']}
-                            (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
-                with r3_col3:
-                    st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
-                            → {count_rate_data['to_be_non_defect_count']}
-                            (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
-                with r3_col4:
-                    st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
-                            → {count_rate_data['filtered_unlabeled_defect_count']}""")
+            result_viewer.show_multilot_statistics(model_1_raw_data, model_1_metadata, rv_m1_threshold)
 
         with r4_header:
-            st.text("Model 2 results")
+            st.subheader("Model 2 results")
         with model_2_statistics.container():
-            defect_id_lists, probability_lists, answer_lists = model_2_raw_data
-
-            for id_list, prob_list, ans_list, meta in zip(defect_id_lists, probability_lists, answer_lists, model_2_metadata):
-                st.text(f"{meta['lot_id']}")
-                count_rate_data = result_viewer.calculate_filtered_results((id_list, prob_list, ans_list), rv_m2_threshold)
-                r4_col1, r4_col2, r4_col3, r4_col4 = st.columns([4, 3, 3, 2])
-                with r4_col1:
-                    st.warning(f"""**Total defect count**: As-is: {count_rate_data['as_is_defect_count']}
-                            → To-be: {count_rate_data['to_be_defect_count']}
-                            (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
-                with r4_col2:
-                    st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
-                            → {count_rate_data['to_be_true_defect_count']}
-                            (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
-                with r4_col3:
-                    st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
-                            → {count_rate_data['to_be_non_defect_count']}
-                            (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
-                with r4_col4:
-                    st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
-                            → {count_rate_data['filtered_unlabeled_defect_count']}""")
+            result_viewer.show_multilot_statistics(model_2_raw_data, model_2_metadata, rv_m2_threshold)
 
         # TODO: Get classtype grouping from backend
         with classtype_count:
@@ -236,31 +196,20 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                     st.dataframe(data=classtype_counter_df)
                     st.divider()
 
-        # TODO: Wrap into a function
-        # Aggregate raw data lists
-        aggregate_id_list_1, aggregate_prob_list_1, aggregate_ans_list_1, aggregate_lot_id_list_1 =  [], [], [], []
-        m1_defect_id_lists, m1_prob_lists, m1_ans_lists = model_1_raw_data
-        for defect_id_list, prob_list, ans_list, meta in zip(m1_defect_id_lists, m1_prob_lists, m1_ans_lists, model_1_metadata):
-            aggregate_id_list_1.extend(defect_id_list)
-            aggregate_prob_list_1.extend(prob_list)
-            aggregate_ans_list_1.extend(ans_list)
-            aggregate_lot_id_list_1.extend([meta['lot_id']] * len(defect_id_list))
-        aggregate_id_list_2, aggregate_prob_list_2, aggregate_ans_list_2, aggregate_lot_id_list_2 =  [], [], [], []
-        m2_defect_id_lists, m2_prob_lists, m2_ans_lists = model_2_raw_data
-        for defect_id_list, prob_list, ans_list, meta in zip(m2_defect_id_lists, m2_prob_lists, m2_ans_lists, model_2_metadata):
-            aggregate_id_list_2.extend(defect_id_list)
-            aggregate_prob_list_2.extend(prob_list)
-            aggregate_ans_list_2.extend(ans_list)
-            aggregate_lot_id_list_2.extend([meta['lot_id']] * len(defect_id_list))
+        # Combine defect_ids, probabilities, answers, lot_id into one list each
+        m1_aggregated_data_lists = result_viewer.aggregate_lists(model_1_raw_data, model_1_metadata)
+        m2_aggregated_data_lists = result_viewer.aggregate_lists(model_2_raw_data, model_2_metadata)
 
         # Draw 2D comparison chart
         with vr3_col1:
-            st.plotly_chart(result_viewer.generate_2D_plot((aggregate_id_list_1, aggregate_prob_list_1, aggregate_ans_list_1, rv_m1_threshold, aggregate_lot_id_list_1),
-                                                           (aggregate_id_list_2, aggregate_prob_list_2, aggregate_ans_list_2, rv_m2_threshold, aggregate_lot_id_list_2)))
+            st.plotly_chart(result_viewer.generate_2D_plot(m1_aggregated_data_lists,
+                                                           m2_aggregated_data_lists,
+                                                           rv_m1_threshold,
+                                                           rv_m2_threshold))
 
         with vr3_col2:
             # TODO: This should be done somewhere else
-            if 1 not in set(aggregate_ans_list_1) or 1 not in set(aggregate_ans_list_2):
+            if 1 not in set(m1_aggregated_data_lists[2]) or 1 not in set(m1_aggregated_data_lists[2]):
                 # All data is unlabeled or dataset consists of only non-defects
                 st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
 
@@ -342,31 +291,10 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
         # Show Total/Defect/Non-defect/unlabeled count
         with r3_header.container():
-            st.text("Model 1 results")
+            st.subheader("Model 1 results")
 
         with model_1_statistics.container():
-            defect_id_lists, probability_lists, answer_lists = model_1_raw_data
-
-            for id_list, prob_list, ans_list, meta in zip(defect_id_lists, probability_lists, answer_lists, model_1_metadata):
-                st.text(f"{meta['lot_id']}")
-                count_rate_data = result_viewer.calculate_filtered_results((id_list, prob_list, ans_list), rv_m1_threshold)
-
-                r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([4, 3, 3, 2])
-                with r3_col1:
-                    st.warning(f"""**Total defect count**: As-is: {count_rate_data['as_is_defect_count']}
-                            → To-be: {count_rate_data['to_be_defect_count']}
-                            (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
-                with r3_col2:
-                    st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
-                            → {count_rate_data['to_be_true_defect_count']}
-                            (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
-                with r3_col3:
-                    st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
-                            → {count_rate_data['to_be_non_defect_count']}
-                            (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
-                with r3_col4:
-                    st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
-                            → {count_rate_data['filtered_unlabeled_defect_count']}""")
+            result_viewer.show_multilot_statistics(model_1_raw_data, model_1_metadata, rv_m1_threshold)
 
         # TODO: Get classtype grouping from backend
         with classtype_count:
@@ -381,27 +309,16 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                     st.dataframe(data=classtype_counter_df)
                     st.divider()
 
-        # Aggregate raw data lists
-        aggregate_id_list, aggregate_prob_list, aggregate_ans_list, aggregate_lot_id_list =  [], [], [], []
-        m1_defect_id_lists, m1_prob_lists, m1_ans_lists = model_1_raw_data
-        for defect_id_list, prob_list, ans_list, meta in zip(m1_defect_id_lists, m1_prob_lists, m1_ans_lists, model_1_metadata):
-            aggregate_id_list.extend(defect_id_list)
-            aggregate_prob_list.extend(prob_list)
-            aggregate_ans_list.extend(ans_list)
-            # aggregate_threshold_list.extend([rv_m1_threshold] * len(defect_id_list))
-            aggregate_lot_id_list.extend([meta['lot_id']] * len(defect_id_list))
+        # Combine defect_ids, probabilities, answers, lot_id into one list each
+        m1_aggregated_data_lists = result_viewer.aggregate_lists(model_1_raw_data, model_1_metadata)
 
         # Draw 1D comparison chart
         with vr3_col1:
-            st.plotly_chart(result_viewer.generate_multilot_1D_plot(aggregate_id_list,
-                                                                    aggregate_prob_list,
-                                                                    aggregate_ans_list,
-                                                                    rv_m1_threshold,
-                                                                    aggregate_lot_id_list))
+            st.plotly_chart(result_viewer.generate_multilot_1D_plot(m1_aggregated_data_lists, rv_m1_threshold))
 
         with vr3_col2:
             # TODO: This should be done somewhere else
-            if 1 not in set(aggregate_ans_list):
+            if 1 not in set(m1_aggregated_data_lists[2]):
                 # All data is unlabeled or dataset consists of only non-defects
                 st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
 

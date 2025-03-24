@@ -109,6 +109,33 @@ def calculate_filtered_results(
     }
 
 
+def show_multilot_statistics(
+    raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
+    model_metadata: list[dict[str, Any]],
+    selected_threshold,
+) -> None:
+    defect_id_lists, probability_lists, answer_lists = raw_data
+    for id_list, prob_list, ans_list, meta in zip(defect_id_lists, probability_lists, answer_lists, model_metadata):
+        st.text(f"{meta['lot_id']}")
+        count_rate_data = calculate_filtered_results((id_list, prob_list, ans_list), selected_threshold)
+        r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([4, 3, 3, 2])
+        with r3_col1:
+            st.warning(f"""**Total defect count**: As-is {count_rate_data['as_is_defect_count']}
+                    → To-be: {count_rate_data['to_be_defect_count']}
+                    (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
+        with r3_col2:
+            st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
+                    → {count_rate_data['to_be_true_defect_count']}
+                    (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
+        with r3_col3:
+            st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
+                    → {count_rate_data['to_be_non_defect_count']}
+                    (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
+        with r3_col4:
+            st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
+                    → {count_rate_data['filtered_unlabeled_defect_count']}""")
+
+
 def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
     classtype_counter: dict[str, int] = {}
 
@@ -133,6 +160,21 @@ def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
     classtype_counter_df.index = range(1, len(classtype_counter_df) + 1)
 
     return classtype_counter_df
+
+
+def aggregate_lists(
+    raw_data: tuple[list[int], list[float], list[int]], meta_list: list[dict[str, Any]]
+) -> tuple[list[Any]]:
+    defect_id_lists, prob_lists, ans_lists = raw_data
+    lot_id_lists = [meta["lot_id"] for meta in meta_list]
+    aggregate_id_list, aggregate_prob_list, aggregate_ans_list, aggregate_lot_id_list = [], [], [], []
+    for defect_id_list, prob_list, ans_list, lot_id in zip(defect_id_lists, prob_lists, ans_lists, lot_id_lists):
+        aggregate_id_list.extend(defect_id_list)
+        aggregate_prob_list.extend(prob_list)
+        aggregate_ans_list.extend(ans_list)
+        aggregate_lot_id_list.extend([lot_id] * len(defect_id_list))
+
+    return (aggregate_id_list, aggregate_prob_list, aggregate_ans_list, aggregate_lot_id_list)
 
 
 def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_threshold: float) -> go.Figure:
@@ -191,8 +233,9 @@ def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_thres
 
 
 def generate_multilot_1D_plot(
-    id_list: list[int], prob_list: list[float], ans_list: list[int], threshold: float, lot_id_list: list[str]
+    m1_data: tuple[list[int], list[float], list[int], list[str]], threshold: float
 ) -> go.Figure:
+    id_list, prob_list, ans_list, lot_id_list = m1_data
     df = pd.DataFrame(
         data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
     )
@@ -249,11 +292,13 @@ def generate_multilot_1D_plot(
 
 
 def generate_2D_plot(
-    m1_data: tuple[list[int], list[float], list[int], float, list[str]],
-    m2_data: tuple[list[int], list[float], list[int], float, list[str]],
+    m1_data: tuple[list[int], list[float], list[int], list[str]],
+    m2_data: tuple[list[int], list[float], list[int], list[str]],
+    m1_threshold: float,
+    m2_threshold: float,
 ) -> go.Figure:
-    m1_defect_ids, m1_probs, m1_ans, m1_threshold, m1_lot_ids = m1_data
-    m2_defect_ids, m2_probs, m2_ans, m2_threshold, m2_lot_ids = m2_data
+    m1_defect_ids, m1_probs, m1_ans, m1_lot_ids = m1_data
+    m2_defect_ids, m2_probs, m2_ans, m2_lot_ids = m2_data
     assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
 
     defect_ids = [f"Defect ID: {defect_id}" for defect_id in m1_defect_ids]
