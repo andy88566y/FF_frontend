@@ -819,7 +819,7 @@ def get_db_metadata(output_dir: str) -> dict[str, Any]:
 
 
 @st.cache_data(ttl='10s')
-def get_defect_id(output_dir: str) -> list[int]:
+def get_defect_id(output_dir: str) -> list[str]:
     '''
     Get list of defect IDs from a database.
 
@@ -941,7 +941,7 @@ def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray
 
 
 @st.cache_data(ttl='10s')
-def get_probability(output_dir: str, defect_id: list[int]) -> list[float]:
+def get_probability(output_dir: str, defect_id: list[str]) -> list[float]:
     """
     Read a list of the defect probabilities from a database.
 
@@ -962,7 +962,7 @@ def get_probability(output_dir: str, defect_id: list[int]) -> list[float]:
 
 
 @st.cache_data(ttl='10s')
-def get_answer(output_dir: str, defect_id: list[int]) -> list[int]:
+def get_answer(output_dir: str, defect_id: list[str]) -> list[int]:
     """
     Read a list of the ground truths from a database.
 
