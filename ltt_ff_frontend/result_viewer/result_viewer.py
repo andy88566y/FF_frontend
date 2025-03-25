@@ -85,12 +85,13 @@ def calculate_filtered_results(
         1 for prob, ans in zip(probability_list, answer_list) if prob < selected_threshold and ans == 1
     )
     filtered_unlabeled_defect_count = sum(
-        1 for prob, ans in zip(probability_list, answer_list) if prob >= selected_threshold and ans == -1
+        1 for prob, ans in zip(probability_list, answer_list) if prob >``= selected_threshold and ans == -1
     )
 
     as_is_defect_count = positive + negative + unlabeled
     to_be_defect_count = true_positive + false_positive + filtered_unlabeled_defect_count
 
+    capture_rate = true_positive / positive if positive > 0 else -1
     capture_rate = true_positive / positive if positive > 0 else -1
     false_filter_rate = true_negative / negative if negative > 0 else -1
     filter_rate = 1 - (to_be_defect_count / as_is_defect_count) if as_is_defect_count > 0 else -1
@@ -109,6 +110,42 @@ def calculate_filtered_results(
         "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
     }
 
+def draw_column_background_color(s):
+    colors = {
+        "red": "background-color: #ffcccb",
+        "yellow": "background-color: #ffeb3b",
+        "green": "background-color: #d4edda",
+        "blue": "background-color: #d1ecf1",
+        "default": "background-color: #d3d3d3"
+    }
+    col_to_colors = {
+        'Total Defect Count': colors['yellow'],
+        'True Defect Count': colors['red'],
+        'Non Defect Count': colors['green'],
+        'Unlabeled Count': colors['blue'],
+    }
+    return [col_to_colors.get(first_index, colors['default']) for first_index in s.index.get_level_values(0)]
+
+def highlight_capture_rate(column):
+    styles = []
+    for val in column:
+        numeric_val = float(val)
+        color = 'red' if numeric_val != 1.0 and numeric_val != -1.0 else ''
+        font_weight = 'bold' if numeric_val != 1.0 and numeric_val != -1.0 else ''
+        styles.append(f'color: {color}; font-weight: {font_weight};')
+    return styles
+
+def highlight_to_be_total_defect_count(row):
+    numeric_total_to_be_count = float(row[('Total Defect Count', 'To-be')])
+    numeric_true_defect_count = float(row[('True Defect Count', 'Before')])
+
+    row_styles = [''] * len(row)
+    if numeric_total_to_be_count > 150 and numeric_true_defect_count <= 150:
+        index = row.index.get_loc(('Total Defect Count', 'To-be'))
+        row_styles[index] = "color: red; font-weight: bold;"
+    else:
+        pass
+    return row_styles
 
 def show_multilot_statistics(
     raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
@@ -116,26 +153,56 @@ def show_multilot_statistics(
     selected_threshold,
 ) -> None:
     defect_id_lists, probability_lists, answer_lists = raw_data
+    data = []
     for id_list, prob_list, ans_list, meta in zip(defect_id_lists, probability_lists, answer_lists, model_metadata):
-        st.text(f"{meta['lot_id']}")
         count_rate_data = calculate_filtered_results((id_list, prob_list, ans_list), selected_threshold)
-        r3_col1, r3_col2, r3_col3, r3_col4 = st.columns([4, 3, 3, 2])
-        with r3_col1:
-            st.warning(f"""**Total defect count**: As-is {count_rate_data['as_is_defect_count']}
-                    → To-be: {count_rate_data['to_be_defect_count']}
-                    (Filter Rate: {count_rate_data['filter_rate']:.4f})""")
-        with r3_col2:
-            st.error(f"""**True defect count**: {count_rate_data['as_is_true_defect_count']}
-                    → {count_rate_data['to_be_true_defect_count']}
-                    (Capture Rate: {count_rate_data['capture_rate']:.4f})""")
-        with r3_col3:
-            st.success(f"""**Non-defect count**: {count_rate_data['as_is_non_defect_count']}
-                    → {count_rate_data['to_be_non_defect_count']}
-                    (False Filter Rate: {count_rate_data['false_filter_rate']:.4f})""")
-        with r3_col4:
-            st.info(f"""**Unlabeled count**: {count_rate_data['unlabeled']}
-                    → {count_rate_data['filtered_unlabeled_defect_count']}""")
+        data.append(
+            [
+                meta['lot_id'],
+                count_rate_data['as_is_defect_count'],
+                count_rate_data['to_be_defect_count'],
+                f"{count_rate_data['filter_rate']:.4f}",
+                count_rate_data['as_is_true_defect_count'],
+                count_rate_data['to_be_true_defect_count'],
+                f"{count_rate_data['capture_rate']:.4f}",
+                count_rate_data['as_is_non_defect_count'],
+                count_rate_data['to_be_non_defect_count'],
+                f"{count_rate_data['false_filter_rate']:.4f}",
+                count_rate_data['unlabeled'],
+                count_rate_data['filtered_unlabeled_defect_count']
+            ]
+        )
+    index = [
+        ('Lot', 'ID'),
+        ('Total Defect Count', 'As-is'),
+        ('Total Defect Count', 'To-be'),
+        ('Total Defect Count', 'Filter Rate'),
+        ('True Defect Count', 'Before'),
+        ('True Defect Count', 'After'),
+        ('True Defect Count', 'Capture Rate'),
+        ('Non Defect Count', 'Before'),
+        ('Non Defect Count', 'After'),
+        ('Non Defect Count', 'False Filter Rate'),
+        ('Unlabeled Count', 'Total'),
+        ('Unlabeled Count', 'Filtered')
+    ]
+    pd_multiindex = pd.MultiIndex.from_tuples(index)
+    df = pd.DataFrame(data, columns=pd_multiindex)
+    styled_df = df.style.apply(draw_column_background_color, axis=1) \
+                        .apply(highlight_to_be_total_defect_count, axis=1) \
+                        .apply(highlight_capture_rate, subset=[('True Defect Count', 'Capture Rate')], axis=0)
+    event = st.dataframe(
+        styled_df,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="multi-row"
+    )
 
+    selected_rows = event.selection.rows
+    selected_df = df.iloc[selected_rows]
+    selected_lot_id_list = selected_df["Lot"]["ID"].tolist()
+    return selected_lot_id_list
 
 def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
     classtype_counter: dict[str, int] = {}
@@ -232,14 +299,17 @@ def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_thres
 
     return fig
 
-
 def generate_multilot_1D_plot(
-    m1_data: tuple[list[int], list[float], list[int], list[str]], threshold: float
+    m1_data: tuple[list[int], list[float], list[int], list[str]],
+    threshold: float,
+    selected_lot_id_list: list[str] = []
 ) -> go.Figure:
+
     id_list, prob_list, ans_list, lot_id_list = m1_data
     df = pd.DataFrame(
         data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
     )
+    df = df[df['Lot ID'].isin(selected_lot_id_list)] if selected_lot_id_list else df
     df["Classification"] = [
         "Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]
     ]
@@ -547,6 +617,7 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
 
 def plot_multilot_roc(
     roc_data: list[tuple[str, list[tuple[np.ndarray, np.ndarray, np.ndarray]], float, list[dict[str, Any]]]],
+    selected_lot_id_list: list[str] = []
 ) -> go.Figure:
     fig = go.Figure()
 
@@ -574,6 +645,10 @@ def plot_multilot_roc(
 
             inference_threshold = model_metadata["model_threshold"]
             lot_id = model_metadata["lot_id"]
+
+            # Skip lots if not selected
+            if selected_lot_id_list and lot_id not in selected_lot_id_list:
+                continue
 
             # Draw the main curve
             if len(roc_data) > 1 and model_name == "Model 1":
@@ -811,7 +886,7 @@ def app() -> None:
 
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 2])
 
-    output_dir_default = "/mnt/dbpc/xxx"
+    output_dir_default = "/mnt/dbpc/xxxx"
     with r1_col1:
         rv_m1_output_dir = st.text_input("Model 1 (Base) Result Directory", value=output_dir_default)
     with r1_col2:
@@ -825,6 +900,7 @@ def app() -> None:
 
     st.divider()
 
+    # rv_m1_output_dir = f"/home/ronyauw/multilot_result"
     db_files = glob.glob(f"{rv_m1_output_dir}/*.db")
 
     if not ALLOW_MULTILOT and len(db_files) > 1:
