@@ -385,7 +385,7 @@ def generate_2D_plot(
         xaxis3={"zeroline": False, "showgrid": False},
         yaxis3={"zeroline": False, "showgrid": False, "title": "Model 1 Histogram"},
         height=600,
-        width=600,
+        width=800,
         bargap=0,
         barmode="stack",
         hovermode="closest",

@@ -93,9 +93,17 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                 rv_m2_topk = st.number_input("Top k", 0, 999, 150, 1,
                                              help="Top-k defects ranked by Probabilities will be considered as defects.", key='m2_topk')
             with vr1_col5:
-                result_viewer.gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, top_k=rv_m1_topk)
+                result_viewer.gen_lrf(model_id="1",
+                                      output_dir=rv_m1_output_dir,
+                                      gen_lrf_type=st_gen_lrf_type,
+                                      top_k=rv_m1_topk,
+                                      key_number=1)
             with vr2_col5:
-                result_viewer.gen_lrf("2", rv_m2_output_dir, st_gen_lrf_type, top_k=rv_m2_topk)
+                result_viewer.gen_lrf(model_id="2",
+                                      output_dir=rv_m2_output_dir,
+                                      gen_lrf_type=st_gen_lrf_type,
+                                      top_k=rv_m2_topk,
+                                      key_number=2)
 
             rv_m1_threshold = helper.get_topk_model_threshold(rv_m1_output_dir, rv_m1_topk)
             rv_m2_threshold = helper.get_topk_model_threshold(rv_m2_output_dir, rv_m2_topk)

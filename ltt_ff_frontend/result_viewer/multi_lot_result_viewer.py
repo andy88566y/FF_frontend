@@ -10,9 +10,11 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
     # Column for printing error message
     r2_col1, _r2_col2 = st.columns([3, 2])
 
-    # Columns for printing Model info for 1 or 2 models (lot ID, model name, threshold, etc)
-    vr1_col1, vr1_col2, vr1_col3, vr1_col4, vr1_col5 = st.columns([1, 2, 3, 2, 2])
-    vr2_col1, vr2_col2, vr2_col3, vr2_col4, vr2_col5 = st.columns([1, 2, 3, 2, 2])
+    # Columns for printing Model info for 1 or 2 models (Model #1/2, model name, threshold, lot ID + gen lrf button)
+    vr1_col1, vr1_col2, vr1_col3, vr1_col4 = st.columns([1, 3, 3, 4])
+    with st.container():
+        model_info_divider = st.empty()
+    vr2_col1, vr2_col2, vr2_col3, vr2_col4 = st.columns([1, 3, 3, 4])
 
     st.divider()
 
@@ -74,46 +76,50 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         with vr2_col1:
             st.text("Model 2 (Candidate)")
         with vr1_col2:
-            for meta in model_1_metadata:
-                st.text(f"Lot ID:\n{meta['lot_id']}")
-        with vr2_col2:
-            for meta in model_2_metadata:
-                st.text(f"Lot ID:\n{meta['lot_id']}")
-        with vr1_col3:
             st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata[0]['model_name'])}")
-        with vr2_col3:
+        with vr2_col2:
             st.text(f"Inference Model:\n{helper.format_model_name(model_2_metadata[0]['model_name'])}")
+        with model_info_divider:
+            st.divider()
 
         # Generate lrf by top k, and adjust threshold according to top k
         rv_m1_threshold = rv_m2_threshold = 1.0 # init as max value
         for index, (meta_1, meta_2) in enumerate(zip(model_1_metadata, model_2_metadata)):
             if st_gen_lrf_type == "top_k":
-                with vr1_col4:
+                with vr1_col3:
                     # Only show one top k number selector
                     if index == 0:
                         st.number_input(label="Top k", min_value=0, max_value=999, value=150, step=1,
                                         help="Top-k defects ranked by Probabilities will be considered as defects.",
                                         key='m1_topk')
-                with vr2_col4:
+                with vr2_col3:
                     if index == 0:
                         st.number_input(label="Top k", min_value=0, max_value=999, value=150, step=1,
                                         help="Top-k defects ranked by Probabilities will be considered as defects.",
                                         key='m2_topk')
-                with vr1_col5:
-                    result_viewer.gen_lrf(model_id="1",
-                                          output_dir=rv_m1_output_dir,
-                                          gen_lrf_type=st_gen_lrf_type,
-                                          top_k=st.session_state['m1_topk'],
-                                          key_number=index, # unique key for each gen lrf button
-                                          lot_id=meta_1["lot_id"])
+                with vr1_col4:
+                    gen_lrf_col, lot_id_col = st.columns([2, 3])
+                    with gen_lrf_col:
+                        result_viewer.gen_lrf(model_id="1",
+                                            output_dir=rv_m1_output_dir,
+                                            gen_lrf_type=st_gen_lrf_type,
+                                            top_k=st.session_state['m1_topk'],
+                                            key_number=index, # unique key for each gen lrf button
+                                            lot_id=meta_1["lot_id"])
+                    with lot_id_col:
+                        st.text(f"Lot ID: {meta_1['lot_id']}")
 
-                with vr2_col5:
-                    result_viewer.gen_lrf(model_id="2",
+                with vr2_col4:
+                    gen_lrf_col, lot_id_col = st.columns([2, 3])
+                    with gen_lrf_col:
+                        result_viewer.gen_lrf(model_id="2",
                                           output_dir=rv_m2_output_dir,
                                           gen_lrf_type=st_gen_lrf_type,
                                           top_k=st.session_state['m2_topk'],
                                           key_number=index + len(model_1_metadata), # unique key for each gen lrf button
                                           lot_id=meta_2["lot_id"])
+                    with lot_id_col:
+                        st.text(f"Lot ID: {meta_2['lot_id']}")
 
                 m1_current_threshold = helper.get_topk_model_threshold(output_dir=rv_m1_output_dir,
                                                                        top_k=st.session_state['m1_topk'],
@@ -129,7 +135,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
             # Generate lrf by threshold
             else:
-                with vr1_col4:
+                with vr1_col3:
                     if index == 0:
                         rv_m1_threshold = st.number_input(label="Confidence threshold:",
                                                           value=meta_1['model_threshold'],
@@ -137,7 +143,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                                                           format="%.5f",
                                                           help="Probabilities above threshold will be considered as defects.",
                                                           key='m1_threshold')
-                with vr2_col4:
+                with vr2_col3:
                     if index == 0:
                         rv_m2_threshold = st.number_input(label="Confidence threshold:",
                                                           value=meta_2['model_threshold'],
@@ -156,20 +162,29 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                     st.error(f'Confidence threshold must be between 0.0 and 1.0! Model 2 selected confidence threshold: {rv_m2_threshold}')
                     return
 
-                with vr1_col5:
-                    result_viewer.gen_lrf(model_id="1",
-                                          output_dir=rv_m1_output_dir,
-                                          gen_lrf_type=st_gen_lrf_type,
-                                          threshold=rv_m1_threshold,
-                                          key_number=index, # unique key for each gen lrf button
-                                          lot_id=meta_1["lot_id"])
-                with vr2_col5:
-                    result_viewer.gen_lrf(model_id="2",
-                                          output_dir=rv_m2_output_dir,
-                                          gen_lrf_type=st_gen_lrf_type,
-                                          threshold=rv_m2_threshold,
-                                          key_number=index + len(model_1_metadata),
-                                          lot_id=meta_2["lot_id"])
+                with vr1_col4:
+                    gen_lrf_col, lot_id_col = st.columns([2, 3])
+                    with gen_lrf_col:
+                        result_viewer.gen_lrf(model_id="1",
+                                            output_dir=rv_m1_output_dir,
+                                            gen_lrf_type=st_gen_lrf_type,
+                                            threshold=rv_m1_threshold,
+                                            key_number=index, # unique key for each gen lrf button
+                                            lot_id=meta_1["lot_id"])
+                    with lot_id_col:
+                        st.text(f"Lot ID: {meta_1['lot_id']}")
+
+                with vr2_col4:
+                    gen_lrf_col, lot_id_col = st.columns([2, 3])
+                    with gen_lrf_col:
+                        result_viewer.gen_lrf(model_id="2",
+                                            output_dir=rv_m2_output_dir,
+                                            gen_lrf_type=st_gen_lrf_type,
+                                            threshold=rv_m2_threshold,
+                                            key_number=index + len(model_1_metadata),
+                                            lot_id=meta_2["lot_id"])
+                    with lot_id_col:
+                        st.text(f"Lot ID: {meta_2['lot_id']}")
 
         # Show Total/Defect/Non-defect/unlabeled count
         with r3_header:
@@ -233,28 +248,29 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         with vr1_col1:
             st.text("Model 1 (Base)")
         with vr1_col2:
-            for meta in model_1_metadata:
-                st.text(f"Lot ID: {meta['lot_id']}")
-        with vr1_col3:
             st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata[0]['model_name'])}")
 
         # Generate lrf by top k, and adjust threshold according to top k
         rv_m1_threshold = 1.0 # init as max value
         for index, meta in enumerate(model_1_metadata):
             if st_gen_lrf_type == "top_k":
-                with vr1_col4:
+                with vr1_col3:
                     # Only show one top k number selector
                     if index == 0:
                         st.number_input(label="Top k", min_value=0, max_value=999, value=150, step=1,
                                         help="Top-k defects ranked by Probabilities will be considered as defects.",
                                         key='m1_topk')
-                with vr1_col5:
-                    result_viewer.gen_lrf(model_id="1",
-                                          output_dir=rv_m1_output_dir,
-                                          gen_lrf_type=st_gen_lrf_type,
-                                          top_k=st.session_state['m1_topk'],
-                                          key_number=index, # unique key for each gen lrf button
-                                          lot_id=meta["lot_id"])
+                with vr1_col4:
+                    gen_lrf_col, lot_id_col = st.columns([2, 3])
+                    with gen_lrf_col:
+                        result_viewer.gen_lrf(model_id="1",
+                                            output_dir=rv_m1_output_dir,
+                                            gen_lrf_type=st_gen_lrf_type,
+                                            top_k=st.session_state['m1_topk'],
+                                            key_number=index, # unique key for each gen lrf button
+                                            lot_id=meta["lot_id"])
+                    with lot_id_col:
+                        st.text(f"Lot ID: {meta['lot_id']}")
 
                 current_threshold = helper.get_topk_model_threshold(output_dir=rv_m1_output_dir,
                                                                           top_k=st.session_state['m1_topk'],
@@ -266,7 +282,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
             # Generate lrf by threshold
             else:
-                with vr1_col4:
+                with vr1_col3:
                     if index == 0:
                         rv_m1_threshold = st.number_input(label="Confidence threshold:",
                                                           value=meta['model_threshold'],
@@ -281,13 +297,18 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                     st.error(f'Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}')
                     return
 
-                with vr1_col5:
-                    result_viewer.gen_lrf(model_id="1",
-                                          output_dir=rv_m1_output_dir,
-                                          gen_lrf_type=st_gen_lrf_type,
-                                          threshold=rv_m1_threshold,
-                                          key_number=index, # unique key for each gen lrf button
-                                          lot_id=meta["lot_id"])
+                with vr1_col4:
+                    gen_lrf_col, lot_id_col = st.columns([2, 3])
+                    with gen_lrf_col:
+                        result_viewer.gen_lrf(model_id="1",
+                                            output_dir=rv_m1_output_dir,
+                                            gen_lrf_type=st_gen_lrf_type,
+                                            threshold=rv_m1_threshold,
+                                            key_number=index, # unique key for each gen lrf button
+                                            lot_id=meta["lot_id"])
+
+                    with lot_id_col:
+                        st.text(f"Lot ID: {meta['lot_id']}")
 
         # Show Total/Defect/Non-defect/unlabeled count
         with r3_header.container():
