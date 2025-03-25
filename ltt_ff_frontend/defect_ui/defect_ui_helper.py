@@ -335,6 +335,12 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
             paged_statuses_df["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
         )
 
+        # Just show lot_id, don't show image_dir and lrf_path
+        # This line has to happen before renaming the index column, otherwise we won't be able to access index 0
+        paged_statuses_df["lot_info"] = pformat(
+            [data_path["lot_id"] for data_path in paged_statuses_df["lot_info"].iloc[0]["data_paths"]]
+        )
+
         # Sort rows by start time and rename current index column to "multilot_inference_id"
         paged_statuses_df = paged_statuses_df.sort_values(by="start_time", ascending=False).reset_index(
             drop=False, names="multilot_inference_id"
@@ -343,11 +349,6 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         # Calculate index based on current page and page size
         start_index = page_size * (current_page - 1) + 1
         paged_statuses_df.index = range(start_index, start_index + len(paged_statuses_df))
-
-        # Just show lot_id, don't show image_dir and lrf_path
-        paged_statuses_df["lot_info"] = pformat(
-            [data_path["lot_id"] for data_path in paged_statuses_df["lot_info"][0]["data_paths"]]
-        )
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if "end_time" in paged_statuses_df.columns:
