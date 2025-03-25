@@ -395,11 +395,11 @@ def generate_2D_plot(
     return fig
 
 
-def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float]]) -> go.Figure:
+def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float, str]]) -> go.Figure:
     fig = go.Figure()
 
     for curve_data in roc_data:
-        model_name, data, selected_threshold, inference_threshold = curve_data
+        model_name, data, selected_threshold, inference_threshold, output_dir = curve_data
         fpr, tpr, threshold = data
         tnr = 1 - fpr
 
@@ -459,35 +459,33 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
         ##################################################################
         # Selected threshold                                             #
         ##################################################################
-        # Search for the marker whose threshold is equal or smaller than selected threshold.
-        # Note: need to reverse because threshold is from 1 to 0.
-        reversed_threshold = threshold[::-1]
-        selected_idx = np.searchsorted(reversed_threshold, selected_threshold, side="left")
-        selected_idx = len(threshold) - selected_idx - 1
+        x_value, y_value = helper.get_roc_threshold_marker_coordinates(
+            output_dir=output_dir, selected_threshold=selected_threshold
+        )[0]
 
         # Draw marker for current selected model threshold
         fig.add_trace(
             go.Scatter(
-                x=[tnr[selected_idx]],
-                y=[tpr[selected_idx]],
+                x=[x_value],
+                y=[y_value],
                 mode="markers",
                 marker={"color": "red", "size": 10},
                 name=f"Selected Threshold ({selected_threshold:.6f})",
                 hoverinfo="text",
                 hovertext=f"""Selected Threshold<br>
-    Capture rate: {tpr[selected_idx]}<br>
-    False Filter Rate: {tnr[selected_idx]}<br>
+    Capture rate: {y_value}<br>
+    False Filter Rate: {x_value}<br>
     Threshold: {selected_threshold:.6f}""",
             )
         )
 
         # Add annotation above current selected model threshold
         fig.add_annotation(
-            x=tnr[selected_idx],
-            y=tpr[selected_idx],
+            x=x_value,
+            y=y_value,
             text=f"""{model_name} Threshold = {selected_threshold:.6f} <br>
-    Capture Rate: {tpr[selected_idx]:.4f} <br>
-    False Filter Rate: {tnr[selected_idx]:.4f}""",
+    Capture Rate: {y_value:.4f} <br>
+    False Filter Rate: {x_value:.4f}""",
             showarrow=False,
             yshift=30,
         )
@@ -497,6 +495,9 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
         ##################################################################
         # Draw inference threshold
         if selected_threshold != inference_threshold:
+            # Search for the marker whose threshold is equal or smaller than inference threshold.
+            # Note: need to reverse because threshold is from 1 to 0.
+            reversed_threshold = threshold[::-1]
             infer_idx = np.searchsorted(reversed_threshold, inference_threshold, side="left")
             infer_idx = len(threshold) - infer_idx - 1
 
@@ -551,9 +552,15 @@ def plot_multilot_roc(
     fig = go.Figure()
 
     for curve_data in roc_data:
-        model_name, data_list, selected_threshold, model_metadata_list = curve_data
+        model_name, data_list, selected_threshold, model_metadata_list, output_dir = curve_data
 
-        for lot_data, model_metadata in zip(data_list, model_metadata_list):
+        selected_threshold_coord_list = helper.get_roc_threshold_marker_coordinates(
+            output_dir=output_dir, selected_threshold=selected_threshold
+        )
+
+        for lot_data, model_metadata, selected_threshold_coord in zip(
+            data_list, model_metadata_list, selected_threshold_coord_list
+        ):
             fpr, tpr, threshold = lot_data
             tnr = 1 - fpr
 
@@ -616,35 +623,29 @@ def plot_multilot_roc(
             ##################################################################
             # Selected threshold                                             #
             ##################################################################
-            # Search for the marker whose threshold is equal or smaller than selected threshold.
-            # Note: need to reverse because threshold is from 1 to 0.
-            reversed_threshold = threshold[::-1]
-            selected_idx = np.searchsorted(reversed_threshold, selected_threshold, side="left")
-            selected_idx = len(threshold) - selected_idx - 1
-
             # Draw marker for current selected model threshold
             fig.add_trace(
                 go.Scatter(
-                    x=[tnr[selected_idx]],
-                    y=[tpr[selected_idx]],
+                    x=[selected_threshold_coord[0]],
+                    y=[selected_threshold_coord[1]],
                     mode="markers",
                     marker={"color": "red", "size": 10},
                     name=f"Selected Threshold ({selected_threshold:.6f})",
                     hoverinfo="text",
                     hovertext=f"""Selected Threshold<br>
-        Capture rate: {tpr[selected_idx]}<br>
-        False Filter Rate: {tnr[selected_idx]}<br>
+        Capture rate: {selected_threshold_coord[1]}<br>
+        False Filter Rate: {selected_threshold_coord[0]}<br>
         Threshold: {selected_threshold:.6f}""",
                 )
             )
 
             # Add annotation above current selected model threshold
             fig.add_annotation(
-                x=tnr[selected_idx],
-                y=tpr[selected_idx],
+                x=selected_threshold_coord[0],
+                y=selected_threshold_coord[1],
                 text=f"""{model_name} Threshold = {selected_threshold:.6f} <br>
-        Capture Rate: {tpr[selected_idx]:.4f} <br>
-        False Filter Rate: {tnr[selected_idx]:.4f}""",
+        Capture Rate: {selected_threshold_coord[1]:.4f} <br>
+        False Filter Rate: {selected_threshold_coord[0]:.4f}""",
                 showarrow=False,
                 yshift=30,
             )
@@ -654,6 +655,9 @@ def plot_multilot_roc(
             ##################################################################
             # Draw inference threshold
             if selected_threshold != inference_threshold:
+                # Search for the marker whose threshold is equal or smaller than inference threshold.
+                # Note: need to reverse because threshold is from 1 to 0.
+                reversed_threshold = threshold[::-1]
                 infer_idx = np.searchsorted(reversed_threshold, inference_threshold, side="left")
                 infer_idx = len(threshold) - infer_idx - 1
 

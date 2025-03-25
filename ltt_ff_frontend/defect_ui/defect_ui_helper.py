@@ -1101,6 +1101,24 @@ def get_roc_data(output_dir: str, return_curve: bool = True) -> list[tuple[np.nd
 
 
 @st.cache_data(ttl="10s")
+def get_roc_threshold_marker_coordinates(output_dir: str, selected_threshold: float) -> list[tuple[float, float]]:
+    """
+    Get the coordinates to draw the threshold marker on the CR/FFR curve.
+
+    Args:
+        output_dir: Root output directory of inference resuits.
+    """
+    r = requests.get(
+        API_ROOT + "result/get_roc_selected_threshold",
+        params={"output_dir": output_dir, "selected_threshold": selected_threshold},
+        timeout=TIMEOUT,
+    )
+    threshold_coordinates_list = r.json()["threshold_coordinates_list"]
+
+    return threshold_coordinates_list
+
+
+@st.cache_data(ttl="10s")
 def get_probability(output_dir: str, defect_id: list[list[int]]) -> list[list[float]]:
     """
     Read a list of the defect probabilities from a database.

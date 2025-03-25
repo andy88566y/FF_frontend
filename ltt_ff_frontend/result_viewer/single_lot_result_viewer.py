@@ -218,8 +218,8 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)[0]
                 model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)[0]
                 st.plotly_chart(result_viewer.plot_roc([
-                    ("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold']),
-                    ("Model 2", model_2_roc_data, rv_m2_threshold, model_2_metadata['model_threshold']),
+                    ("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold'], rv_m1_output_dir),
+                    ("Model 2", model_2_roc_data, rv_m2_threshold, model_2_metadata['model_threshold'], rv_m2_output_dir),
                 ]))
 
     elif rv_m1_output_dir not in invalid_input:
@@ -309,7 +309,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
             else:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)[0]
-                st.plotly_chart(result_viewer.plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold'])]))
+                st.plotly_chart(result_viewer.plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold'], rv_m1_output_dir)]))
 
     else:
         pass
