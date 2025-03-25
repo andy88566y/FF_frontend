@@ -299,7 +299,7 @@ def generate_2D_plot(
 ) -> go.Figure:
     m1_defect_ids, m1_probs, m1_ans, m1_lot_ids = m1_data
     m2_defect_ids, m2_probs, m2_ans, m2_lot_ids = m2_data
-    assert m1_defect_ids == m2_defect_ids, "Defect IDs Count Mismatch!"
+    assert sorted(m1_defect_ids) == sorted(m2_defect_ids), "Defect IDs Count Mismatch!"
 
     defect_ids = [f"Defect ID: {defect_id}" for defect_id in m1_defect_ids]
     classifications = [

@@ -62,7 +62,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
             logger.info("All lot IDs matched between model 1 and model 2!")
 
         # Check if results for both models were calculated using the same labels
-        for raw_data_1, meta_1, raw_data_2, meta_2 in zip(model_1_raw_data, model_1_metadata, model_2_raw_data, model_2_metadata):
+        for raw_data_1, meta_1, raw_data_2, meta_2 in zip(sorted(model_1_raw_data[2]), model_1_metadata, sorted(model_2_raw_data[2]), model_2_metadata):
             if raw_data_1[2] != raw_data_2[2]:
                 with r2_col1:
                     st.error(f"""Results were not calculated using the same labels. Check if the same lrf file was used.
