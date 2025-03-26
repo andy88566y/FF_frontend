@@ -573,19 +573,35 @@ def plot_multilot_roc(
             lot_id = model_metadata["lot_id"]
 
             # Draw the main curve
-            fig.add_trace(
-                go.Scatter(
-                    x=tnr,
-                    y=tpr,
-                    mode="lines",
-                    name=f"{model_name}: {lot_id}",
-                    hoverinfo="text+name",
-                    hovertext=[
-                        f"Capture rate: {x}<br>False Filter Rate: {y}<br>Threshold: {z}"
-                        for x, y, z in zip(tpr, tnr, threshold)
-                    ],
+            if len(roc_data) > 1 and model_name == "Model 1":
+                fig.add_trace(
+                    go.Scatter(
+                        x=tnr,
+                        y=tpr,
+                        mode="lines",
+                        line={"dash": "dash"},
+                        name=f"{model_name}: {lot_id}",
+                        hoverinfo="text+name",
+                        hovertext=[
+                            f"Capture rate: {x}<br>False Filter Rate: {y}<br>Threshold: {z}"
+                            for x, y, z in zip(tpr, tnr, threshold)
+                        ],
+                    )
                 )
-            )
+            else:
+                fig.add_trace(
+                    go.Scatter(
+                        x=tnr,
+                        y=tpr,
+                        mode="lines",
+                        name=f"{model_name}: {lot_id}",
+                        hoverinfo="text+name",
+                        hovertext=[
+                            f"Capture rate: {x}<br>False Filter Rate: {y}<br>Threshold: {z}"
+                            for x, y, z in zip(tpr, tnr, threshold)
+                        ],
+                    )
+                )
 
             ##################################################################
             # Highest FFR when CR = 100%                                     #
