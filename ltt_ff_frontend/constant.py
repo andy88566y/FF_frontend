@@ -1,5 +1,6 @@
 API_ROOT = "http://localhost:6500/api/v1/"
 TIMEOUT = 10
+ALLOW_MULTILOT = True
 
 OPTIMIZER_TYPE = ["Adam", "AdamW"]
 OPTIMIZER_PARAMS = {

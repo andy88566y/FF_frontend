@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from loguru import logger
 
+from ltt_ff_frontend.constant import ALLOW_MULTILOT
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 from ltt_ff_frontend.result_viewer import multi_lot_result_viewer, single_lot_result_viewer
 
@@ -829,7 +830,11 @@ def app() -> None:
     st.divider()
 
     db_files = glob.glob(f"{rv_m1_output_dir}/*.db")
-    if len(db_files) > 1:
-        multi_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
+
+    if not ALLOW_MULTILOT and len(db_files) > 1:
+        st.error(f"Error: multiple ({len(db_files)}) .db files found in {rv_m1_output_dir}")
     else:
-        single_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
+        if len(db_files) > 1:
+            multi_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
+        else:
+            single_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
