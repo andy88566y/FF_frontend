@@ -1,7 +1,7 @@
 import base64
 import os
 from pprint import pformat
-from typing import Any, Optional, Literal
+from typing import Any, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -13,21 +13,21 @@ from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
 
 
 def gap(size: int) -> None:
-    '''
+    """
     Simple function to space out Streamlit UI elements.
 
     Args:
         size: The number of newlines.
-    '''
+    """
     for _ in range(size):
-        st.write('')
+        st.write("")
 
 
 def format_model_name(name: str) -> str:
     if name is None:
         return "SCRATCH"
     # For base model name (e.g. base/LTT_SW#x9u#N3#M0-M2#20250124T000000Z#55032dae#55032dae.encrypted.pth)
-    if '/' in name:
+    if "/" in name:
         model_paths = name.split("/")
         model_type = model_paths[-2]
         model_name = model_paths[-1]
@@ -37,41 +37,41 @@ def format_model_name(name: str) -> str:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
 
-@st.cache_data(ttl='10s')
+@st.cache_data(ttl="10s")
 def get_base_models() -> list[str]:
-    '''
+    """
     Returns a list of all available models to be used for inference or fine-tuning.
-    '''
-    r = requests.get(f'{API_ROOT}get_model_list', timeout=TIMEOUT)
+    """
+    r = requests.get(f"{API_ROOT}get_model_list", timeout=TIMEOUT)
 
-    if r.json()['status'] == 'error':
-        logger.error(r.json()['message'])
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
         return []
     else:
-        base_model_list = r.json()['model_list']
-        logger.info(f'List of base models: {base_model_list}')
+        base_model_list = r.json()["model_list"]
+        logger.info(f"List of base models: {base_model_list}")
         return base_model_list
 
 
-@st.cache_data(ttl='300s')
+@st.cache_data(ttl="300s")
 def get_model_threshold(model_name: str) -> float:
-    '''
+    """
     Return model threshold for selected model
-    '''
+    """
     params = {"model_name": model_name}
-    r = requests.get(f'{API_ROOT}get_model_threshold', params=params, timeout=TIMEOUT)
+    r = requests.get(f"{API_ROOT}get_model_threshold", params=params, timeout=TIMEOUT)
 
-    if r.json()['status'] == 'error':
-        logger.error(r.json()['message'])
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
         return 0.0
     else:
-        model_threshold = r.json()['model_threshold']
-        logger.info(f'Model threshold for {model_name}: {model_threshold}')
+        model_threshold = r.json()["model_threshold"]
+        logger.info(f"Model threshold for {model_name}: {model_threshold}")
         return model_threshold
 
 
 def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> requests.Response:
-    '''
+    """
     Calls FalseFilter API with use_cache=True.
 
     Args:
@@ -80,15 +80,19 @@ def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> reque
                                 is considered defective.
 
     Returns the reponse of the API request.
-    '''
-    r = requests.post(API_ROOT+'generate_lrf', json={
-                        "output_dir": output_dir,
-                        "threshold": confidence_threshold,
-                    }, timeout=TIMEOUT)
+    """
+    r = requests.post(
+        API_ROOT + "generate_lrf",
+        json={
+            "output_dir": output_dir,
+            "threshold": confidence_threshold,
+        },
+        timeout=TIMEOUT,
+    )
 
-    status = r.json()['status']
+    status = r.json()["status"]
 
-    if status == 'started':
+    if status == "started":
         logger.info(".lrf generation requested successfully!")
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
@@ -97,7 +101,7 @@ def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> reque
 
 
 def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
-    '''
+    """
     Call FalseFilter API to generate an .lrf with top K defects
 
     Args:
@@ -105,15 +109,19 @@ def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
         top_k: The top k number of defects will be labeled as defects.
 
     Returns the reponse of the API request.
-    '''
-    r = requests.post(API_ROOT+'generate_top_k_lrf', json={
-                        "output_dir": output_dir,
-                        "top_k": top_k,
-                    }, timeout=TIMEOUT)
+    """
+    r = requests.post(
+        API_ROOT + "generate_top_k_lrf",
+        json={
+            "output_dir": output_dir,
+            "top_k": top_k,
+        },
+        timeout=TIMEOUT,
+    )
 
-    status = r.json()['status']
+    status = r.json()["status"]
 
-    if status == 'started':
+    if status == "started":
         logger.info("Top k .lrf generation requested successfully!")
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
@@ -121,12 +129,18 @@ def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
     return r
 
 
-def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
-                      recipe: Optional[dict[str, Any]] = None,
-                      base_model: Optional[str]= "",
-                      confidence_threshold: Optional[float] = 0.0,
-                      inference_batch_size: int = 32, overwrite: bool = False) -> requests.Response:
-    '''
+def request_inference(
+    image_dir: str,
+    lrf_path: str,
+    lot_id: str,
+    output_dir: str,
+    recipe: Optional[dict[str, Any]] = None,
+    base_model: Optional[str] = "",
+    confidence_threshold: Optional[float] = 0.0,
+    inference_batch_size: int = 32,
+    overwrite: bool = False,
+) -> requests.Response:
+    """
     Calls FalseFilter API to run inference.
 
     Args:
@@ -140,28 +154,27 @@ def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: st
                    If overwrite=True, the entire result directory will be cleared.
 
     Returns the reponse of the API request.
-    '''
+    """
     if recipe is None:
-        recipe = {
-            "recipes": [{
-                "model_name": base_model,
-                "threshold": confidence_threshold
-            }]
-        }
+        recipe = {"recipes": [{"model_name": base_model, "threshold": confidence_threshold}]}
 
-    r = requests.post(API_ROOT+'inference', json={
-                        "recipe": recipe,
-                        "image_dir": image_dir,
-                        "lrf_path": lrf_path,
-                        "lot_id": lot_id,
-                        "output_dir": output_dir,
-                        "batch_size": inference_batch_size,
-                        "overwrite": overwrite,
-                    }, timeout=TIMEOUT)
+    r = requests.post(
+        API_ROOT + "inference",
+        json={
+            "recipe": recipe,
+            "image_dir": image_dir,
+            "lrf_path": lrf_path,
+            "lot_id": lot_id,
+            "output_dir": output_dir,
+            "batch_size": inference_batch_size,
+            "overwrite": overwrite,
+        },
+        timeout=TIMEOUT,
+    )
 
-    status = r.json()['status']
+    status = r.json()["status"]
 
-    if status == 'started':
+    if status == "started":
         logger.info("Inference started running successfully!")
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
@@ -169,13 +182,15 @@ def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: st
     return r
 
 
-def request_multilot_inference(base_model: str,
-                               multilot_config: dict,
-                               output_dir: str,
-                               confidence_threshold: float,
-                               inference_batch_size: int = 32,
-                               overwrite: bool = False) -> requests.Response:
-    '''
+def request_multilot_inference(
+    base_model: str,
+    multilot_config: dict,
+    output_dir: str,
+    confidence_threshold: float,
+    inference_batch_size: int = 32,
+    overwrite: bool = False,
+) -> requests.Response:
+    """
     Calls FalseFilter API to run multilot inference.
 
     Args:
@@ -188,20 +203,24 @@ def request_multilot_inference(base_model: str,
                    If overwrite=True, the entire result directory will be cleared.
 
     Returns the reponse of the API request.
-    '''
-    r = requests.post(API_ROOT+'multilot_inference', json={
-                        "model_name": base_model,
-                        "lot_info": multilot_config,
-                        "output_dir": output_dir,
-                        "threshold": confidence_threshold,
-                        "batch_size": inference_batch_size,
-                        "overwrite": overwrite,
-                        "use_cache": False
-                    }, timeout=TIMEOUT)
+    """
+    r = requests.post(
+        API_ROOT + "multilot_inference",
+        json={
+            "model_name": base_model,
+            "lot_info": multilot_config,
+            "output_dir": output_dir,
+            "threshold": confidence_threshold,
+            "batch_size": inference_batch_size,
+            "overwrite": overwrite,
+            "use_cache": False,
+        },
+        timeout=TIMEOUT,
+    )
 
-    status = r.json()['status']
+    status = r.json()["status"]
 
-    if status == 'started':
+    if status == "started":
         logger.info("Multilot inference started running successfully!")
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
@@ -209,9 +228,9 @@ def request_multilot_inference(base_model: str,
     return r
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def request_paginated_inference_status(page_size: int, current_page: int) -> str:
-    '''
+    """
     Gets pagainated inference status by calling FalseFilter API
 
     Args:
@@ -219,43 +238,48 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
         current_page : the page that is current requested
 
     Returns the response of the API request
-    '''
-    r = requests.get(f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
+    """
+    r = requests.get(
+        f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT
+    )
     paged_statuses = r.json()
-    logger.info(f'Status of inference request [{current_page}, {page_size}]: {paged_statuses}')
+    logger.info(f"Status of inference request [{current_page}, {page_size}]: {paged_statuses}")
 
     paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
 
     if not paged_statuses_df.empty:
-
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        paged_statuses_df['start_time'] = pd.to_datetime(paged_statuses_df['start_time'], unit='s').dt.floor('s')
-        paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        paged_statuses_df["start_time"] = pd.to_datetime(paged_statuses_df["start_time"], unit="s").dt.floor("s")
+        paged_statuses_df["start_time"] = (
+            paged_statuses_df["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+        )
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="inference_id").sort_values(by='start_time', ascending=False)
+        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="inference_id").sort_values(
+            by="start_time", ascending=False
+        )
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        if 'end_time' in paged_statuses_df.columns:
-            paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
-            paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        if "end_time" in paged_statuses_df.columns:
+            paged_statuses_df["end_time"] = pd.to_datetime(paged_statuses_df["end_time"], unit="s").dt.floor("s")
+            paged_statuses_df["end_time"] = (
+                paged_statuses_df["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+            )
 
             # Calculate runtime only for rows that have end_time
-            paged_statuses_df['runtime'] = paged_statuses_df.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
-            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
-
+            paged_statuses_df["runtime"] = paged_statuses_df.apply(
+                lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
+            )
+            paged_statuses_df["runtime"] = paged_statuses_df["runtime"].apply(
+                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                if pd.notnull(x)
+                else None
+            )
 
     # Change ordering
-    sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
-        'inference_id',
-        'status',
-        'progress',
-        'lot_id',
-        'total_images',
-        'start_time',
-        'end_time',
-        'runtime'
-    ])
+    sorted_paged_statuses_df = paged_statuses_df.reindex(
+        columns=["inference_id", "status", "progress", "lot_id", "total_images", "start_time", "end_time", "runtime"]
+    )
 
     # For columns not included above, just add them to the back.
     for column in paged_statuses_df.columns:
@@ -265,9 +289,9 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
     return sorted_paged_statuses_df
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def request_paginated_multilot_inference_status(page_size: int, current_page: int) -> str:
-    '''
+    """
     Gets pagainated multilot inference status by calling FalseFilter API
 
     Args:
@@ -275,45 +299,62 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         current_page : the page that is current requested
 
     Returns the response of the API request
-    '''
-    r = requests.get(f"{API_ROOT}multilot_inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
+    """
+    r = requests.get(
+        f"{API_ROOT}multilot_inference/get_paginated_status?page_size={page_size}&current_page={current_page}",
+        timeout=TIMEOUT,
+    )
     paged_statuses = r.json()
-    logger.info(f'Status of multilot inference request [{current_page}, {page_size}]: {paged_statuses}')
+    logger.info(f"Status of multilot inference request [{current_page}, {page_size}]: {paged_statuses}")
 
     paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
 
     if not paged_statuses_df.empty:
-
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        paged_statuses_df['start_time'] = pd.to_datetime(paged_statuses_df['start_time'], unit='s').dt.floor('s')
-        paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        paged_statuses_df["start_time"] = pd.to_datetime(paged_statuses_df["start_time"], unit="s").dt.floor("s")
+        paged_statuses_df["start_time"] = (
+            paged_statuses_df["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+        )
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="multilot_inference_id").sort_values(by='start_time', ascending=False)
+        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="multilot_inference_id").sort_values(
+            by="start_time", ascending=False
+        )
 
         # Just show lot_id, don't show image_dir and lrf_path
-        paged_statuses_df['lot_info'] = pformat([data_path['lot_id'] for data_path in paged_statuses_df['lot_info'][0]['data_paths']])
+        paged_statuses_df["lot_info"] = pformat(
+            [data_path["lot_id"] for data_path in paged_statuses_df["lot_info"][0]["data_paths"]]
+        )
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        if 'end_time' in paged_statuses_df.columns:
-            paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
-            paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        if "end_time" in paged_statuses_df.columns:
+            paged_statuses_df["end_time"] = pd.to_datetime(paged_statuses_df["end_time"], unit="s").dt.floor("s")
+            paged_statuses_df["end_time"] = (
+                paged_statuses_df["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+            )
 
             # Calculate runtime only for rows that have end_time
-            paged_statuses_df['runtime'] = paged_statuses_df.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
-            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
-
+            paged_statuses_df["runtime"] = paged_statuses_df.apply(
+                lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
+            )
+            paged_statuses_df["runtime"] = paged_statuses_df["runtime"].apply(
+                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                if pd.notnull(x)
+                else None
+            )
 
     # Change ordering
-    sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
-        'multilot_inference_id',
-        'status',
-        'progress',
-        'start_time',
-        'end_time',
-        'runtime',
-        'lot_info',
-    ])
+    sorted_paged_statuses_df = paged_statuses_df.reindex(
+        columns=[
+            "multilot_inference_id",
+            "status",
+            "progress",
+            "start_time",
+            "end_time",
+            "runtime",
+            "lot_info",
+        ]
+    )
 
     # For columns not included above, just add them to the back.
     for column in paged_statuses_df.columns:
@@ -323,30 +364,30 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
     return sorted_paged_statuses_df
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def request_inference_status(inference_id: str) -> requests.Response:
-    '''
+    """
     Gets inference status by calling FalseFilter API
 
     Args:
       inference_id: Name of the inference job
 
     Returns the response of the API request
-    '''
+    """
     r = requests.get(f"{API_ROOT}inference/status/{inference_id}", timeout=TIMEOUT)
     return r.json()
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def request_inference_statuses(inference_id_list: list[str]) -> pd.DataFrame:
-    '''
+    """
     Gets inference status by calling FalseFilter API
 
     Args:
       inference_id_list: List of inference id to get statuses for.
 
     Returns the response of the API request
-    '''
+    """
     detailed_inference_statuses = {}
     for inference_id in inference_id_list:
         detailed_inference_statuses[inference_id] = request_inference_status(inference_id)
@@ -354,33 +395,35 @@ def request_inference_statuses(inference_id_list: list[str]) -> pd.DataFrame:
     return format_inference_status(pd.DataFrame.from_dict(detailed_inference_statuses).T).T
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def request_multilot_inference_status(multilot_inference_id: str) -> requests.Response:
-    '''
+    """
     Gets multilot inference status by calling FalseFilter API
 
     Args:
       multilot_inference_id: Name of the multilot inference job
 
     Returns the response of the API request
-    '''
+    """
     r = requests.get(f"{API_ROOT}multilot_inference/status/{multilot_inference_id}", timeout=TIMEOUT)
     return r.json()
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def request_multilot_inference_statuses(multilot_inference_id_list: list[str]) -> pd.DataFrame:
-    '''
+    """
     Gets multilot inference status by calling FalseFilter API
 
     Args:
       multilot_inference_id_list: List of multilot inference id to get statuses for.
 
     Returns the response of the API request
-    '''
+    """
     detailed_multilot_inference_statuses = {}
     for multilot_inference_id in multilot_inference_id_list:
-        detailed_multilot_inference_statuses[multilot_inference_id] = request_multilot_inference_status(multilot_inference_id)
+        detailed_multilot_inference_statuses[multilot_inference_id] = request_multilot_inference_status(
+            multilot_inference_id
+        )
 
     return format_multilot_inference_status(pd.DataFrame.from_dict(detailed_multilot_inference_statuses).T).T
 
@@ -395,35 +438,44 @@ def format_url(params: dict[str, str]):
 
 
 def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
-    '''
+    """
     Format and sort the detailed inference status dataframe.
 
     Args:
         inference_status: Dataframe containing raw inference job status details.
 
     Returns a processed dataframe with adjusted timezones and formatted details.
-    '''
+    """
     if not inference_status.empty:
-
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        inference_status['start_time'] = pd.to_datetime(inference_status['start_time'], unit='s').dt.floor('s')
-        inference_status['start_time'] = inference_status['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        inference_status["start_time"] = pd.to_datetime(inference_status["start_time"], unit="s").dt.floor("s")
+        inference_status["start_time"] = (
+            inference_status["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+        )
 
         # Convert model name to user-readable format
-        if 'model_name' in inference_status.columns:
-            inference_status['model_name'] = inference_status['model_name'].apply(format_model_name)
+        if "model_name" in inference_status.columns:
+            inference_status["model_name"] = inference_status["model_name"].apply(format_model_name)
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        inference_status = inference_status.rename(columns={'index': 'inference_id'})
+        inference_status = inference_status.rename(columns={"index": "inference_id"})
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        if 'end_time' in inference_status.columns:
-            inference_status['end_time'] = pd.to_datetime(inference_status['end_time'], unit='s').dt.floor('s')
-            inference_status['end_time'] = inference_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        if "end_time" in inference_status.columns:
+            inference_status["end_time"] = pd.to_datetime(inference_status["end_time"], unit="s").dt.floor("s")
+            inference_status["end_time"] = (
+                inference_status["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+            )
 
             # Calculate runtime only for rows that have end_time
-            inference_status['runtime'] = inference_status.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
-            inference_status['runtime'] = inference_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
+            inference_status["runtime"] = inference_status.apply(
+                lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
+            )
+            inference_status["runtime"] = inference_status["runtime"].apply(
+                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                if pd.notnull(x)
+                else None
+            )
 
         # TODO: Make hyper-link work
         # inference_status['Review Link'] = inference_status[["output_dir", "image_dir"]].apply(
@@ -431,27 +483,29 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
         # )
 
     # Change ordering
-    sorted_inference_statuses_df = inference_status.reindex(columns=[
-        'status',
-        'progress',
-        'start_time',
-        'end_time',
-        'runtime',
-        'lot_id',
-        # 'Review Link',
-        'total_images',
-        'defect_count',
-        'non_defect_count',
-        'unlabeled_count',
-        'image_dir',
-        'lrf_path',
-        'lrf_type',
-        'model_name',
-        'threshold',
-        'output_dir',
-        'message',
-        'error_message',
-    ])
+    sorted_inference_statuses_df = inference_status.reindex(
+        columns=[
+            "status",
+            "progress",
+            "start_time",
+            "end_time",
+            "runtime",
+            "lot_id",
+            # 'Review Link',
+            "total_images",
+            "defect_count",
+            "non_defect_count",
+            "unlabeled_count",
+            "image_dir",
+            "lrf_path",
+            "lrf_type",
+            "model_name",
+            "threshold",
+            "output_dir",
+            "message",
+            "error_message",
+        ]
+    )
 
     # For columns not included above, just add them to the back.
     for column in inference_status.columns:
@@ -462,34 +516,47 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
 
 
 def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) -> pd.DataFrame:
-    '''
+    """
     Format and sort the detailed multilot inference status dataframe.
 
     Args:
         multilot_inference_status: Dataframe containing raw multilot inference job status details.
 
     Returns a processed dataframe with adjusted timezones and formatted details.
-    '''
+    """
     if not multilot_inference_status.empty:
-
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        multilot_inference_status['start_time'] = pd.to_datetime(multilot_inference_status['start_time'], unit='s').dt.floor('s')
-        multilot_inference_status['start_time'] = multilot_inference_status['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        multilot_inference_status["start_time"] = pd.to_datetime(
+            multilot_inference_status["start_time"], unit="s"
+        ).dt.floor("s")
+        multilot_inference_status["start_time"] = (
+            multilot_inference_status["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+        )
 
         # Convert model name to user-readable format
-        multilot_inference_status['model_name'] = multilot_inference_status['model_name'].apply(format_model_name)
+        multilot_inference_status["model_name"] = multilot_inference_status["model_name"].apply(format_model_name)
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        multilot_inference_status = multilot_inference_status.rename(columns={'index': 'inference_id'})
+        multilot_inference_status = multilot_inference_status.rename(columns={"index": "inference_id"})
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        if 'end_time' in multilot_inference_status.columns:
-            multilot_inference_status['end_time'] = pd.to_datetime(multilot_inference_status['end_time'], unit='s').dt.floor('s')
-            multilot_inference_status['end_time'] = multilot_inference_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        if "end_time" in multilot_inference_status.columns:
+            multilot_inference_status["end_time"] = pd.to_datetime(
+                multilot_inference_status["end_time"], unit="s"
+            ).dt.floor("s")
+            multilot_inference_status["end_time"] = (
+                multilot_inference_status["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+            )
 
             # Calculate runtime only for rows that have end_time
-            multilot_inference_status['runtime'] = multilot_inference_status.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
-            multilot_inference_status['runtime'] = multilot_inference_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
+            multilot_inference_status["runtime"] = multilot_inference_status.apply(
+                lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
+            )
+            multilot_inference_status["runtime"] = multilot_inference_status["runtime"].apply(
+                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                if pd.notnull(x)
+                else None
+            )
 
         # TODO: Make hyper-link work
         # inference_status['Review Link'] = inference_status[["output_dir", "image_dir"]].apply(
@@ -497,21 +564,23 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
         # )
 
     # Change ordering
-    sorted_multilot_inference_statuses_df = multilot_inference_status.reindex(columns=[
-        'status',
-        'progress',
-        'start_time',
-        'end_time',
-        'runtime',
-        'lot_info',
-        'children_job_id',
-        # 'Review Link',
-        'model_name',
-        'threshold',
-        'output_dir',
-        'message',
-        'error_message',
-    ])
+    sorted_multilot_inference_statuses_df = multilot_inference_status.reindex(
+        columns=[
+            "status",
+            "progress",
+            "start_time",
+            "end_time",
+            "runtime",
+            "lot_info",
+            "children_job_id",
+            # 'Review Link',
+            "model_name",
+            "threshold",
+            "output_dir",
+            "message",
+            "error_message",
+        ]
+    )
 
     # For columns not included above, just add them to the back.
     for column in multilot_inference_status.columns:
@@ -521,18 +590,20 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
     return sorted_multilot_inference_statuses_df
 
 
-def request_finetune(base_model: str,
-                     model_naming: tuple[str, str, str, str],
-                     multilot_config: dict,
-                     epochs: int,
-                     lr: float,
-                     optimizer_type: str,
-                     optimizer_params: dict[str, Any],
-                     loss_type: str,
-                     loss_params: dict[str, Any],
-                     lr_scheduler_type: str,
-                     lr_scheduler_params: dict[str, Any]) -> requests.Response:
-    '''
+def request_finetune(
+    base_model: str,
+    model_naming: tuple[str, str, str, str],
+    multilot_config: dict,
+    epochs: int,
+    lr: float,
+    optimizer_type: str,
+    optimizer_params: dict[str, Any],
+    loss_type: str,
+    loss_params: dict[str, Any],
+    lr_scheduler_type: str,
+    lr_scheduler_params: dict[str, Any],
+) -> requests.Response:
+    """
     Calls FFA model fine-tuning.
 
     Args:
@@ -549,27 +620,31 @@ def request_finetune(base_model: str,
         lr_scheduler_params: Parameters required for the selected lr scheduler, if any.
 
     Returns the reponse of the API request.
-    '''
+    """
     # TODO: Check multilot_config is valid structure
 
-    r = requests.post(API_ROOT+'finetune', json={
-        "base_model_name": base_model,
-        "batch_size": 32,
-        "epochs": epochs,
-        "learning_rate": lr,
-        "model_naming": model_naming,
-        "training_info": multilot_config,
-        "optimizer_type": optimizer_type,
-        "optimizer_params": optimizer_params,
-        "loss_type": loss_type,
-        "loss_params": loss_params,
-        "lr_scheduler_type": lr_scheduler_type,
-        "lr_scheduler_params": lr_scheduler_params,
-    }, timeout=TIMEOUT)
+    r = requests.post(
+        API_ROOT + "finetune",
+        json={
+            "base_model_name": base_model,
+            "batch_size": 32,
+            "epochs": epochs,
+            "learning_rate": lr,
+            "model_naming": model_naming,
+            "training_info": multilot_config,
+            "optimizer_type": optimizer_type,
+            "optimizer_params": optimizer_params,
+            "loss_type": loss_type,
+            "loss_params": loss_params,
+            "lr_scheduler_type": lr_scheduler_type,
+            "lr_scheduler_params": lr_scheduler_params,
+        },
+        timeout=TIMEOUT,
+    )
 
-    status = r.json()['status']
+    status = r.json()["status"]
 
-    if status == 'started':
+    if status == "started":
         logger.info("Model fine-tuning started running successfully!")
     else:
         logger.error(f"Error occurred when calling fine-tuning API: {r.json()['message']}")
@@ -577,19 +652,21 @@ def request_finetune(base_model: str,
     return r
 
 
-def request_basetrain(model_naming: tuple[str, str, str, str],
-                      multilot_config: dict,
-                      channel_size: tuple[int, int, int],
-                      kernel_size: tuple[int, int, int],
-                      epochs: int,
-                      lr: float,
-                      optimizer_type: str,
-                      optimizer_params: dict[str, Any],
-                      loss_type: str,
-                      loss_params: dict[str, Any],
-                      lr_scheduler_type: str,
-                      lr_scheduler_params: dict[str, Any]) -> requests.Response:
-    '''
+def request_basetrain(
+    model_naming: tuple[str, str, str, str],
+    multilot_config: dict,
+    channel_size: tuple[int, int, int],
+    kernel_size: tuple[int, int, int],
+    epochs: int,
+    lr: float,
+    optimizer_type: str,
+    optimizer_params: dict[str, Any],
+    loss_type: str,
+    loss_params: dict[str, Any],
+    lr_scheduler_type: str,
+    lr_scheduler_params: dict[str, Any],
+) -> requests.Response:
+    """
     Calls FFA model base-training.
 
     Args:
@@ -606,30 +683,34 @@ def request_basetrain(model_naming: tuple[str, str, str, str],
         lr_scheduler_params: Parameters required for the selected lr scheduler, if any.
 
     Returns the reponse of the API request.
-    '''
+    """
     # TODO: Check multilot_config is valid structure
 
-    r = requests.post(API_ROOT + 'basetrain', json={
-        "batch_size": 32,
-        "epochs": epochs,
-        "learning_rate": lr,
-        "model_naming": model_naming,
-        "training_info": multilot_config,
-        "model_params": {
-            "channel_size": list(channel_size),
-            "kernel_size": list(kernel_size),
+    r = requests.post(
+        API_ROOT + "basetrain",
+        json={
+            "batch_size": 32,
+            "epochs": epochs,
+            "learning_rate": lr,
+            "model_naming": model_naming,
+            "training_info": multilot_config,
+            "model_params": {
+                "channel_size": list(channel_size),
+                "kernel_size": list(kernel_size),
+            },
+            "optimizer_type": optimizer_type,
+            "optimizer_params": optimizer_params,
+            "loss_type": loss_type,
+            "loss_params": loss_params,
+            "lr_scheduler_type": lr_scheduler_type,
+            "lr_scheduler_params": lr_scheduler_params,
         },
-        "optimizer_type": optimizer_type,
-        "optimizer_params": optimizer_params,
-        "loss_type": loss_type,
-        "loss_params": loss_params,
-        "lr_scheduler_type": lr_scheduler_type,
-        "lr_scheduler_params": lr_scheduler_params,
-    }, timeout=TIMEOUT)
+        timeout=TIMEOUT,
+    )
 
-    status = r.json()['status']
+    status = r.json()["status"]
 
-    if status == 'started':
+    if status == "started":
         logger.info("Model base-training started running successfully!")
     else:
         logger.error(f"Error occurred when calling base-training API: {r.json()['message']}")
@@ -637,9 +718,9 @@ def request_basetrain(model_naming: tuple[str, str, str, str],
     return r
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def request_paginated_finetuning_status(page_size: int, current_page: int) -> dict[str, Any]:
-    '''
+    """
     Gets pagainated inference status by calling FalseFilter API
 
     Args:
@@ -647,49 +728,63 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
         current_page : the page that is current requested
 
     Returns the response of the API request
-    '''
-    r = requests.get(f"{API_ROOT}finetune/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT)
+    """
+    r = requests.get(
+        f"{API_ROOT}finetune/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT
+    )
     paged_statuses = r.json()
-    logger.info(f'Status of finetuning request [{current_page}, {page_size}]: {paged_statuses}')
+    logger.info(f"Status of finetuning request [{current_page}, {page_size}]: {paged_statuses}")
 
     paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
 
     if not paged_statuses_df.empty:
-
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        paged_statuses_df['start_time'] = pd.to_datetime(paged_statuses_df['start_time'], unit='s').dt.floor('s')
-        paged_statuses_df['start_time'] = paged_statuses_df['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        paged_statuses_df["start_time"] = pd.to_datetime(paged_statuses_df["start_time"], unit="s").dt.floor("s")
+        paged_statuses_df["start_time"] = (
+            paged_statuses_df["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+        )
 
         # Convert model name to user-readable format
-        paged_statuses_df['base_model_name'] = paged_statuses_df['base_model_name'].apply(format_model_name)
+        paged_statuses_df["base_model_name"] = paged_statuses_df["base_model_name"].apply(format_model_name)
 
         # Rename index column so that detailed status table will show 'training_id' instead of 'index'
-        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="training_id").sort_values(by='start_time', ascending=False)
+        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="training_id").sort_values(
+            by="start_time", ascending=False
+        )
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        if 'end_time' in paged_statuses_df.columns:
-            paged_statuses_df['end_time'] = pd.to_datetime(paged_statuses_df['end_time'], unit='s').dt.floor('s')
-            paged_statuses_df['end_time'] = paged_statuses_df['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        if "end_time" in paged_statuses_df.columns:
+            paged_statuses_df["end_time"] = pd.to_datetime(paged_statuses_df["end_time"], unit="s").dt.floor("s")
+            paged_statuses_df["end_time"] = (
+                paged_statuses_df["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+            )
 
             # Calculate runtime only for rows that have end_time
-            paged_statuses_df['runtime'] = paged_statuses_df.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
-            paged_statuses_df['runtime'] = paged_statuses_df['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
-
+            paged_statuses_df["runtime"] = paged_statuses_df.apply(
+                lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
+            )
+            paged_statuses_df["runtime"] = paged_statuses_df["runtime"].apply(
+                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                if pd.notnull(x)
+                else None
+            )
 
     # Change ordering
-    sorted_paged_statuses_df = paged_statuses_df.reindex(columns=[
-        'training_id',
-        'status',
-        'progress',
-        'start_time',
-        'end_time',
-        'runtime',
-        'base_model_name',
-        'site',
-        'tool',
-        'tech_layer',
-        'layer_group',
-    ])
+    sorted_paged_statuses_df = paged_statuses_df.reindex(
+        columns=[
+            "training_id",
+            "status",
+            "progress",
+            "start_time",
+            "end_time",
+            "runtime",
+            "base_model_name",
+            "site",
+            "tool",
+            "tech_layer",
+            "layer_group",
+        ]
+    )
 
     # For columns not included above, just add them to the back.
     for column in paged_statuses_df.columns:
@@ -699,30 +794,30 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
     return sorted_paged_statuses_df
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def request_finetuning_status(finetuning_id: str) -> requests.Response:
-    '''
+    """
     Gets finetuning status by calling FalseFilter API
 
     Args:
       finetuning_id: Name of the finetuning job
 
     Returns the response of the API request
-    '''
+    """
     r = requests.get(f"{API_ROOT}finetune/status/{finetuning_id}", timeout=TIMEOUT)
     return r.json()
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def request_finetuning_statuses(finetuning_id_list: list[str]) -> pd.DataFrame:
-    '''
+    """
     Gets finetuning status by calling FalseFilter API
 
     Args:
       finetuning_id_list: List of training id to get statuses for.
 
     Returns the response of the API request
-    '''
+    """
     detailed_finetuning_statuses = {}
     for training_id in finetuning_id_list:
         detailed_finetuning_statuses[training_id] = request_finetuning_status(training_id)
@@ -731,72 +826,83 @@ def request_finetuning_statuses(finetuning_id_list: list[str]) -> pd.DataFrame:
 
 
 def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
-    '''
+    """
     Format and sort the detailed finetuning status dataframe.
 
     Args:
         finetuning_status: Dataframe containing raw finetuning job status details.
 
     Returns a processed dataframe with adjusted timezones and formatted details.
-    '''
+    """
     if not finetuning_status.empty:
-
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        finetuning_status['start_time'] = pd.to_datetime(finetuning_status['start_time'], unit='s').dt.floor('s')
-        finetuning_status['start_time'] = finetuning_status['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        finetuning_status["start_time"] = pd.to_datetime(finetuning_status["start_time"], unit="s").dt.floor("s")
+        finetuning_status["start_time"] = (
+            finetuning_status["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+        )
 
         # Convert model name to user-readable format
-        finetuning_status['base_model_name'] = finetuning_status['base_model_name'].apply(format_model_name)
-        finetuning_status['output_model_name'] = finetuning_status['output_model_name'].apply(format_model_name)
+        finetuning_status["base_model_name"] = finetuning_status["base_model_name"].apply(format_model_name)
+        finetuning_status["output_model_name"] = finetuning_status["output_model_name"].apply(format_model_name)
 
         # Format training info (from yaml config) to be easily readable
-        finetuning_status['training_info'] = finetuning_status['training_info'].map(lambda x: pformat(x))
+        finetuning_status["training_info"] = finetuning_status["training_info"].map(lambda x: pformat(x))
 
         # Format epoch loss and validation loss to be more readable
-        if 'debug' in finetuning_status.columns:
-            finetuning_status['debug'] = finetuning_status['debug'].map(lambda x: pformat(x))
+        if "debug" in finetuning_status.columns:
+            finetuning_status["debug"] = finetuning_status["debug"].map(lambda x: pformat(x))
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        finetuning_status = finetuning_status.rename(columns={'index': 'inference_id'})
+        finetuning_status = finetuning_status.rename(columns={"index": "inference_id"})
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        if 'end_time' in finetuning_status.columns:
-            finetuning_status['end_time'] = pd.to_datetime(finetuning_status['end_time'], unit='s').dt.floor('s')
-            finetuning_status['end_time'] = finetuning_status['end_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
+        if "end_time" in finetuning_status.columns:
+            finetuning_status["end_time"] = pd.to_datetime(finetuning_status["end_time"], unit="s").dt.floor("s")
+            finetuning_status["end_time"] = (
+                finetuning_status["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+            )
 
             # Calculate runtime only for rows that have end_time
-            finetuning_status['runtime'] = finetuning_status.apply(lambda row: row['end_time'] - row['start_time'] if pd.notnull(row['end_time']) else None, axis=1)
-            finetuning_status['runtime'] = finetuning_status['runtime'].apply(lambda x: f'{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}' if pd.notnull(x) else None)
+            finetuning_status["runtime"] = finetuning_status.apply(
+                lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
+            )
+            finetuning_status["runtime"] = finetuning_status["runtime"].apply(
+                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                if pd.notnull(x)
+                else None
+            )
 
     # Change ordering
-    sorted_finetuning_statuses_df = finetuning_status.reindex(columns=[
-        'status',
-        'progress',
-        'start_time',
-        'end_time',
-        'runtime',
-        'base_model_name',
-        'model_params',
-        'site',
-        'tool',
-        'tech_layer',
-        'layer_group',
-        'output_model_name',
-        'current_epoch',
-        'total_epochs',
-        'batch_size',
-        'learning_rate',
-        'optimizer_type',
-        'optimizer_params',
-        'loss_type',
-        'loss_params',
-        'lr_scheduler_type',
-        'lr_scheduler_params',
-        'training_info',
-        'debug',
-        'message',
-        'error_message',
-    ])
+    sorted_finetuning_statuses_df = finetuning_status.reindex(
+        columns=[
+            "status",
+            "progress",
+            "start_time",
+            "end_time",
+            "runtime",
+            "base_model_name",
+            "model_params",
+            "site",
+            "tool",
+            "tech_layer",
+            "layer_group",
+            "output_model_name",
+            "current_epoch",
+            "total_epochs",
+            "batch_size",
+            "learning_rate",
+            "optimizer_type",
+            "optimizer_params",
+            "loss_type",
+            "loss_params",
+            "lr_scheduler_type",
+            "lr_scheduler_params",
+            "training_info",
+            "debug",
+            "message",
+            "error_message",
+        ]
+    )
 
     # For columns not included above, just add them to the back.
     for column in finetuning_status.columns:
@@ -806,9 +912,9 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
     return sorted_finetuning_statuses_df
 
 
-@st.cache_data(ttl='10s')
+@st.cache_data(ttl="10s")
 def get_db_metadata(output_dir: str) -> dict[str, Any]:
-    '''
+    """
     Get Result DB metadata.
 
     Args:
@@ -816,19 +922,19 @@ def get_db_metadata(output_dir: str) -> dict[str, Any]:
 
         Returns:
             A dictionary of result database metadata
-    '''
-    r = requests.get(API_ROOT+'result/get_db_metadata', params={"output_dir": output_dir}, timeout=TIMEOUT)
+    """
+    r = requests.get(API_ROOT + "result/get_db_metadata", params={"output_dir": output_dir}, timeout=TIMEOUT)
 
-    if r.json()['status'] == 'completed':
-        return r.json()['db_metadata']
+    if r.json()["status"] == "completed":
+        return r.json()["db_metadata"]
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-@st.cache_data(ttl='10s')
+@st.cache_data(ttl="10s")
 def get_defect_id(output_dir: str) -> list[str]:
-    '''
+    """
     Get list of defect IDs from a database.
 
     Args:
@@ -836,54 +942,54 @@ def get_defect_id(output_dir: str) -> list[str]:
 
         Returns:
             A list of the defect IDs of a lot of images.
-    '''
-    r = requests.get(API_ROOT+'result/get_defect_id', params={"output_dir": output_dir}, timeout=TIMEOUT)
+    """
+    r = requests.get(API_ROOT + "result/get_defect_id", params={"output_dir": output_dir}, timeout=TIMEOUT)
 
-    if r.json()['status'] == 'completed':
-        return r.json()['defect_id_list']
+    if r.json()["status"] == "completed":
+        return r.json()["defect_id_list"]
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-@st.cache_data(ttl='1s')
+@st.cache_data(ttl="1s")
 def get_topk_model_threshold(output_dir: str, top_k: int = 150) -> float:
-    '''
+    """
     Return model threshold for selected model
-    '''
+    """
     params = {"output_dir": output_dir, "top_k": top_k}
-    r = requests.get(f'{API_ROOT}result/get_topk_threshold', params=params, timeout=TIMEOUT)
+    r = requests.get(f"{API_ROOT}result/get_topk_threshold", params=params, timeout=TIMEOUT)
 
-    if r.json()['status'] == 'error':
-        logger.error(r.json()['message'])
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
         return 0.0
     else:
-        model_threshold = r.json()['threshold']
-        logger.info(f'Model threshold for `{output_dir}` top_k={top_k}: {model_threshold}')
+        model_threshold = r.json()["threshold"]
+        logger.info(f"Model threshold for `{output_dir}` top_k={top_k}: {model_threshold}")
         return model_threshold
 
 
 # TODO: Split this into smaller functions
-@st.cache_data(ttl='30s')
+@st.cache_data(ttl="30s")
 def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -> list[dict[str, Any]]:
-    '''
+    """
     Return lrf data with selected columns
-    '''
+    """
     params = {"output_dir": output_dir, "cols": ",".join(cols)}
-    r = requests.get(f'{API_ROOT}result/get_lrf_data', params=params, timeout=TIMEOUT)
-    if r.json()['status'] == 'error':
+    r = requests.get(f"{API_ROOT}result/get_lrf_data", params=params, timeout=TIMEOUT)
+    if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
         raise ValueError(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
     else:
-        lrf_data = r.json()['lrf_data']
-        logger.info(f'LRF data of {len(lrf_data)} defects loaded from `{output_dir}`')
+        lrf_data = r.json()["lrf_data"]
+        logger.info(f"LRF data of {len(lrf_data)} defects loaded from `{output_dir}`")
 
-    r = requests.get(API_ROOT+'result/get_answer', json={"output_dir": output_dir}, timeout=TIMEOUT)
-    if r.json()['status'] == 'error':
+    r = requests.get(API_ROOT + "result/get_answer", json={"output_dir": output_dir}, timeout=TIMEOUT)
+    if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
         raise ValueError(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
     else:
-        answer_list = r.json()['answer_list']
+        answer_list = r.json()["answer_list"]
         if len(lrf_data) != len(answer_list):
             logger.error(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
             raise ValueError(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
@@ -892,16 +998,20 @@ def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -
             lrf_data_with_ans.append({**data, "Ans": ans})
 
     if include_prob:
-        r = requests.get(API_ROOT+'result/get_probability', json={"output_dir": output_dir}, timeout=TIMEOUT)
+        r = requests.get(API_ROOT + "result/get_probability", json={"output_dir": output_dir}, timeout=TIMEOUT)
 
-        if r.json()['status'] == 'error':
+        if r.json()["status"] == "error":
             logger.error(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
             raise ValueError(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
         else:
-            probs = r.json()['probability_list']
+            probs = r.json()["probability_list"]
             if len(lrf_data_with_ans) != len(probs):
-                logger.error(f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}")
-                raise ValueError(f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}")
+                logger.error(
+                    f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}"
+                )
+                raise ValueError(
+                    f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}"
+                )
             lrf_data_with_prob = []
             for data, prob in zip(lrf_data_with_ans, probs):
                 lrf_data_with_prob.append({**data, "Probability": prob})
@@ -910,9 +1020,9 @@ def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -
         return lrf_data_with_ans
 
 
-@st.cache_data(ttl='10s')
+@st.cache_data(ttl="10s")
 def get_prc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    '''
+    """
     Get the data needed to draw a PRC curve.
 
     Args:
@@ -920,18 +1030,22 @@ def get_prc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray
         lot_id: Name of the lof of defect images.
         model_name: Name of inference results.
         return_curve: If false, just return the area under the curve (AUPRC)
-    '''
-    r = requests.get(API_ROOT+'result/get_prc_data', params={"output_dir": output_dir, "return_curve": return_curve}, timeout=TIMEOUT)
+    """
+    r = requests.get(
+        API_ROOT + "result/get_prc_data",
+        params={"output_dir": output_dir, "return_curve": return_curve},
+        timeout=TIMEOUT,
+    )
 
-    prc_data_list = r.json()['prc_data']
+    prc_data_list = r.json()["prc_data"]
     prc_data_ndarray = tuple(np.array(data_list) for data_list in prc_data_list)
 
     return prc_data_ndarray
 
 
-@st.cache_data(ttl='10s')
+@st.cache_data(ttl="10s")
 def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    '''
+    """
     Get the data needed to draw an ROC curve (fpr, tpr, threshold)
 
     Args:
@@ -939,16 +1053,20 @@ def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray
         lot_id: Name of the lof of defect images.
         model_name: Name of inference results.
         return_curve: If false, just return the area under the curve (AUROC)
-    '''
-    r = requests.get(API_ROOT+'result/get_roc_data', params={"output_dir": output_dir, "return_curve": return_curve}, timeout=TIMEOUT)
+    """
+    r = requests.get(
+        API_ROOT + "result/get_roc_data",
+        params={"output_dir": output_dir, "return_curve": return_curve},
+        timeout=TIMEOUT,
+    )
 
-    roc_data_list = r.json()['roc_data']
+    roc_data_list = r.json()["roc_data"]
     roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
 
     return roc_data_ndarray
 
 
-@st.cache_data(ttl='10s')
+@st.cache_data(ttl="10s")
 def get_probability(output_dir: str, defect_id: list[str]) -> list[float]:
     """
     Read a list of the defect probabilities from a database.
@@ -960,16 +1078,20 @@ def get_probability(output_dir: str, defect_id: list[str]) -> list[float]:
     Returns:
         A list of the defect probabilities of a lot of images.
     """
-    r = requests.get(API_ROOT+'result/get_probability', json={"output_dir": output_dir, "defect_id_list": defect_id}, timeout=TIMEOUT)
+    r = requests.get(
+        API_ROOT + "result/get_probability",
+        json={"output_dir": output_dir, "defect_id_list": defect_id},
+        timeout=TIMEOUT,
+    )
 
-    if r.json()['status'] == 'completed':
-        return r.json()['probability_list']
+    if r.json()["status"] == "completed":
+        return r.json()["probability_list"]
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-@st.cache_data(ttl='10s')
+@st.cache_data(ttl="10s")
 def get_answer(output_dir: str, defect_id: list[str]) -> list[int]:
     """
     Read a list of the ground truths from a database.
@@ -981,21 +1103,25 @@ def get_answer(output_dir: str, defect_id: list[str]) -> list[int]:
     Returns:
         A list of the ground truths of a lot of images.
     """
-    r = requests.get(API_ROOT+'result/get_answer', json={"output_dir": output_dir, "defect_id_list": defect_id}, timeout=TIMEOUT)
+    r = requests.get(
+        API_ROOT + "result/get_answer", json={"output_dir": output_dir, "defect_id_list": defect_id}, timeout=TIMEOUT
+    )
 
-    if r.json()['status'] == 'completed':
-        return r.json()['answer_list']
+    if r.json()["status"] == "completed":
+        return r.json()["answer_list"]
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-@st.cache_data(ttl='10s')
-def get_predictions(output_dir: str,
-                    defect_list: Optional[list[str]] = None,
-                    recipe: Optional[list[dict[str, Any]]] = None,
-                    recipe_mode: Literal["FILTER", "CATCHER"] = "FILTER",
-                    top_k: Optional[int] = None,) -> list[int]:
+@st.cache_data(ttl="10s")
+def get_predictions(
+    output_dir: str,
+    defect_list: Optional[list[str]] = None,
+    recipe: Optional[dict[str, Any]] = None,
+    recipe_mode: Literal["FILTER", "CATCHER"] = "FILTER",
+    top_k: Optional[int] = None,
+) -> list[int]:
     """
     Read a list of the ground truths from a database.
 
@@ -1006,14 +1132,20 @@ def get_predictions(output_dir: str,
     Returns:
         A list of the ground truths of a lot of images.
     """
-    r = requests.get(API_ROOT+'result/get_predictions', json={"output_dir": output_dir,
-                                                         "defect_id_list": defect_list,
-                                                         "recipe": recipe,
-                                                         "recipe_mode": recipe_mode,
-                                                         "top_k": top_k}, timeout=TIMEOUT)
+    r = requests.post(
+        API_ROOT + "result/get_predictions",
+        json={
+            "output_dir": output_dir,
+            "defect_id_list": defect_list,
+            "recipe": recipe,
+            "recipe_mode": recipe_mode,
+            "top_k": top_k,
+        },
+        timeout=TIMEOUT,
+    )
 
-    if r.json()['status'] == 'completed':
-        return r.json()['predictions_list']
+    if r.json()["status"] == "completed":
+        return r.json()["predictions_list"]
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
