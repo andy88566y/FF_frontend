@@ -1,7 +1,7 @@
 import base64
 import os
 from pprint import pformat
-from typing import Any
+from typing import Any, Optional, Literal
 
 import numpy as np
 import pandas as pd
@@ -974,6 +974,35 @@ def get_answer(output_dir: str, defect_id: list[str]) -> list[int]:
 
     if r.json()['status'] == 'completed':
         return r.json()['answer_list']
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
+@st.cache_data(ttl='10s')
+def get_predictions(output_dir: str,
+                    defect_list: Optional[list[str]] = None,
+                    recipe: Optional[list[dict[str, Any]]] = None,
+                    recipe_mode: Literal["FILTER", "CATCHER"] = "FILTER",
+                    top_k: Optional[int] = None,) -> list[int]:
+    """
+    Read a list of the ground truths from a database.
+
+    Args:
+        output_dir: Root output directory where inference results were stored.
+        defect_id: ID of the defect images
+
+    Returns:
+        A list of the ground truths of a lot of images.
+    """
+    r = requests.get(API_ROOT+'result/get_predictions', json={"output_dir": output_dir,
+                                                         "defect_id_list": defect_list,
+                                                         "recipe": recipe,
+                                                         "recipe_mode": recipe_mode,
+                                                         "top_k": top_k}, timeout=TIMEOUT)
+
+    if r.json()['status'] == 'completed':
+        return r.json()['predictions_list']
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")

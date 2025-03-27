@@ -13,7 +13,15 @@ def app() -> None:
 
     r1_col1, r1_col2 = st.columns([3, 2])
     with r1_col1:
-        recipe_file = st.file_uploader("Upload Inference Recipe (.yaml)", type=".yaml")
+        yaml_help_text = '''
+        **Example of a valid recipe:**\n
+        recipes:\n
+        \- model_name: base/model_1.encrypted.pth\n
+        &nbsp;&nbsp;threshold: 0.5\n
+        \- model_name: base/model_2.encrypted.pth\n
+        &nbsp;&nbsp;threshold: 0.9\n
+        '''
+        recipe_file = st.file_uploader("Upload Inference Recipe (.yaml)", type=".yaml", help=yaml_help_text)
     with r1_col2:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
         st.caption(":red[If Overwrite is set to true, all existing files in Result Directory will be removed.]")
