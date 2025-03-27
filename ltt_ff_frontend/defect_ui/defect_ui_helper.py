@@ -1101,7 +1101,9 @@ def get_roc_data(output_dir: str, return_curve: bool = True) -> list[tuple[np.nd
 
 
 @st.cache_data(ttl="10s")
-def get_roc_threshold_marker_coordinates(output_dir: str, selected_threshold: float) -> list[tuple[float, float]]:
+def get_roc_threshold_marker_coordinates(
+    output_dir: str, selected_threshold: float | None = None
+) -> list[tuple[float, float]]:
     """
     Get the coordinates to draw the threshold marker on the CR/FFR curve.
 

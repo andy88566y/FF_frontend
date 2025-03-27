@@ -496,33 +496,31 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
         ##################################################################
         # Draw inference threshold
         if selected_threshold != inference_threshold:
-            # Search for the marker whose threshold is equal or smaller than inference threshold.
-            # Note: need to reverse because threshold is from 1 to 0.
-            reversed_threshold = threshold[::-1]
-            infer_idx = np.searchsorted(reversed_threshold, inference_threshold, side="left")
-            infer_idx = len(threshold) - infer_idx - 1
+            x_value, y_value = helper.get_roc_threshold_marker_coordinates(
+                output_dir=output_dir, selected_threshold=inference_threshold
+            )[0]
 
             fig.add_trace(
                 go.Scatter(
-                    x=[tnr[infer_idx]],
-                    y=[tpr[infer_idx]],
+                    x=[x_value],
+                    y=[y_value],
                     mode="markers",
                     marker={"color": "black", "size": 10},
                     name=f"Inference ({inference_threshold:.6f})",
                     hoverinfo="text",
                     hovertext=f"""Inference Threshold<br>
-        Capture rate: {tpr[infer_idx]}<br>
-        False Filter Rate: {tnr[infer_idx]}<br>
+        Capture rate: {y_value}<br>
+        False Filter Rate: {x_value}<br>
         Threshold: {inference_threshold:.6f}""",
                 )
             )
 
             fig.add_annotation(
-                x=tnr[infer_idx],
-                y=tpr[infer_idx],
+                x=x_value,
+                y=y_value,
                 text=f"""{model_name} Inference threshold = {inference_threshold:.6f} <br>
-        Capture Rate: {tpr[infer_idx]:.4f} <br>
-        False Filter Rate: {tnr[infer_idx]:.4f}""",
+        Capture Rate: {y_value:.4f} <br>
+        False Filter Rate: {x_value:.4f}""",
                 showarrow=False,
                 yshift=-30,
             )
@@ -559,8 +557,12 @@ def plot_multilot_roc(
             output_dir=output_dir, selected_threshold=selected_threshold
         )
 
-        for lot_data, model_metadata, selected_threshold_coord in zip(
-            data_list, model_metadata_list, selected_threshold_coord_list
+        inference_threshold_coord_list = helper.get_roc_threshold_marker_coordinates(
+            output_dir=output_dir, selected_threshold=None
+        )
+
+        for lot_data, model_metadata, selected_threshold_coord, inference_threshold_coord in zip(
+            data_list, model_metadata_list, selected_threshold_coord_list, inference_threshold_coord_list
         ):
             fpr, tpr, threshold = lot_data
             tnr = 1 - fpr
@@ -672,33 +674,27 @@ def plot_multilot_roc(
             ##################################################################
             # Draw inference threshold
             if selected_threshold != inference_threshold:
-                # Search for the marker whose threshold is equal or smaller than inference threshold.
-                # Note: need to reverse because threshold is from 1 to 0.
-                reversed_threshold = threshold[::-1]
-                infer_idx = np.searchsorted(reversed_threshold, inference_threshold, side="left")
-                infer_idx = len(threshold) - infer_idx - 1
-
                 fig.add_trace(
                     go.Scatter(
-                        x=[tnr[infer_idx]],
-                        y=[tpr[infer_idx]],
+                        x=[inference_threshold_coord[0]],
+                        y=[inference_threshold_coord[1]],
                         mode="markers",
                         marker={"color": "black", "size": 10},
                         name=f"Inference ({inference_threshold:.6f})",
                         hoverinfo="text",
                         hovertext=f"""Inference Threshold<br>
-            Capture rate: {tpr[infer_idx]}<br>
-            False Filter Rate: {tnr[infer_idx]}<br>
+            Capture rate: {inference_threshold_coord[1]}<br>
+            False Filter Rate: {inference_threshold_coord[0]}<br>
             Threshold: {inference_threshold:.6f}""",
                     )
                 )
 
                 fig.add_annotation(
-                    x=tnr[infer_idx],
-                    y=tpr[infer_idx],
+                    x=inference_threshold_coord[0],
+                    y=inference_threshold_coord[1],
                     text=f"""{model_name} Inference threshold = {inference_threshold:.6f} <br>
-            Capture Rate: {tpr[infer_idx]:.4f} <br>
-            False Filter Rate: {tnr[infer_idx]:.4f}""",
+            Capture Rate: {inference_threshold_coord[1]:.4f} <br>
+            False Filter Rate: {inference_threshold_coord[0]:.4f}""",
                     showarrow=False,
                     yshift=-30,
                 )
