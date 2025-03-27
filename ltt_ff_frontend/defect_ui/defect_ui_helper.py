@@ -121,7 +121,10 @@ def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
     return r
 
 
-def request_inference(recipe: dict, image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
+def request_inference(image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
+                      recipe: Optional[dict[str, Any]] = None,
+                      base_model: Optional[str]= "",
+                      confidence_threshold: Optional[float] = 0.0,
                       inference_batch_size: int = 32, overwrite: bool = False) -> requests.Response:
     '''
     Calls FalseFilter API to run inference.
@@ -138,6 +141,14 @@ def request_inference(recipe: dict, image_dir: str, lrf_path: str, lot_id: str, 
 
     Returns the reponse of the API request.
     '''
+    if recipe is None:
+        recipe = {
+            "recipes": [{
+                "model_name": base_model,
+                "threshold": confidence_threshold
+            }]
+        }
+
     r = requests.post(API_ROOT+'inference', json={
                         "recipe": recipe,
                         "image_dir": image_dir,
