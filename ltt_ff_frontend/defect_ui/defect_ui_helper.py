@@ -121,19 +121,17 @@ def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
     return r
 
 
-def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
-                      confidence_threshold: float, inference_batch_size: int = 32, overwrite: bool = False) -> requests.Response:
+def request_inference(recipe: dict, image_dir: str, lrf_path: str, lot_id: str, output_dir: str,
+                      inference_batch_size: int = 32, overwrite: bool = False) -> requests.Response:
     '''
     Calls FalseFilter API to run inference.
 
     Args:
-        model_name: Name of inference model.
+        recipe: Inference recipe containing models names and thresholds.
         image_dir: Directory containing defect images.
         lrf_path: Absolute path to the .lrf file for the defect images.
         lot_id: Name of the lot of defect images.
         output_dir: Directory to store the generated database file and filtered .lrf file.
-        confidence_threshold: Images with defect probability higher than confidence threshold
-                                is considered defective.
         inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
         overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
                    If overwrite=True, the entire result directory will be cleared.
@@ -141,15 +139,13 @@ def request_inference(base_model: str, image_dir: str, lrf_path: str, lot_id: st
     Returns the reponse of the API request.
     '''
     r = requests.post(API_ROOT+'inference', json={
-                        "model_name": base_model,
+                        "recipe": recipe,
                         "image_dir": image_dir,
                         "lrf_path": lrf_path,
                         "lot_id": lot_id,
                         "output_dir": output_dir,
-                        "threshold": confidence_threshold,
                         "batch_size": inference_batch_size,
                         "overwrite": overwrite,
-                        "use_cache": False
                     }, timeout=TIMEOUT)
 
     status = r.json()['status']
@@ -403,7 +399,8 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
         inference_status['start_time'] = inference_status['start_time'].dt.tz_localize('UTC').dt.tz_convert('Asia/Taipei')
 
         # Convert model name to user-readable format
-        inference_status['model_name'] = inference_status['model_name'].apply(format_model_name)
+        if 'model_name' in inference_status.columns:
+            inference_status['model_name'] = inference_status['model_name'].apply(format_model_name)
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
         inference_status = inference_status.rename(columns={'index': 'inference_id'})
