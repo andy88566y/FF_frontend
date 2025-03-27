@@ -39,76 +39,60 @@ def bresenham_line(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
 
     return points
 
-def add_shape_to_fig(fig: go.Figure,
-                     shape_type: str,
-                     x0: float,
-                     y0: float,
-                     x1: float,
-                     y1: float,
-                     title: str) -> None:
+
+def add_shape_to_fig(fig: go.Figure, shape_type: str, x0: float, y0: float, x1: float, y1: float, title: str) -> None:
     if fig is not None:
-        fig.add_shape(
-            type='line',
-            x0=x0, y0=y0, x1=x1, y1=y1,
-            line=dict(color='red', width=3)
-        )
+        fig.add_shape(type="line", x0=x0, y0=y0, x1=x1, y1=y1, line=dict(color="red", width=3))
         fig.update_layout(
-            title={
-                'text': title,
-                'y': 1,
-                'x': 0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'
-            },
-            margin=dict(t=30)
+            title={"text": title, "y": 1, "x": 0.5, "xanchor": "center", "yanchor": "top"}, margin=dict(t=30)
         )
 
-def get_pixel_values(images: list[Image],
-                     selection: dict[str, Any],
-                     direction: str,
-                     fig2: go.Figure,
-                     fig3: go.Figure) -> list[np.ndarray]:
-    x0, x1 = selection['box'][-1]['x'][0], selection['box'][-1]['x'][1]
-    y0, y1 = selection['box'][-1]['y'][0], selection['box'][-1]['y'][1]
+
+def get_pixel_values(
+    images: list[Image], selection: dict[str, Any], direction: str, fig2: go.Figure, fig3: go.Figure
+) -> list[np.ndarray]:
+    x0, x1 = selection["box"][-1]["x"][0], selection["box"][-1]["x"][1]
+    y0, y1 = selection["box"][-1]["y"][0], selection["box"][-1]["y"][1]
     pixel_values = []
 
-    if direction == 'horizontal':
+    if direction == "horizontal":
         y_midpoint = (y0 + y1) / 2
         for img in images:
             img_array = np.array(img)
-            row_values = img_array[int(y_midpoint), int(x0):int(x1)]
+            row_values = img_array[int(y_midpoint), int(x0) : int(x1)]
             pixel_values.append(row_values)
-        add_shape_to_fig(fig2, 'line', x0, y_midpoint, x1, y_midpoint, "Line Pos (RT)")
-        add_shape_to_fig(fig3, 'line', x0, y_midpoint, x1, y_midpoint, "Line Pos (T)")
+        add_shape_to_fig(fig2, "line", x0, y_midpoint, x1, y_midpoint, "Line Pos (RT)")
+        add_shape_to_fig(fig3, "line", x0, y_midpoint, x1, y_midpoint, "Line Pos (T)")
 
-    elif direction == 'vertical':
+    elif direction == "vertical":
         x_midpoint = (x0 + x1) / 2
         for img in images:
             img_array = np.array(img)
-            col_values = img_array[int(y1):int(y0), int(x_midpoint)]
+            col_values = img_array[int(y1) : int(y0), int(x_midpoint)]
             pixel_values.append(col_values[::-1])
-        add_shape_to_fig(fig2, 'line', x_midpoint, y0, x_midpoint, y1, "Line Pos (RT)")
-        add_shape_to_fig(fig3, 'line', x_midpoint, y0, x_midpoint, y1, "Line Pos (T)")
+        add_shape_to_fig(fig2, "line", x_midpoint, y0, x_midpoint, y1, "Line Pos (RT)")
+        add_shape_to_fig(fig3, "line", x_midpoint, y0, x_midpoint, y1, "Line Pos (T)")
 
-    elif direction == 'right_diagonal':
+    elif direction == "right_diagonal":
         points = bresenham_line(int(x0), int(y1), int(x1), int(y0))
         for img in images:
             img_array = np.array(img)
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
-        add_shape_to_fig(fig2, 'line', x0, y1, x1, y0, "Line Pos (RT)")
-        add_shape_to_fig(fig3, 'line', x0, y1, x1, y0, "Line Pos (T)")
+        add_shape_to_fig(fig2, "line", x0, y1, x1, y0, "Line Pos (RT)")
+        add_shape_to_fig(fig3, "line", x0, y1, x1, y0, "Line Pos (T)")
 
-    elif direction == 'left_diagonal':
+    elif direction == "left_diagonal":
         points = bresenham_line(int(x0), int(y0), int(x1), int(y1))
         for img in images:
             img_array = np.array(img)
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
-        add_shape_to_fig(fig2, 'line', x0, y0, x1, y1, "Line Pos (RT)")
-        add_shape_to_fig(fig3, 'line', x0, y0, x1, y1, "Line Pos (T)")
+        add_shape_to_fig(fig2, "line", x0, y0, x1, y1, "Line Pos (RT)")
+        add_shape_to_fig(fig3, "line", x0, y0, x1, y1, "Line Pos (T)")
 
     return pixel_values
+
 
 def create_figure(image: Image) -> go.Figure:
     fig = go.Figure()
@@ -119,26 +103,29 @@ def create_figure(image: Image) -> go.Figure:
         margin=dict(t=20, b=20, l=20, r=20),
         xaxis=dict(scaleanchor="y", scaleratio=1),
         yaxis=dict(scaleanchor="x", scaleratio=1),
-        dragmode='zoom',
+        dragmode="zoom",
     )
     fig.update_xaxes(scaleanchor="y", scaleratio=1, range=[0, 100], autorange=True)
     fig.update_yaxes(scaleanchor="x", scaleratio=1, range=[0, 100], autorange=True)
     return fig
 
+
 def create_chart(df: pd.DataFrame, domain: list[str], range_colors: list[str]) -> alt.Chart:
-    chart = alt.Chart(df.reset_index().melt('index', var_name='Line', value_name='value')).mark_line().encode(
-        x='index:Q',
-        y='value:Q',
-        color=alt.Color('Line:N', scale=alt.Scale(domain=domain, range=range_colors), legend=alt.Legend(orient='bottom'))
-    ).properties(
-        width=700,
-        height=300
-    ).configure_axisX(
-        domain=False,
-        title=None,
-        labels=False
+    chart = (
+        alt.Chart(df.reset_index().melt("index", var_name="Line", value_name="value"))
+        .mark_line()
+        .encode(
+            x="index:Q",
+            y="value:Q",
+            color=alt.Color(
+                "Line:N", scale=alt.Scale(domain=domain, range=range_colors), legend=alt.Legend(orient="bottom")
+            ),
+        )
+        .properties(width=700, height=300)
+        .configure_axisX(domain=False, title=None, labels=False)
     )
     return chart
+
 
 def app(selected_row: pd.DataFrame, image_dir: str) -> None:
     st.subheader(f"Defect {selected_row.No.values[0]}")
@@ -199,9 +186,21 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
 
     # Create a subplot with shared axes
     # TODO: Movement along the Y-axis will update synchronously, but movement along the X-axis will not.
-    fig = make_subplots(rows=2, cols=3, shared_xaxes=True, shared_yaxes=True, vertical_spacing=0.10,
-                        subplot_titles=("Reference Image Rt", "Test Image Rt", "Difference Rt",
-                                        "Reference Image T", "Test Image T", "Difference T"))
+    fig = make_subplots(
+        rows=2,
+        cols=3,
+        shared_xaxes=True,
+        shared_yaxes=True,
+        vertical_spacing=0.10,
+        subplot_titles=(
+            "Reference Image Rt",
+            "Test Image Rt",
+            "Difference Rt",
+            "Reference Image T",
+            "Test Image T",
+            "Difference T",
+        ),
+    )
 
     # Add images to the subplot
     fig.add_trace(go.Image(z=np.array(ref_image)), row=1, col=1)
@@ -212,31 +211,23 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
     fig.add_trace(go.Image(z=np.array(diff_image_T)), row=2, col=3)
 
     # Add a scatter trace
-    fig.add_trace(
-        go.Scatter(
-            x=[0, 200 * 1],
-            y=[0, 200 * 1],
-            mode="markers",
-            marker_opacity=0
-        ),
-        row=1, col=1
-    )
+    fig.add_trace(go.Scatter(x=[0, 200 * 1], y=[0, 200 * 1], mode="markers", marker_opacity=0), row=1, col=1)
 
     # Update layout
     fig.update_layout(
         width=900,
         height=800,
-        margin={'t':20, 'b':20, 'l':20, 'r':20},
+        margin={"t": 20, "b": 20, "l": 20, "r": 20},
         modebar={
-            'orientation': 'v',
-            'bgcolor': 'rgba(0,0,0,0)',
-            'color': 'gray',
-            'activecolor': '#c37969',
+            "orientation": "v",
+            "bgcolor": "rgba(0,0,0,0)",
+            "color": "gray",
+            "activecolor": "#c37969",
         },
-        xaxis={'scaleanchor': "y", 'scaleratio': 1},
-        yaxis={'scaleanchor': "x", 'scaleratio': 1},
-        dragmode='zoom',
-        modebar_add=['select'],
+        xaxis={"scaleanchor": "y", "scaleratio": 1},
+        yaxis={"scaleanchor": "x", "scaleratio": 1},
+        dragmode="zoom",
+        modebar_add=["select"],
     )
 
     # Update axes to fix the image size
@@ -267,45 +258,54 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
     if "direction" not in st.session_state:
         st.session_state.direction = "horizontal"
 
-    col1, col2, col3, col4 = st.columns([1,1,1,1])
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     with col1:
         if st.button("Horizontal", icon=":material/east:", key="horizontal_button", use_container_width=True):
-            st.session_state.direction= "horizontal"
+            st.session_state.direction = "horizontal"
     with col2:
         if st.button("Vertical", icon=":material/south:", key="vertical_button", use_container_width=True):
-            st.session_state.direction= "vertical"
+            st.session_state.direction = "vertical"
     with col3:
-        if st.button("Downward Diagonal",icon=":material/south_east:", key="left_diagonal_button", use_container_width=True):
-            st.session_state.direction= "left_diagonal"
+        if st.button(
+            "Downward Diagonal", icon=":material/south_east:", key="left_diagonal_button", use_container_width=True
+        ):
+            st.session_state.direction = "left_diagonal"
     with col4:
-        if st.button("Upward Diagonal",icon=":material/north_east:", key="right_diagonal_button", use_container_width=True):
-            st.session_state.direction= "right_diagonal"
+        if st.button(
+            "Upward Diagonal", icon=":material/north_east:", key="right_diagonal_button", use_container_width=True
+        ):
+            st.session_state.direction = "right_diagonal"
 
     # Get the selection result
     try:
         selection = event.selection
 
-        if selection and 'box' in selection and len(selection['box']) > 0:
+        if selection and "box" in selection and len(selection["box"]) > 0:
             pixel_values = get_pixel_values(images, selection, st.session_state.direction, fig2, fig3)
             extracted_data = {index: array[:, 0] for index, array in enumerate(pixel_values)}
 
             # data change to dataFrame
             df_pixel = pd.DataFrame(extracted_data)
-            df_pixel.columns = ['Reference Image Rt', 'Test Image Rt', 'Difference Rt', 'Reference Image T', 'Test Image T', 'Difference T']
+            df_pixel.columns = [
+                "Reference Image Rt",
+                "Test Image Rt",
+                "Difference Rt",
+                "Reference Image T",
+                "Test Image T",
+                "Difference T",
+            ]
 
             # split to 2 charts
             df_pixel_1 = df_pixel.iloc[:, :3]
             df_pixel_2 = df_pixel.iloc[:, 3:]
 
             # Configuration to remove the modebar
-            config = {
-                'displayModeBar': False
-            }
+            config = {"displayModeBar": False}
 
             # Plot line charts
             col11, col12 = st.columns([1, 1])
             with col11:
-                chart_1 = create_chart(df_pixel_1, ['Reference Image Rt', 'Test Image Rt'], ['darkblue', 'lightblue'])
+                chart_1 = create_chart(df_pixel_1, ["Reference Image Rt", "Test Image Rt"], ["darkblue", "lightblue"])
                 col111, col112 = st.columns([4, 1])
                 with col111:
                     st.altair_chart(chart_1)
@@ -313,7 +313,7 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
                     st.plotly_chart(fig2, use_container_width=True, key="images2", config=config)
 
             with col12:
-                chart_2 = create_chart(df_pixel_2, ['Reference Image T', 'Test Image T'], ['darkblue', 'lightblue'])
+                chart_2 = create_chart(df_pixel_2, ["Reference Image T", "Test Image T"], ["darkblue", "lightblue"])
                 col121, col122 = st.columns([5, 1])
                 with col121:
                     st.altair_chart(chart_2)
