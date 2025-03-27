@@ -4,7 +4,7 @@ TIMEOUT = 10
 OPTIMIZER_TYPE = ["Adam", "AdamW"]
 OPTIMIZER_PARAMS = {
     "Adam": {
-        "weight_decay":  (0.0, "%0.3f", 0.0, 1.0), # (default_value, accuracy, min_value, max_value)
+        "weight_decay": (0.0, "%0.3f", 0.0, 1.0),  # (default_value, accuracy, min_value, max_value)
     },
     "AdamW": {
         "weight_decay": (0.01, "%0.3f", 0.0, 1.0),
@@ -22,9 +22,7 @@ LOSS_PARAMS = {
 }
 LR_SCHEDULER_TYPE = ["disable", "plateau"]
 LR_SCHEDULER_PARAMS = {
-    "disable": {
-
-    },
+    "disable": {},
     "plateau": {
         "factor": (0.1, "%0.2f", 0.0, 1.0),
         "patience": (5, "%d", 0, 1000),
