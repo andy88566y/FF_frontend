@@ -1117,8 +1117,8 @@ def get_answer(output_dir: str, defect_id: list[str]) -> list[int]:
 @st.cache_data(ttl="10s")
 def get_predictions(
     output_dir: str,
+    recipe: dict[str, Any],
     defect_list: Optional[list[str]] = None,
-    recipe: Optional[dict[str, Any]] = None,
     recipe_mode: Literal["FILTER", "CATCHER"] = "FILTER",
     top_k: Optional[int] = None,
 ) -> list[int]:

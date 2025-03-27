@@ -1,9 +1,6 @@
 from typing import Any
 
-import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 import yaml
 from loguru import logger
@@ -14,7 +11,7 @@ from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
     defect_id_list = helper.get_defect_id(output_dir)
     answer_list = helper.get_answer(output_dir=output_dir, defect_id=defect_id_list)
-    prediction_list = helper.get_predictions(output_dir=output_dir, defect_list=defect_id_list, recipe=recipe)
+    prediction_list = helper.get_predictions(output_dir=output_dir, recipe=recipe, defect_list=defect_id_list)
 
     positive = answer_list.count(1)
     negative = answer_list.count(0)
