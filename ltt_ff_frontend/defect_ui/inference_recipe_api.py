@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+import yaml
 from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
@@ -10,20 +11,17 @@ def app() -> None:
     st.title("False Filter Inference")
     st.caption("Inference lot data with selected model")
 
-    r1_col1, r1_col2, r1_col3 = st.columns([3, 2, 2])
+    r1_col1, r1_col2, r1_col3 = st.columns([2, 1, 2])
     with r1_col1:
-        inf_base_model = st.selectbox(
-            "Base model", options=helper.get_base_models(), index=0, format_func=helper.format_model_name
-        )
-    with r1_col2:
-        model_threshold = helper.get_model_threshold(model_name=inf_base_model)
-        inf_filter_threshold = st.number_input(
-            label="Confidence threshold:",
-            value=model_threshold,
-            step=0.00001,
-            format="%.5f",
-            help="Probabilities above threshold will be considered as defects.",
-        )
+        yaml_help_text = """
+        **Example of a valid recipe:**\n
+        recipes:\n
+        \- model_name: base/model_1.encrypted.pth\n
+        &nbsp;&nbsp;threshold: 0.5\n
+        \- model_name: base/model_2.encrypted.pth\n
+        &nbsp;&nbsp;threshold: 0.9\n
+        """
+        recipe_file = st.file_uploader("Upload Inference Recipe (.yaml)", type=".yaml", help=yaml_help_text)
     with r1_col3:
         inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
         st.caption(":red[If Overwrite is set to true, all existing files in Result Directory will be removed.]")
@@ -46,34 +44,41 @@ def app() -> None:
             label=".lrf path", value="/mnt/dbpc/xxx", help="Absolute path to the selected .lrf file."
         )
 
+    st.subheader("Recipe preview:")
+    if recipe_file is not None:
+        recipe = yaml.load(recipe_file, Loader=yaml.Loader)
+        st.json(recipe)
+
     if st.button("Start Inference Job", type="primary"):
         # Validate user input first
-        required_input = [inf_lot_id, inf_output_dir, inf_image_dir, inf_lrf_path]
+        required_input = [recipe_file, inf_lot_id, inf_output_dir, inf_image_dir, inf_lrf_path]
         for item in required_input:
             if not item:
                 logger.error(
-                    "Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path."
+                    "Missing user input detected. Please upload a recipe and enter Lot ID/Result Directory/Image Directory/.lrf path."
                 )
-                st.error("Missing user input detected. Please enter Lot ID/Result Directory/Image Directory/.lrf path.")
+                st.error(
+                    "Missing user input detected. Please upload a recipe and enter Lot ID/Result Directory/Image Directory/.lrf path."
+                )
                 return
 
         # Validate confidence threshold
-        if inf_filter_threshold < 0.0 or inf_filter_threshold > 1.0:
-            logger.error(
-                f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {inf_filter_threshold}"
-            )
-            st.error(
-                f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {inf_filter_threshold}"
-            )
-            return
+        for batch in recipe["recipes"]:
+            if batch["threshold"] < 0.0 or batch["threshold"] > 1.0:
+                logger.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {batch['threshold']}"
+                )
+                st.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {batch['threshold']}"
+                )
+                return
 
         request = helper.request_inference(
-            base_model=inf_base_model,
+            recipe=recipe,
             lot_id=inf_lot_id,
             output_dir=inf_output_dir,
             image_dir=inf_image_dir,
             lrf_path=inf_lrf_path,
-            confidence_threshold=inf_filter_threshold,
             overwrite=inf_overwrite,
         )
 
