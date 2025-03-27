@@ -47,7 +47,7 @@ def app() -> None:
     with r2_col2:
         inf_output_dir = st.text_input(
             label="Result directory",
-            value="/mnt/fs0/minye/multilot_inference",
+            value="/mnt/dbpc/xxx",
             help="The directory to store generated .lrf and .db files.",
         )
 
