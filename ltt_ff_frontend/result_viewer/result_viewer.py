@@ -54,7 +54,9 @@ def get_multilot_model_data(
     output_dir: str,
 ) -> tuple[list[dict[str, Any]], tuple[list[list[int]], list[list[float]], list[list[int]]]] | tuple[None, None]:
     try:
+        logger.debug("GCD")
         db_metadata = helper.get_db_metadata_lists(output_dir=output_dir)
+        logger.debug(db_metadata)
         defect_id_list = helper.get_defect_id_lists(output_dir=output_dir)
         probability_list = helper.get_probability(output_dir, defect_id_list)
         answer_list = helper.get_answer(output_dir, defect_id_list)
@@ -62,7 +64,7 @@ def get_multilot_model_data(
         assert len(defect_id_list) == len(answer_list), f"IDs: {len(defect_id_list)} Ans: {len(answer_list)}"
         return db_metadata, (defect_id_list, probability_list, answer_list)
     except Exception as e:
-        logger.warning(f"Error getting model data from {output_dir}! {e}")
+        logger.warning(f"Error getting model data from {output_dir}! {type(e)} {e}")
         return None, None
 
 
@@ -85,7 +87,7 @@ def calculate_filtered_results(
         1 for prob, ans in zip(probability_list, answer_list) if prob < selected_threshold and ans == 1
     )
     filtered_unlabeled_defect_count = sum(
-        1 for prob, ans in zip(probability_list, answer_list) if prob >``= selected_threshold and ans == -1
+        1 for prob, ans in zip(probability_list, answer_list) if prob >= selected_threshold and ans == -1
     )
 
     as_is_defect_count = positive + negative + unlabeled
@@ -886,7 +888,7 @@ def app() -> None:
 
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 2])
 
-    output_dir_default = "/mnt/dbpc/xxxx"
+    output_dir_default = "/mnt/dbpc/xxx"
     with r1_col1:
         rv_m1_output_dir = st.text_input("Model 1 (Base) Result Directory", value=output_dir_default)
     with r1_col2:
@@ -900,7 +902,6 @@ def app() -> None:
 
     st.divider()
 
-    # rv_m1_output_dir = f"/home/ronyauw/multilot_result"
     db_files = glob.glob(f"{rv_m1_output_dir}/*.db")
 
     if not ALLOW_MULTILOT and len(db_files) > 1:
