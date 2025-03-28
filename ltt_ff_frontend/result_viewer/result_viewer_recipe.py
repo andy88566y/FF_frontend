@@ -11,8 +11,8 @@ from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
     defect_id_list = helper.get_defect_id_lists(output_dir)
-    answer_list = helper.get_answer(output_dir=output_dir, defect_id=defect_id_list)
-    prediction_list = helper.get_predictions(output_dir=output_dir, recipe=recipe, defect_list=defect_id_list)
+    answer_list = helper.get_answer(output_dir=output_dir, defect_id=defect_id_list)[0]
+    prediction_list = helper.get_predictions(output_dir=output_dir, recipe=recipe, defect_list=defect_id_list)[0]
 
     positive = answer_list.count(1)
     negative = answer_list.count(0)
