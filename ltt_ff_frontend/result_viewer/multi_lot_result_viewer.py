@@ -1,12 +1,47 @@
 import streamlit as st
+import pandas as pd
 from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 from ltt_ff_frontend.result_viewer import result_viewer
 
+def highlight_cols(s):
+    colors = {
+        "red": "background-color: #ffcccb",
+        "yellow": "background-color: #ffeb3b",
+        "green": "background-color: #d4edda",
+        "blue": "background-color: #d1ecf1",
+        "default": "background-color: #d3d3d3"
+    }
+    col_to_colors = {
+        'Total Defect Count': colors['yellow'],
+        'True Defect Count': colors['red'],
+        'Non Defect Count': colors['green'],
+        'Unlabeled Count': colors['blue'],
+    }
+    return [col_to_colors.get(first_index, colors['default']) for first_index in s.index.get_level_values(0)]
 
+def highlight_capture_rate(column):
+    styles = []
+    for val in column:
+        numeric_val = float(val)
+        color = 'red' if numeric_val != 1.0 and numeric_val != -1.0 else ''
+        font_weight = 'bold' if numeric_val != 1.0 and numeric_val != -1.0 else ''
+        styles.append(f'color: {color}; font-weight: {font_weight};')
+    return styles
+
+def highlight_to_be_total_defect_count(row):
+    numeric_total_to_be_count = float(row[('Total Defect Count', 'To-be')])
+    numeric_true_defect_count = float(row[('True Defect Count', 'Before')])
+
+    row_styles = [''] * len(row)
+    if numeric_total_to_be_count > 150 and numeric_true_defect_count <= 150:
+        index = row.index.get_loc(('Total Defect Count', 'To-be'))
+        row_styles[index] = "color: red; font-weight: bold;"
+    else:
+        pass
+    return row_styles
 def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, st_gen_lrf_type: str) -> None:
-
     # Column for printing error message
     r2_col1, _r2_col2 = st.columns([3, 2])
 
@@ -191,7 +226,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
             st.subheader("Model 1 results")
 
         with model_1_statistics.container():
-            result_viewer.show_multilot_statistics(model_1_raw_data, model_1_metadata, rv_m1_threshold)
+            model_1_selected_lot_id_list = result_viewer.show_multilot_statistics(model_1_raw_data, model_1_metadata, rv_m1_threshold)
 
         with r4_header:
             st.subheader("Model 2 results")
@@ -315,7 +350,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
             st.subheader("Model 1 results")
 
         with model_1_statistics.container():
-            result_viewer.show_multilot_statistics(model_1_raw_data, model_1_metadata, rv_m1_threshold)
+            model_1_selected_lot_id_list = result_viewer.show_multilot_statistics(model_1_raw_data, model_1_metadata, rv_m1_threshold)
 
         # TODO: Get classtype grouping from backend
         with classtype_count:
@@ -335,7 +370,11 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
         # Draw 1D comparison chart
         with vr3_col1:
-            st.plotly_chart(result_viewer.generate_multilot_1D_plot(m1_aggregated_data_lists, rv_m1_threshold))
+            st.plotly_chart(
+                result_viewer.generate_multilot_1D_plot(
+                    m1_aggregated_data_lists,
+                    rv_m1_threshold,
+                    model_1_selected_lot_id_list))
 
         with vr3_col2:
             # TODO: This should be done somewhere else
@@ -345,7 +384,8 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
             else:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)
-                st.plotly_chart(result_viewer.plot_multilot_roc([("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata, rv_m1_output_dir)]))
+                params = [("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata, rv_m1_output_dir)]
+                st.plotly_chart(result_viewer.plot_multilot_roc(params, model_1_selected_lot_id_list))
 
     else:
         pass
