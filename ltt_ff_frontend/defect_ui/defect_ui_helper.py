@@ -12,6 +12,9 @@ from loguru import logger
 from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
 
 
+#####################################################################################################
+# Formatting                                                                                        #
+#####################################################################################################
 def gap(size: int) -> None:
     """
     Simple function to space out Streamlit UI elements.
@@ -37,6 +40,9 @@ def format_model_name(name: str) -> str:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
 
+#####################################################################################################
+# Get model information                                                                             #
+#####################################################################################################
 @st.cache_data(ttl="10s")
 def get_base_models() -> list[str]:
     """
@@ -70,7 +76,10 @@ def get_model_threshold(model_name: str) -> float:
         return model_threshold
 
 
-def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> requests.Response:
+#####################################################################################################
+# Generate LRF                                                                                      #
+#####################################################################################################
+def request_threshold_lrf(output_dir: str, confidence_threshold: float, lot_id: str) -> requests.Response:
     """
     Calls FalseFilter API with use_cache=True.
 
@@ -78,14 +87,20 @@ def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> reque
         output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
         confidence_threshold: Images with defect probability lower than confidence threshold
                                 is considered defective.
+        lot_id: Name of the lot of defect images.
 
     Returns the reponse of the API request.
     """
+    meta = get_db_metadata_lists(output_dir)[0]
+    model_name = meta.get("model_name", meta.get("model_name_0", ""))
+    recipe = {"recipes": [{"model_name": model_name, "threshold": confidence_threshold}]}
+
     r = requests.post(
         API_ROOT + "generate_lrf",
         json={
             "output_dir": output_dir,
-            "threshold": confidence_threshold,
+            "recipe": recipe,
+            "lot_id": lot_id,
         },
         timeout=TIMEOUT,
     )
@@ -100,7 +115,7 @@ def request_threshold_lrf(output_dir: str, confidence_threshold: float) -> reque
     return r
 
 
-def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
+def request_top_k_lrf(output_dir: str, top_k: int, lot_id: str) -> requests.Response:
     """
     Call FalseFilter API to generate an .lrf with top K defects
 
@@ -115,6 +130,7 @@ def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
         json={
             "output_dir": output_dir,
             "top_k": top_k,
+            "lot_id": lot_id,
         },
         timeout=TIMEOUT,
     )
@@ -129,6 +145,9 @@ def request_top_k_lrf(output_dir: str, top_k: int) -> requests.Response:
     return r
 
 
+#####################################################################################################
+# Inference / Multilot Inference                                                                    #
+#####################################################################################################
 def request_inference(
     image_dir: str,
     lrf_path: str,
@@ -183,10 +202,11 @@ def request_inference(
 
 
 def request_multilot_inference(
-    base_model: str,
-    multilot_config: dict,
     output_dir: str,
-    confidence_threshold: float,
+    multilot_config: dict,
+    recipe: Optional[dict[str, Any]] = None,
+    base_model: Optional[str] = "",
+    confidence_threshold: Optional[float] = 0.0,
     inference_batch_size: int = 32,
     overwrite: bool = False,
 ) -> requests.Response:
@@ -194,9 +214,10 @@ def request_multilot_inference(
     Calls FalseFilter API to run multilot inference.
 
     Args:
-        model_name: Name of inference model.
-        multilot_config: Dict containing lot info (lot id, lrf path, image dir)
         output_dir: Directory to store the generated database file and filtered .lrf file.
+        multilot_config: Dict containing lot info (lot id, lrf path, image dir)
+        recipe: Inference recipe containing models names and thresholds.
+        base_model: Name of inference model.
         confidence_threshold: Images with defect probability higher than confidence threshold is considered defective.
         inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
         overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
@@ -204,16 +225,17 @@ def request_multilot_inference(
 
     Returns the reponse of the API request.
     """
+    if recipe is None:
+        recipe = {"recipes": [{"model_name": base_model, "threshold": confidence_threshold}]}
+
     r = requests.post(
         API_ROOT + "multilot_inference",
         json={
-            "model_name": base_model,
-            "lot_info": multilot_config,
             "output_dir": output_dir,
-            "threshold": confidence_threshold,
+            "lot_info": multilot_config,
+            "recipe": recipe,
             "batch_size": inference_batch_size,
             "overwrite": overwrite,
-            "use_cache": False,
         },
         timeout=TIMEOUT,
     )
@@ -254,10 +276,14 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
             paged_statuses_df["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
         )
 
-        # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="inference_id").sort_values(
-            by="start_time", ascending=False
+        # Sort rows by start time and rename current index column to "inference_id"
+        paged_statuses_df = paged_statuses_df.sort_values(by="start_time", ascending=False).reset_index(
+            drop=False, names="inference_id"
         )
+
+        # Calculate index based on current page and page size
+        start_index = page_size * (current_page - 1) + 1
+        paged_statuses_df.index = range(start_index, start_index + len(paged_statuses_df))
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if "end_time" in paged_statuses_df.columns:
@@ -316,15 +342,20 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
             paged_statuses_df["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
         )
 
-        # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="multilot_inference_id").sort_values(
-            by="start_time", ascending=False
+        # Just show lot_id, don't show image_dir and lrf_path
+        # This line has to happen before renaming the index column, otherwise we won't be able to access index 0
+        paged_statuses_df["lot_info"] = pformat(
+            [data_path["lot_id"] for data_path in paged_statuses_df["lot_info"].iloc[0]["data_paths"]]
         )
 
-        # Just show lot_id, don't show image_dir and lrf_path
-        paged_statuses_df["lot_info"] = pformat(
-            [data_path["lot_id"] for data_path in paged_statuses_df["lot_info"][0]["data_paths"]]
+        # Sort rows by start time and rename current index column to "multilot_inference_id"
+        paged_statuses_df = paged_statuses_df.sort_values(by="start_time", ascending=False).reset_index(
+            drop=False, names="multilot_inference_id"
         )
+
+        # Calculate index based on current page and page size
+        start_index = page_size * (current_page - 1) + 1
+        paged_statuses_df.index = range(start_index, start_index + len(paged_statuses_df))
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if "end_time" in paged_statuses_df.columns:
@@ -428,15 +459,6 @@ def request_multilot_inference_statuses(multilot_inference_id_list: list[str]) -
     return format_multilot_inference_status(pd.DataFrame.from_dict(detailed_multilot_inference_statuses).T).T
 
 
-def format_url(params: dict[str, str]):
-    # TODO: Get correct base url
-    base_url = "http://xxx:6501"
-    param_strs = []
-    for k, v in params.items():
-        param_strs.append(f"{k}={base64.urlsafe_b64encode(str.encode(v)).decode()}")
-    return f"{base_url}/?{'&'.join(param_strs)}"
-
-
 def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
     """
     Format and sort the detailed inference status dataframe.
@@ -534,7 +556,8 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
         )
 
         # Convert model name to user-readable format
-        multilot_inference_status["model_name"] = multilot_inference_status["model_name"].apply(format_model_name)
+        if "model_name" in multilot_inference_status.columns:
+            multilot_inference_status["model_name"] = multilot_inference_status["model_name"].apply(format_model_name)
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
         multilot_inference_status = multilot_inference_status.rename(columns={"index": "inference_id"})
@@ -590,6 +613,9 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
     return sorted_multilot_inference_statuses_df
 
 
+#####################################################################################################
+# Finetune / Basetrain                                                                              #
+#####################################################################################################
 def request_finetune(
     base_model: str,
     model_naming: tuple[str, str, str, str],
@@ -747,10 +773,14 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
         # Convert model name to user-readable format
         paged_statuses_df["base_model_name"] = paged_statuses_df["base_model_name"].apply(format_model_name)
 
-        # Rename index column so that detailed status table will show 'training_id' instead of 'index'
-        paged_statuses_df = paged_statuses_df.reset_index(drop=False, names="training_id").sort_values(
-            by="start_time", ascending=False
+        # Sort rows by start time and rename current index column to "training_id"
+        paged_statuses_df = paged_statuses_df.sort_values(by="start_time", ascending=False).reset_index(
+            drop=False, names="training_id"
         )
+
+        # Calculate index based on current page and page size
+        start_index = page_size * (current_page - 1) + 1
+        paged_statuses_df.index = range(start_index, start_index + len(paged_statuses_df))
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if "end_time" in paged_statuses_df.columns:
@@ -912,8 +942,11 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
     return sorted_finetuning_statuses_df
 
 
+#####################################################################################################
+# Database                                                                                          #
+#####################################################################################################
 @st.cache_data(ttl="10s")
-def get_db_metadata(output_dir: str) -> dict[str, Any]:
+def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
     """
     Get Result DB metadata.
 
@@ -923,7 +956,7 @@ def get_db_metadata(output_dir: str) -> dict[str, Any]:
         Returns:
             A dictionary of result database metadata
     """
-    r = requests.get(API_ROOT + "result/get_db_metadata", params={"output_dir": output_dir}, timeout=TIMEOUT)
+    r = requests.get(API_ROOT + "result/get_db_metadata_lists", params={"output_dir": output_dir}, timeout=TIMEOUT)
 
     if r.json()["status"] == "completed":
         return r.json()["db_metadata"]
@@ -933,7 +966,7 @@ def get_db_metadata(output_dir: str) -> dict[str, Any]:
 
 
 @st.cache_data(ttl="10s")
-def get_defect_id(output_dir: str) -> list[str]:
+def get_defect_id_lists(output_dir: str) -> list[list[str]]:
     """
     Get list of defect IDs from a database.
 
@@ -943,7 +976,7 @@ def get_defect_id(output_dir: str) -> list[str]:
         Returns:
             A list of the defect IDs of a lot of images.
     """
-    r = requests.get(API_ROOT + "result/get_defect_id", params={"output_dir": output_dir}, timeout=TIMEOUT)
+    r = requests.get(API_ROOT + "result/get_defect_id_lists", params={"output_dir": output_dir}, timeout=TIMEOUT)
 
     if r.json()["status"] == "completed":
         return r.json()["defect_id_list"]
@@ -953,11 +986,11 @@ def get_defect_id(output_dir: str) -> list[str]:
 
 
 @st.cache_data(ttl="1s")
-def get_topk_model_threshold(output_dir: str, top_k: int = 150) -> float:
+def get_topk_model_threshold(output_dir: str, top_k: int = 150, lot_id: str = "") -> float:
     """
     Return model threshold for selected model
     """
-    params = {"output_dir": output_dir, "top_k": top_k}
+    params = {"output_dir": output_dir, "top_k": top_k, "lot_id": lot_id}
     r = requests.get(f"{API_ROOT}result/get_topk_threshold", params=params, timeout=TIMEOUT)
 
     if r.json()["status"] == "error":
@@ -971,31 +1004,35 @@ def get_topk_model_threshold(output_dir: str, top_k: int = 150) -> float:
 
 # TODO: Split this into smaller functions
 @st.cache_data(ttl="30s")
-def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -> list[dict[str, Any]]:
+def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = False) -> list[list[dict[str, Any]]]:
     """
     Return lrf data with selected columns
     """
     params = {"output_dir": output_dir, "cols": ",".join(cols)}
-    r = requests.get(f"{API_ROOT}result/get_lrf_data", params=params, timeout=TIMEOUT)
+    r = requests.get(f"{API_ROOT}result/get_lrf_data_lists", params=params, timeout=TIMEOUT)
     if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
         raise ValueError(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
     else:
-        lrf_data = r.json()["lrf_data"]
-        logger.info(f"LRF data of {len(lrf_data)} defects loaded from `{output_dir}`")
+        lrf_data_list = r.json()["lrf_data"]
+        for lrf_data in lrf_data_list:
+            logger.info(f"LRF data of {len(lrf_data)} defects loaded from `{output_dir}`")
 
     r = requests.get(API_ROOT + "result/get_answer", json={"output_dir": output_dir}, timeout=TIMEOUT)
     if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
         raise ValueError(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
     else:
-        answer_list = r.json()["answer_list"]
-        if len(lrf_data) != len(answer_list):
-            logger.error(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
-            raise ValueError(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
-        lrf_data_with_ans = []
-        for data, ans in zip(lrf_data, answer_list):
-            lrf_data_with_ans.append({**data, "Ans": ans})
+        answer_lists = r.json()["answer_list"]
+        lrf_data_with_ans_list = []
+        for lrf_data, answer_list in zip(lrf_data_list, answer_lists):
+            if len(lrf_data) != len(answer_list):
+                logger.error(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
+                raise ValueError(f"Difference in length between lrf data and answer {len(lrf_data)} {len(answer_list)}")
+            lrf_data_with_ans = []
+            for data, ans in zip(lrf_data, answer_list):
+                lrf_data_with_ans.append({**data, "Ans": ans})
+            lrf_data_with_ans_list.append(lrf_data_with_ans)
 
     if include_prob:
         r = requests.get(API_ROOT + "result/get_probability", json={"output_dir": output_dir}, timeout=TIMEOUT)
@@ -1004,20 +1041,23 @@ def get_lrf_data(output_dir: str, cols: list[str], include_prob: bool = False) -
             logger.error(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
             raise ValueError(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
         else:
-            probs = r.json()["probability_list"]
-            if len(lrf_data_with_ans) != len(probs):
-                logger.error(
-                    f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}"
-                )
-                raise ValueError(
-                    f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probs)}"
-                )
-            lrf_data_with_prob = []
-            for data, prob in zip(lrf_data_with_ans, probs):
-                lrf_data_with_prob.append({**data, "Probability": prob})
-            return lrf_data_with_prob
+            probability_lists = r.json()["probability_list"]
+            lrf_data_with_prob_list = []
+            for lrf_data_with_ans, probability_list in zip(lrf_data_with_ans_list, probability_lists):
+                if len(lrf_data_with_ans) != len(probability_list):
+                    logger.error(
+                        f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probability_list)}"
+                    )
+                    raise ValueError(
+                        f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probability_list)}"
+                    )
+                lrf_data_with_prob = []
+                for data, prob in zip(lrf_data_with_ans, probability_list):
+                    lrf_data_with_prob.append({**data, "Probability": prob})
+                lrf_data_with_prob_list.append(lrf_data_with_prob)
+            return lrf_data_with_prob_list
     else:
-        return lrf_data_with_ans
+        return lrf_data_with_ans_list
 
 
 @st.cache_data(ttl="10s")
@@ -1044,7 +1084,7 @@ def get_prc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray
 
 
 @st.cache_data(ttl="10s")
-def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_roc_data(output_dir: str, return_curve: bool = True) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
     """
     Get the data needed to draw an ROC curve (fpr, tpr, threshold)
 
@@ -1060,14 +1100,36 @@ def get_roc_data(output_dir: str, return_curve: bool = True) -> tuple[np.ndarray
         timeout=TIMEOUT,
     )
 
-    roc_data_list = r.json()["roc_data"]
-    roc_data_ndarray = tuple(np.array(data_list) for data_list in roc_data_list)
+    roc_data_lists = r.json()["roc_data"]
+    roc_data_ndarray_list = [
+        tuple(np.array(data_list) for data_list in roc_data_list) for roc_data_list in roc_data_lists
+    ]
 
-    return roc_data_ndarray
+    return roc_data_ndarray_list
 
 
 @st.cache_data(ttl="10s")
-def get_probability(output_dir: str, defect_id: list[str]) -> list[float]:
+def get_roc_threshold_marker_coordinates(
+    output_dir: str, selected_threshold: float | None = None
+) -> list[tuple[float, float]]:
+    """
+    Get the coordinates to draw the threshold marker on the CR/FFR curve.
+
+    Args:
+        output_dir: Root output directory of inference resuits.
+    """
+    r = requests.get(
+        API_ROOT + "result/get_roc_selected_threshold",
+        params={"output_dir": output_dir, "selected_threshold": selected_threshold},
+        timeout=TIMEOUT,
+    )
+    threshold_coordinates_list = r.json()["threshold_coordinates_list"]
+
+    return threshold_coordinates_list
+
+
+@st.cache_data(ttl="10s")
+def get_probability(output_dir: str, defect_id: list[list[int]]) -> list[list[float]]:
     """
     Read a list of the defect probabilities from a database.
 
@@ -1092,7 +1154,7 @@ def get_probability(output_dir: str, defect_id: list[str]) -> list[float]:
 
 
 @st.cache_data(ttl="10s")
-def get_answer(output_dir: str, defect_id: list[str]) -> list[int]:
+def get_answer(output_dir: str, defect_id: list[list[int]]) -> list[list[int]]:
     """
     Read a list of the ground truths from a database.
 
@@ -1118,7 +1180,7 @@ def get_answer(output_dir: str, defect_id: list[str]) -> list[int]:
 def get_predictions(
     output_dir: str,
     recipe: dict[str, Any],
-    defect_list: Optional[list[str]] = None,
+    defect_list: Optional[list[list[str]]] = None,
     recipe_mode: Literal["FILTER", "CATCHER"] = "FILTER",
     top_k: Optional[int] = None,
 ) -> list[int]:
@@ -1149,3 +1211,12 @@ def get_predictions(
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
+def format_url(params: dict[str, str]):
+    # TODO: Get correct base url
+    base_url = "http://xxx:6501"
+    param_strs = []
+    for k, v in params.items():
+        param_strs.append(f"{k}={base64.urlsafe_b64encode(str.encode(v)).decode()}")
+    return f"{base_url}/?{'&'.join(param_strs)}"

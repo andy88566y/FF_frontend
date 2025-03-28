@@ -8,10 +8,10 @@ from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 def app() -> None:
     logger.debug("Loading Inference Dashboard...")
-    st.title("False Filter Inference")
-    st.caption("Inference lot data with selected model")
+    st.title("False Filter Inference (Recipe)")
+    st.caption("Inference lot data with recipe")
 
-    r1_col1, r1_col2, r1_col3 = st.columns([2, 1, 2])
+    r1_col1, _r1_col2, r1_col3 = st.columns([2, 1, 2])
     with r1_col1:
         yaml_help_text = """
         **Example of a valid recipe:**\n
