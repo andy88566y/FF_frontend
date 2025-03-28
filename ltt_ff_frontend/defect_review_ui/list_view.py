@@ -105,7 +105,7 @@ def app(result_dir: str, image_dir: str) -> None:
         st.session_state.result_dir = ""
     # Initialize session state for probability threshold
     if "prob_threshold" not in st.session_state:
-        st.session_state.prob_threshold = db_metadata["model_threshold"]
+        st.session_state.prob_threshold = db_metadata.get("model_threshold", db_metadata.get("model_0_threshold", -1))
     # Ensure color_option is set in session state
     if "color_option" not in st.session_state:
         st.session_state.color_option = "ClassType"
