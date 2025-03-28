@@ -234,8 +234,6 @@ def request_multilot_inference(
             "output_dir": output_dir,
             "lot_info": multilot_config,
             "recipe": recipe,
-            "model_name": base_model,
-            "threshold": confidence_threshold,
             "batch_size": inference_batch_size,
             "overwrite": overwrite,
         },
