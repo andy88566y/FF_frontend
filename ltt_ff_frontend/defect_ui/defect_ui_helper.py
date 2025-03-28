@@ -1154,7 +1154,7 @@ def get_probability(output_dir: str, defect_id: list[list[int]]) -> list[list[fl
 
 
 @st.cache_data(ttl="10s")
-def get_answer(output_dir: str, defect_id: list[list[int]]) -> list[list[int]]:
+def get_answer(output_dir: str, defect_id: list[list[str]]) -> list[list[int]]:
     """
     Read a list of the ground truths from a database.
 
@@ -1183,7 +1183,7 @@ def get_predictions(
     defect_list: Optional[list[list[str]]] = None,
     recipe_mode: Literal["FILTER", "CATCHER"] = "FILTER",
     top_k: Optional[int] = None,
-) -> list[int]:
+) -> list[list[int]]:
     """
     Read a list of the ground truths from a database.
 
