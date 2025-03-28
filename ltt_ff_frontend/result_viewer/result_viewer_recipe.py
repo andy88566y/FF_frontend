@@ -1,3 +1,4 @@
+import glob
 from typing import Any
 
 import pandas as pd
@@ -89,6 +90,12 @@ def app() -> None:
         """
         recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
 
+    db_files = glob.glob(f"{rv_output_dir}/*.db")
+
+    if len(db_files) > 1:
+        st.error(f"Error: multiple ({len(db_files)}) .db files found in {rv_output_dir}")
+        return
+
     if recipe_file is not None:
         st.subheader("Recipe preview:")
         recipe = yaml.load(recipe_file, Loader=yaml.Loader)
@@ -138,3 +145,7 @@ def app() -> None:
 
     else:
         pass
+
+
+def app_allow_multilot() -> None:
+    pass
