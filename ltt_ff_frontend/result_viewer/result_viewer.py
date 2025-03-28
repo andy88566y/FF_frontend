@@ -9,7 +9,6 @@ import plotly.graph_objects as go
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import ALLOW_MULTILOT
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 from ltt_ff_frontend.result_viewer import multi_lot_result_viewer, single_lot_result_viewer
 
@@ -157,7 +156,7 @@ def show_multilot_statistics(
     raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
     model_metadata: list[dict[str, Any]],
     selected_threshold,
-    key: str = 'model_stats'
+    key: str = "model_stats",
 ) -> None:
     defect_id_lists, probability_lists, answer_lists = raw_data
     data = []
@@ -201,12 +200,7 @@ def show_multilot_statistics(
         .apply(highlight_capture_rate, subset=[("True Defect Count", "Capture Rate")], axis=0)
     )
     event = st.dataframe(
-        styled_df,
-        key=key,
-        use_container_width=True,
-        hide_index=True,
-        on_select="rerun",
-        selection_mode="multi-row"
+        styled_df, key=key, use_container_width=True, hide_index=True, on_select="rerun", selection_mode="multi-row"
     )
     logger.debug(event)
 
@@ -891,7 +885,7 @@ def gen_lrf(
         raise NotImplementedError(f"gen_lrf_type {gen_lrf_type} is not implemented.")
 
 
-def app() -> None:
+def app(allow_multilot: bool = False) -> None:
     logger.debug("Loading Result Viewer...")
     st.title("False Filter Result Viewer")
     st.caption("Visualize False Filter Result [Model 1 - Base] [Model 2 - Candidate (optional)]")
@@ -914,10 +908,18 @@ def app() -> None:
 
     db_files = glob.glob(f"{rv_m1_output_dir}/*.db")
 
-    if not ALLOW_MULTILOT and len(db_files) > 1:
+    if not allow_multilot and len(db_files) > 1:
         st.error(f"Error: multiple ({len(db_files)}) .db files found in {rv_m1_output_dir}")
     else:
         if len(db_files) > 1:
             multi_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
         else:
             single_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
+
+
+# TODO: Maybe switch to use decorator
+def app_allow_multilot():
+    def inner_app():
+        app(allow_multilot=True)
+
+    return inner_app
