@@ -91,11 +91,15 @@ def request_threshold_lrf(output_dir: str, confidence_threshold: float, lot_id: 
 
     Returns the reponse of the API request.
     """
+    meta = get_db_metadata_lists(output_dir)[0]
+    model_name = meta.get("model_name", meta.get("model_name_0", ""))
+    recipe = {"recipes": [{"model_name": model_name, "threshold": confidence_threshold}]}
+
     r = requests.post(
         API_ROOT + "generate_lrf",
         json={
             "output_dir": output_dir,
-            "threshold": confidence_threshold,
+            "recipe": recipe,
             "lot_id": lot_id,
         },
         timeout=TIMEOUT,
@@ -198,10 +202,11 @@ def request_inference(
 
 
 def request_multilot_inference(
-    base_model: str,
-    multilot_config: dict,
     output_dir: str,
-    confidence_threshold: float,
+    multilot_config: dict,
+    recipe: Optional[dict[str, Any]] = None,
+    base_model: Optional[str] = "",
+    confidence_threshold: Optional[float] = 0.0,
     inference_batch_size: int = 32,
     overwrite: bool = False,
 ) -> requests.Response:
@@ -209,9 +214,10 @@ def request_multilot_inference(
     Calls FalseFilter API to run multilot inference.
 
     Args:
-        model_name: Name of inference model.
-        multilot_config: Dict containing lot info (lot id, lrf path, image dir)
         output_dir: Directory to store the generated database file and filtered .lrf file.
+        multilot_config: Dict containing lot info (lot id, lrf path, image dir)
+        recipe: Inference recipe containing models names and thresholds.
+        base_model: Name of inference model.
         confidence_threshold: Images with defect probability higher than confidence threshold is considered defective.
         inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
         overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
@@ -219,16 +225,19 @@ def request_multilot_inference(
 
     Returns the reponse of the API request.
     """
+    if recipe is None:
+        recipe = {"recipes": [{"model_name": base_model, "threshold": confidence_threshold}]}
+
     r = requests.post(
         API_ROOT + "multilot_inference",
         json={
-            "model_name": base_model,
-            "lot_info": multilot_config,
             "output_dir": output_dir,
+            "lot_info": multilot_config,
+            "recipe": recipe,
+            "model_name": base_model,
             "threshold": confidence_threshold,
             "batch_size": inference_batch_size,
             "overwrite": overwrite,
-            "use_cache": False,
         },
         timeout=TIMEOUT,
     )
@@ -958,7 +967,7 @@ def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
 
 
 @st.cache_data(ttl="10s")
-def get_defect_id_lists(output_dir: str) -> list[list[int]]:
+def get_defect_id_lists(output_dir: str) -> list[list[str]]:
     """
     Get list of defect IDs from a database.
 
@@ -1172,7 +1181,7 @@ def get_answer(output_dir: str, defect_id: list[list[int]]) -> list[list[int]]:
 def get_predictions(
     output_dir: str,
     recipe: dict[str, Any],
-    defect_list: Optional[list[str]] = None,
+    defect_list: Optional[list[list[str]]] = None,
     recipe_mode: Literal["FILTER", "CATCHER"] = "FILTER",
     top_k: Optional[int] = None,
 ) -> list[int]:

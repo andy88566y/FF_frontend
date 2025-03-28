@@ -112,42 +112,46 @@ def calculate_filtered_results(
         "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
     }
 
+
 def draw_column_background_color(s):
     colors = {
         "red": "background-color: #ffcccb",
         "yellow": "background-color: #ffeb3b",
         "green": "background-color: #d4edda",
         "blue": "background-color: #d1ecf1",
-        "default": "background-color: #d3d3d3"
+        "default": "background-color: #d3d3d3",
     }
     col_to_colors = {
-        'Total Defect Count': colors['yellow'],
-        'True Defect Count': colors['red'],
-        'Non Defect Count': colors['green'],
-        'Unlabeled Count': colors['blue'],
+        "Total Defect Count": colors["yellow"],
+        "True Defect Count": colors["red"],
+        "Non Defect Count": colors["green"],
+        "Unlabeled Count": colors["blue"],
     }
-    return [col_to_colors.get(first_index, colors['default']) for first_index in s.index.get_level_values(0)]
+    return [col_to_colors.get(first_index, colors["default"]) for first_index in s.index.get_level_values(0)]
+
 
 def highlight_capture_rate(column):
     styles = []
     for val in column:
         numeric_val = float(val)
-        color = 'red' if numeric_val != 1.0 and numeric_val != -1.0 else ''
-        font_weight = 'bold' if numeric_val != 1.0 and numeric_val != -1.0 else ''
-        styles.append(f'color: {color}; font-weight: {font_weight};')
+        color = "red" if numeric_val != 1.0 and numeric_val != -1.0 else ""
+        font_weight = "bold" if numeric_val != 1.0 and numeric_val != -1.0 else ""
+        styles.append(f"color: {color}; font-weight: {font_weight};")
     return styles
 
-def highlight_to_be_total_defect_count(row):
-    numeric_total_to_be_count = float(row[('Total Defect Count', 'To-be')])
-    numeric_true_defect_count = float(row[('True Defect Count', 'Before')])
 
-    row_styles = [''] * len(row)
+def highlight_to_be_total_defect_count(row):
+    numeric_total_to_be_count = float(row[("Total Defect Count", "To-be")])
+    numeric_true_defect_count = float(row[("True Defect Count", "Before")])
+
+    row_styles = [""] * len(row)
     if numeric_total_to_be_count > 150 and numeric_true_defect_count <= 150:
-        index = row.index.get_loc(('Total Defect Count', 'To-be'))
+        index = row.index.get_loc(("Total Defect Count", "To-be"))
         row_styles[index] = "color: red; font-weight: bold;"
     else:
         pass
     return row_styles
+
 
 def show_multilot_statistics(
     raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
@@ -160,51 +164,50 @@ def show_multilot_statistics(
         count_rate_data = calculate_filtered_results((id_list, prob_list, ans_list), selected_threshold)
         data.append(
             [
-                meta['lot_id'],
-                count_rate_data['as_is_defect_count'],
-                count_rate_data['to_be_defect_count'],
+                meta["lot_id"],
+                count_rate_data["as_is_defect_count"],
+                count_rate_data["to_be_defect_count"],
                 f"{count_rate_data['filter_rate']:.4f}",
-                count_rate_data['as_is_true_defect_count'],
-                count_rate_data['to_be_true_defect_count'],
+                count_rate_data["as_is_true_defect_count"],
+                count_rate_data["to_be_true_defect_count"],
                 f"{count_rate_data['capture_rate']:.4f}",
-                count_rate_data['as_is_non_defect_count'],
-                count_rate_data['to_be_non_defect_count'],
+                count_rate_data["as_is_non_defect_count"],
+                count_rate_data["to_be_non_defect_count"],
                 f"{count_rate_data['false_filter_rate']:.4f}",
-                count_rate_data['unlabeled'],
-                count_rate_data['filtered_unlabeled_defect_count']
+                count_rate_data["unlabeled"],
+                count_rate_data["filtered_unlabeled_defect_count"],
             ]
         )
     index = [
-        ('Lot', 'ID'),
-        ('Total Defect Count', 'As-is'),
-        ('Total Defect Count', 'To-be'),
-        ('Total Defect Count', 'Filter Rate'),
-        ('True Defect Count', 'Before'),
-        ('True Defect Count', 'After'),
-        ('True Defect Count', 'Capture Rate'),
-        ('Non Defect Count', 'Before'),
-        ('Non Defect Count', 'After'),
-        ('Non Defect Count', 'False Filter Rate'),
-        ('Unlabeled Count', 'Total'),
-        ('Unlabeled Count', 'Filtered')
+        ("Lot", "ID"),
+        ("Total Defect Count", "As-is"),
+        ("Total Defect Count", "To-be"),
+        ("Total Defect Count", "Filter Rate"),
+        ("True Defect Count", "Before"),
+        ("True Defect Count", "After"),
+        ("True Defect Count", "Capture Rate"),
+        ("Non Defect Count", "Before"),
+        ("Non Defect Count", "After"),
+        ("Non Defect Count", "False Filter Rate"),
+        ("Unlabeled Count", "Total"),
+        ("Unlabeled Count", "Filtered"),
     ]
     pd_multiindex = pd.MultiIndex.from_tuples(index)
     df = pd.DataFrame(data, columns=pd_multiindex)
-    styled_df = df.style.apply(draw_column_background_color, axis=1) \
-                        .apply(highlight_to_be_total_defect_count, axis=1) \
-                        .apply(highlight_capture_rate, subset=[('True Defect Count', 'Capture Rate')], axis=0)
+    styled_df = (
+        df.style.apply(draw_column_background_color, axis=1)
+        .apply(highlight_to_be_total_defect_count, axis=1)
+        .apply(highlight_capture_rate, subset=[("True Defect Count", "Capture Rate")], axis=0)
+    )
     event = st.dataframe(
-        styled_df,
-        use_container_width=True,
-        hide_index=True,
-        on_select="rerun",
-        selection_mode="multi-row"
+        styled_df, use_container_width=True, hide_index=True, on_select="rerun", selection_mode="multi-row"
     )
 
     selected_rows = event.selection.rows
     selected_df = df.iloc[selected_rows]
     selected_lot_id_list = selected_df["Lot"]["ID"].tolist()
     return selected_lot_id_list
+
 
 def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
     classtype_counter: dict[str, int] = {}
@@ -301,17 +304,15 @@ def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_thres
 
     return fig
 
-def generate_multilot_1D_plot(
-    m1_data: tuple[list[int], list[float], list[int], list[str]],
-    threshold: float,
-    selected_lot_id_list: list[str] = []
-) -> go.Figure:
 
+def generate_multilot_1D_plot(
+    m1_data: tuple[list[int], list[float], list[int], list[str]], threshold: float, selected_lot_id_list: list[str] = []
+) -> go.Figure:
     id_list, prob_list, ans_list, lot_id_list = m1_data
     df = pd.DataFrame(
         data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
     )
-    df = df[df['Lot ID'].isin(selected_lot_id_list)] if selected_lot_id_list else df
+    df = df[df["Lot ID"].isin(selected_lot_id_list)] if selected_lot_id_list else df
     df["Classification"] = [
         "Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]
     ]
@@ -619,7 +620,7 @@ def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray]
 
 def plot_multilot_roc(
     roc_data: list[tuple[str, list[tuple[np.ndarray, np.ndarray, np.ndarray]], float, list[dict[str, Any]]]],
-    selected_lot_id_list: list[str] = []
+    selected_lot_id_list: list[str] = [],
 ) -> go.Figure:
     fig = go.Figure()
 
@@ -637,6 +638,8 @@ def plot_multilot_roc(
         for lot_data, model_metadata, selected_threshold_coord, inference_threshold_coord in zip(
             data_list, model_metadata_list, selected_threshold_coord_list, inference_threshold_coord_list
         ):
+            model_threshold = model_metadata.get("model_threshold", model_metadata.get("model_threshold_0", ""))
+
             fpr, tpr, threshold = lot_data
             tnr = 1 - fpr
 
@@ -645,7 +648,7 @@ def plot_multilot_roc(
             if tpr_contains_nan:
                 continue
 
-            inference_threshold = model_metadata["model_threshold"]
+            inference_threshold = model_threshold
             lot_id = model_metadata["lot_id"]
 
             # Skip lots if not selected

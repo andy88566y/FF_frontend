@@ -9,7 +9,7 @@ from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
 def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
-    defect_id_list = helper.get_defect_id(output_dir)
+    defect_id_list = helper.get_defect_id_lists(output_dir)
     answer_list = helper.get_answer(output_dir=output_dir, defect_id=defect_id_list)
     prediction_list = helper.get_predictions(output_dir=output_dir, recipe=recipe, defect_list=defect_id_list)
 
@@ -99,7 +99,7 @@ def app() -> None:
     invalid_input = [output_dir_default, ""]
 
     if rv_output_dir not in invalid_input and recipe_file is not None:
-        model_metadata = helper.get_db_metadata(rv_output_dir)
+        model_metadata = helper.get_db_metadata_lists(rv_output_dir)[0]
 
         if model_metadata is None:
             with r1_col2:
@@ -131,7 +131,7 @@ def app() -> None:
 
         # TODO: Get classtype grouping from backend
         with st.expander(label="LRF ClassType count"):
-            defects = helper.get_lrf_data(output_dir=rv_output_dir, cols=["ClassType"], include_prob=False)
+            defects = helper.get_lrf_data_lists(output_dir=rv_output_dir, cols=["ClassType"], include_prob=False)[0]
             classtype_counter_df = get_classtype_count(defects)
             st.caption(f"LRF type: {model_metadata['input_lrf_type']}")
             st.dataframe(data=classtype_counter_df)

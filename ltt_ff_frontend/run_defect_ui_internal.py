@@ -8,6 +8,7 @@ from ltt_ff_frontend.defect_ui import (
     inference_api,
     inference_recipe_api,
     multilot_inference_api,
+    multilot_inference_recipe_api,
     result_viewer_recipe,
 )
 from ltt_ff_frontend.result_viewer import result_viewer
@@ -40,6 +41,12 @@ if __name__ == "__main__":
         title="Multilot Inference",
         icon=":material/action_key:",
     )
+    page_multilot_inference_recipe_api = st.Page(
+        multilot_inference_recipe_api.app,
+        url_path="multilot_inference_recipe_api",
+        title="Multilot Inference Recipe",
+        icon=":material/action_key:",
+    )
     page_defect_review_gui = st.Page(
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
@@ -57,6 +64,7 @@ if __name__ == "__main__":
             page_result_viewer_recipe,
             page_inference_recipe_api,
             page_multilot_inference_api,
+            page_multilot_inference_recipe_api,
             page_defect_review_gui,
             page_finetuning_api,
             page_basetrain_api,

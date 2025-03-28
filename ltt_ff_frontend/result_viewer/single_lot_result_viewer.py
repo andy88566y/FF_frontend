@@ -6,7 +6,6 @@ from ltt_ff_frontend.result_viewer import result_viewer
 
 
 def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, st_gen_lrf_type: str) -> None:
-
     # Column for printing error message
     r2_col1, _r2_col2 = st.columns([3, 2])
 
@@ -31,7 +30,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
     # Columns for drawing distribution chart and ROC curve
     vr3_col1, vr3_col2 = st.columns(2)
 
-    invalid_input = [output_dir_default, '']
+    invalid_input = [output_dir_default, ""]
 
     if rv_m1_output_dir not in invalid_input and rv_m2_output_dir not in invalid_input:
         model_1_metadata, model_1_raw_data = result_viewer.get_model_data(rv_m1_output_dir)
@@ -47,7 +46,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                 st.error(f"Error getting result data from {rv_m2_output_dir}")
                 return
 
-        if model_1_metadata['lot_id'] != model_2_metadata['lot_id']:
+        if model_1_metadata["lot_id"] != model_2_metadata["lot_id"]:
             with r2_col1:
                 st.error(f"""Lot IDs do not match!
                          \nModel 1 lot ID: {model_1_metadata['lot_id']}
@@ -63,12 +62,17 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                 return
 
         # Check if the same lrf was used for inference
-        if model_1_metadata['input_lrf_path'] != model_2_metadata['input_lrf_path']:
+        if model_1_metadata["input_lrf_path"] != model_2_metadata["input_lrf_path"]:
             with r2_col1:
                 st.error(f"""Different LRF files were used during inference!
                          \nModel 1 LRF: {model_1_metadata['input_lrf_path']}
                          \nModel 2 LRF: {model_2_metadata['input_lrf_path']}""")
                 return
+
+        model_1_name = model_1_metadata.get("model_name", model_1_metadata.get("model_name_0", ""))
+        model_1_threshold = model_1_metadata.get("model_threshold", model_1_metadata.get("model_threshold_0", ""))
+        model_2_name = model_2_metadata.get("model_name", model_2_metadata.get("model_name_0", ""))
+        model_2_threshold = model_2_metadata.get("model_threshold", model_2_metadata.get("model_threshold_0", ""))
 
         # Show result database details
         with vr1_col1:
@@ -80,30 +84,48 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         with vr2_col2:
             st.text(f"Lot ID:\n{model_2_metadata['lot_id']}")
         with vr1_col3:
-            st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata['model_name'])}")
+            st.text(f"Inference Model:\n{helper.format_model_name(model_1_name)}")
         with vr2_col3:
-            st.text(f"Inference Model:\n{helper.format_model_name(model_2_metadata['model_name'])}")
+            st.text(f"Inference Model:\n{helper.format_model_name(model_2_name)}")
 
         # Generate lrf by top k, and adjust threshold according to top k
         if st_gen_lrf_type == "top_k":
             with vr1_col4:
-                rv_m1_topk = st.number_input("Top k", 0, 999, 150, 1,
-                                             help="Top-k defects ranked by Probabilities will be considered as defects.", key='m1_topk')
+                rv_m1_topk = st.number_input(
+                    "Top k",
+                    0,
+                    999,
+                    150,
+                    1,
+                    help="Top-k defects ranked by Probabilities will be considered as defects.",
+                    key="m1_topk",
+                )
             with vr2_col4:
-                rv_m2_topk = st.number_input("Top k", 0, 999, 150, 1,
-                                             help="Top-k defects ranked by Probabilities will be considered as defects.", key='m2_topk')
+                rv_m2_topk = st.number_input(
+                    "Top k",
+                    0,
+                    999,
+                    150,
+                    1,
+                    help="Top-k defects ranked by Probabilities will be considered as defects.",
+                    key="m2_topk",
+                )
             with vr1_col5:
-                result_viewer.gen_lrf(model_id="1",
-                                      output_dir=rv_m1_output_dir,
-                                      gen_lrf_type=st_gen_lrf_type,
-                                      top_k=rv_m1_topk,
-                                      key_number=1)
+                result_viewer.gen_lrf(
+                    model_id="1",
+                    output_dir=rv_m1_output_dir,
+                    gen_lrf_type=st_gen_lrf_type,
+                    top_k=rv_m1_topk,
+                    key_number=1,
+                )
             with vr2_col5:
-                result_viewer.gen_lrf(model_id="2",
-                                      output_dir=rv_m2_output_dir,
-                                      gen_lrf_type=st_gen_lrf_type,
-                                      top_k=rv_m2_topk,
-                                      key_number=2)
+                result_viewer.gen_lrf(
+                    model_id="2",
+                    output_dir=rv_m2_output_dir,
+                    gen_lrf_type=st_gen_lrf_type,
+                    top_k=rv_m2_topk,
+                    key_number=2,
+                )
 
             rv_m1_threshold = helper.get_topk_model_threshold(rv_m1_output_dir, rv_m1_topk)
             rv_m2_threshold = helper.get_topk_model_threshold(rv_m2_output_dir, rv_m2_topk)
@@ -111,44 +133,60 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         # Generate lrf by threshold
         else:
             with vr1_col4:
-                rv_m1_threshold = st.number_input(label="Confidence threshold:",
-                                                  value=model_1_metadata['model_threshold'],
-                                                  step=0.00001,
-                                                  format="%.5f",
-                                                  help="Probabilities above thershold will be considered as defects.",
-                                                  key='m1_threshold')
+                rv_m1_threshold = st.number_input(
+                    label="Confidence threshold:",
+                    value=model_1_threshold,
+                    step=0.00001,
+                    format="%.5f",
+                    help="Probabilities above thershold will be considered as defects.",
+                    key="m1_threshold",
+                )
             with vr2_col4:
-                rv_m2_threshold = st.number_input(label="Confidence threshold:",
-                                                  value=model_2_metadata['model_threshold'],
-                                                  step=0.00001,
-                                                  format="%.5f",
-                                                  help="Probabilities above thershold will be considered as defects.",
-                                                  key='m2_threshold')
+                rv_m2_threshold = st.number_input(
+                    label="Confidence threshold:",
+                    value=model_2_threshold,
+                    step=0.00001,
+                    format="%.5f",
+                    help="Probabilities above thershold will be considered as defects.",
+                    key="m2_threshold",
+                )
 
             # Validate confidence thresholds
             if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
-                logger.error(f'Confidence threshold must be between 0.0 and 1.0! Model 1 selected confidence threshold: {rv_m1_threshold}')
-                st.error(f'Confidence threshold must be between 0.0 and 1.0! Model 1 selected confidence threshold: {rv_m1_threshold}')
+                logger.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Model 1 selected confidence threshold: {rv_m1_threshold}"
+                )
+                st.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Model 1 selected confidence threshold: {rv_m1_threshold}"
+                )
                 return
             elif rv_m2_threshold < 0.0 or rv_m2_threshold > 1.0:
-                logger.error(f'Confidence threshold must be between 0.0 and 1.0! Model 2 selected confidence threshold: {rv_m2_threshold}')
-                st.error(f'Confidence threshold must be between 0.0 and 1.0! Model 2 selected confidence threshold: {rv_m2_threshold}')
+                logger.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Model 2 selected confidence threshold: {rv_m2_threshold}"
+                )
+                st.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Model 2 selected confidence threshold: {rv_m2_threshold}"
+                )
                 return
 
             with vr1_col5:
-                result_viewer.gen_lrf(model_id="1",
-                                      output_dir=rv_m1_output_dir,
-                                      gen_lrf_type=st_gen_lrf_type,
-                                      threshold=rv_m1_threshold,
-                                      key_number=0,
-                                      lot_id=model_1_metadata["lot_id"])
+                result_viewer.gen_lrf(
+                    model_id="1",
+                    output_dir=rv_m1_output_dir,
+                    gen_lrf_type=st_gen_lrf_type,
+                    threshold=rv_m1_threshold,
+                    key_number=0,
+                    lot_id=model_1_metadata["lot_id"],
+                )
             with vr2_col5:
-                result_viewer.gen_lrf(model_id="2",
-                                      output_dir=rv_m2_output_dir,
-                                      gen_lrf_type=st_gen_lrf_type,
-                                      threshold=rv_m2_threshold,
-                                      key_number=1,
-                                      lot_id = model_2_metadata["lot_id"])
+                result_viewer.gen_lrf(
+                    model_id="2",
+                    output_dir=rv_m2_output_dir,
+                    gen_lrf_type=st_gen_lrf_type,
+                    threshold=rv_m2_threshold,
+                    key_number=1,
+                    lot_id=model_2_metadata["lot_id"],
+                )
 
         # Show Total/Defect/Non-defect/unlabeled count
         with r3_header:
@@ -192,9 +230,9 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         # TODO: Get classtype grouping from backend
         with classtype_count:
             with st.expander(label="LRF ClassType count"):
-                defects = helper.get_lrf_data_lists(output_dir=rv_m1_output_dir,
-                                              cols=["ClassType"],
-                                              include_prob=False)[0]
+                defects = helper.get_lrf_data_lists(
+                    output_dir=rv_m1_output_dir, cols=["ClassType"], include_prob=False
+                )[0]
                 classtype_counter_df = result_viewer.get_classtype_count(defects)
                 st.caption(f"LRF type: {model_1_metadata['input_lrf_type']}")
                 st.dataframe(data=classtype_counter_df)
@@ -203,10 +241,14 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         with vr3_col1:
             defect_id_list_1, prob_list_1, ans_list_1 = model_1_raw_data
             defect_id_list_2, prob_list_2, ans_list_2 = model_2_raw_data
-            st.plotly_chart(result_viewer.generate_2D_plot((defect_id_list_1, prob_list_1, ans_list_1, [""] * len(defect_id_list_1)),
-                                                           (defect_id_list_2, prob_list_2, ans_list_2, [""] * len(defect_id_list_2)),
-                                                           rv_m1_threshold,
-                                                           rv_m2_threshold))
+            st.plotly_chart(
+                result_viewer.generate_2D_plot(
+                    (defect_id_list_1, prob_list_1, ans_list_1, [""] * len(defect_id_list_1)),
+                    (defect_id_list_2, prob_list_2, ans_list_2, [""] * len(defect_id_list_2)),
+                    rv_m1_threshold,
+                    rv_m2_threshold,
+                )
+            )
 
         with vr3_col2:
             # TODO: This should be done somewhere else
@@ -217,10 +259,26 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
             else:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)[0]
                 model_2_roc_data = helper.get_roc_data(rv_m2_output_dir, return_curve=True)[0]
-                st.plotly_chart(result_viewer.plot_roc([
-                    ("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold'], rv_m1_output_dir),
-                    ("Model 2", model_2_roc_data, rv_m2_threshold, model_2_metadata['model_threshold'], rv_m2_output_dir),
-                ]))
+                st.plotly_chart(
+                    result_viewer.plot_roc(
+                        [
+                            (
+                                "Model 1",
+                                model_1_roc_data,
+                                rv_m1_threshold,
+                                model_1_threshold,
+                                rv_m1_output_dir,
+                            ),
+                            (
+                                "Model 2",
+                                model_2_roc_data,
+                                rv_m2_threshold,
+                                model_2_threshold,
+                                rv_m2_output_dir,
+                            ),
+                        ]
+                    )
+                )
 
     elif rv_m1_output_dir not in invalid_input:
         model_1_metadata, model_1_raw_data = result_viewer.get_model_data(rv_m1_output_dir)
@@ -230,19 +288,29 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
                 st.error(f"Error getting result data from {rv_m1_output_dir}")
                 return
 
+        model_1_name = model_1_metadata.get("model_name", model_1_metadata.get("model_name_0", ""))
+        model_1_threshold = model_1_metadata.get("model_threshold", model_1_metadata.get("model_threshold_0", ""))
+
         # Show result database details
         with vr1_col1:
             st.text("Model 1 (Base)")
         with vr1_col2:
             st.text(f"Lot ID:\n{model_1_metadata['lot_id']}")
         with vr1_col3:
-            st.text(f"Inference Model:\n{helper.format_model_name(model_1_metadata['model_name'])}")
+            st.text(f"Inference Model:\n{helper.format_model_name(model_1_name)}")
 
         # Generate lrf by top k, and adjust threshold according to top k
         if st_gen_lrf_type == "top_k":
             with vr1_col4:
-                rv_m1_topk = st.number_input("Top k", 0, 999, 150, 1,
-                                            help="Top-k defects ranked by Probabilities will be considered as defects.", key='m1_topk')
+                rv_m1_topk = st.number_input(
+                    "Top k",
+                    0,
+                    999,
+                    150,
+                    1,
+                    help="Top-k defects ranked by Probabilities will be considered as defects.",
+                    key="m1_topk",
+                )
             with vr1_col5:
                 result_viewer.gen_lrf("1", rv_m1_output_dir, st_gen_lrf_type, top_k=rv_m1_topk)
 
@@ -251,17 +319,23 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         # Generate lrf by threshold
         else:
             with vr1_col4:
-                rv_m1_threshold = st.number_input(label="Confidence threshold:",
-                                                  value=model_1_metadata['model_threshold'],
-                                                  step=0.00001,
-                                                  format="%.5f",
-                                                  help="Probabilities above thershold will be considered as defects.",
-                                                  key='m1_threshold')
+                rv_m1_threshold = st.number_input(
+                    label="Confidence threshold:",
+                    value=model_1_threshold,
+                    step=0.00001,
+                    format="%.5f",
+                    help="Probabilities above threshold will be considered as defects.",
+                    key="m1_threshold",
+                )
 
             # Validate confidence threshold
             if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
-                logger.error(f'Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}')
-                st.error(f'Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}')
+                logger.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}"
+                )
+                st.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}"
+                )
                 return
 
             with vr1_col5:
@@ -290,9 +364,9 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
         # TODO: Get classtype grouping from backend
         with classtype_count:
             with st.expander(label="LRF ClassType count"):
-                defects = helper.get_lrf_data_lists(output_dir=rv_m1_output_dir,
-                                              cols=["ClassType"],
-                                              include_prob=False)[0]
+                defects = helper.get_lrf_data_lists(
+                    output_dir=rv_m1_output_dir, cols=["ClassType"], include_prob=False
+                )[0]
                 classtype_counter_df = result_viewer.get_classtype_count(defects)
                 st.caption(f"LRF type: {model_1_metadata['input_lrf_type']}")
                 st.dataframe(data=classtype_counter_df)
@@ -309,7 +383,19 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
             else:
                 model_1_roc_data = helper.get_roc_data(rv_m1_output_dir, return_curve=True)[0]
-                st.plotly_chart(result_viewer.plot_roc([("Model 1", model_1_roc_data, rv_m1_threshold, model_1_metadata['model_threshold'], rv_m1_output_dir)]))
+                st.plotly_chart(
+                    result_viewer.plot_roc(
+                        [
+                            (
+                                "Model 1",
+                                model_1_roc_data,
+                                rv_m1_threshold,
+                                model_1_threshold,
+                                rv_m1_output_dir,
+                            )
+                        ]
+                    )
+                )
 
     else:
         pass
