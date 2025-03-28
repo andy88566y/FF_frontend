@@ -558,7 +558,8 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
         )
 
         # Convert model name to user-readable format
-        multilot_inference_status["model_name"] = multilot_inference_status["model_name"].apply(format_model_name)
+        if "model_name" in multilot_inference_status.columns:
+            multilot_inference_status["model_name"] = multilot_inference_status["model_name"].apply(format_model_name)
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
         multilot_inference_status = multilot_inference_status.rename(columns={"index": "inference_id"})
