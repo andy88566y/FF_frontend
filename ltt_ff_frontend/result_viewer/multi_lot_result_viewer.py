@@ -271,13 +271,13 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
         with model_1_statistics.container():
             model_1_selected_lot_id_list = result_viewer.show_multilot_statistics(
-                model_1_raw_data, model_1_metadata, rv_m1_threshold
+                model_1_raw_data, model_1_metadata, rv_m1_threshold, 'model_1_stats'
             )
 
         with r4_header:
             st.subheader("Model 2 results")
         with model_2_statistics.container():
-            result_viewer.show_multilot_statistics(model_2_raw_data, model_2_metadata, rv_m2_threshold)
+            result_viewer.show_multilot_statistics(model_2_raw_data, model_2_metadata, rv_m2_threshold, 'model_2_stats')
 
         # TODO: Get classtype grouping from backend
         with classtype_count:
@@ -421,7 +421,7 @@ def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, s
 
         with model_1_statistics.container():
             model_1_selected_lot_id_list = result_viewer.show_multilot_statistics(
-                model_1_raw_data, model_1_metadata, rv_m1_threshold
+                model_1_raw_data, model_1_metadata, rv_m1_threshold, 'model_1_stats'
             )
 
         # TODO: Get classtype grouping from backend

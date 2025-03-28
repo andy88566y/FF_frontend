@@ -157,6 +157,7 @@ def show_multilot_statistics(
     raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
     model_metadata: list[dict[str, Any]],
     selected_threshold,
+    key: str = 'model_stats'
 ) -> None:
     defect_id_lists, probability_lists, answer_lists = raw_data
     data = []
@@ -200,8 +201,14 @@ def show_multilot_statistics(
         .apply(highlight_capture_rate, subset=[("True Defect Count", "Capture Rate")], axis=0)
     )
     event = st.dataframe(
-        styled_df, use_container_width=True, hide_index=True, on_select="rerun", selection_mode="multi-row"
+        styled_df,
+        key=key,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="multi-row"
     )
+    logger.debug(event)
 
     selected_rows = event.selection.rows
     selected_df = df.iloc[selected_rows]
