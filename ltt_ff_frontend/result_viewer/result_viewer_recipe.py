@@ -6,6 +6,7 @@ import streamlit as st
 import yaml
 from loguru import logger
 
+from ltt_ff_frontend.constant import BLANK_MODEL
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
@@ -75,20 +76,22 @@ def app() -> None:
     st.caption("Visualize False Filter Result")
 
     r1_col1, r1_col2 = st.columns([1, 1])
+    # TODO: Switch to list
+    rc1_col1, rc1_col2, rc1_col3 = st.columns([3, 2, 2])
+    rc2_col1, rc2_col2, rc2_col3 = st.columns([3, 2, 2])
+    rc3_col1, rc3_col2, rc3_col3 = st.columns([3, 2, 2])
+    rc4_col1, rc4_col2, rc4_col3 = st.columns([3, 2, 2])
+    rc5_col1, rc5_col2, rc5_col3 = st.columns([3, 2, 2])
 
     output_dir_default = "/mnt/dbpc/xxx"
     with r1_col1:
         rv_output_dir = st.text_input("Inference (Recipe) Result Directory", value=output_dir_default)
     with r1_col2:
-        yaml_help_text = """
-        **Example of a valid recipe:**\n
-        recipes:\n
-        \- model_name: base/model_1.encrypted.pth\n
-        &nbsp;&nbsp;threshold: 0.5\n
-        \- model_name: base/model_2.encrypted.pth\n
-        &nbsp;&nbsp;threshold: 0.9\n
-        """
-        recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
+        st_recipe_type = st.segmented_control("Recipe UI", ["yaml", "creator"], default="yaml")
+
+        if st_recipe_type is None:
+            st.error("Recipe UI Option can not be None!")
+            return
 
     db_files = glob.glob(f"{rv_output_dir}/*.db")
 
@@ -96,16 +99,137 @@ def app() -> None:
         st.error(f"Error: multiple ({len(db_files)}) .db files found in {rv_output_dir}")
         return
 
-    if recipe_file is not None:
-        st.subheader("Recipe preview:")
-        recipe = yaml.load(recipe_file, Loader=yaml.Loader)
-        st.json(recipe)
+    recipe = None
+    if st_recipe_type == "yaml":
+        with rc1_col1:
+            yaml_help_text = """
+            **Example of a valid recipe:**\n
+            recipes:\n
+            \- model_name: base/model_1.encrypted.pth\n
+            &nbsp;&nbsp;threshold: 0.5\n
+            \- model_name: base/model_2.encrypted.pth\n
+            &nbsp;&nbsp;threshold: 0.9\n
+            """
+            recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
+
+        if recipe_file is not None:
+            recipe = yaml.load(recipe_file, Loader=yaml.Loader)
+    else:
+        available_models = helper.get_base_models(include_blank=True)
+        # TODO: Switch to for loops
+        # TODO: Decide if we want to allow shuffle for users
+        with rc1_col1:
+            recipe_model_1 = st.selectbox(
+                "Model 1", options=available_models, index=0, format_func=helper.format_model_name
+            )
+        with rc1_col2:
+            recipe_model_threshold_1 = st.number_input(
+                label="Model 1 threshold:",
+                value=helper.get_model_threshold(model_name=recipe_model_1),
+                step=0.00001,
+                format="%.5f",
+                help="Probabilities below threshold will be considered as non-defects.",
+            )
+        # with rc1_col3:
+        #     recipe_model_suf_1 = st.toggle("Model 1 SUF")
+
+        with rc2_col1:
+            recipe_model_2 = st.selectbox(
+                "Model 2", options=available_models, index=0, format_func=helper.format_model_name
+            )
+        with rc2_col2:
+            recipe_model_threshold_2 = st.number_input(
+                label="Model 2 threshold:",
+                value=helper.get_model_threshold(model_name=recipe_model_2),
+                step=0.00001,
+                format="%.5f",
+                help="Probabilities below threshold will be considered as non-defects.",
+            )
+        # with rc2_col3:
+        #     recipe_model_suf_2 = st.toggle("Model 2 SUF")
+
+        with rc3_col1:
+            recipe_model_3 = st.selectbox(
+                "Model 3", options=available_models, index=0, format_func=helper.format_model_name
+            )
+        with rc3_col2:
+            recipe_model_threshold_3 = st.number_input(
+                label="Model 3 threshold:",
+                value=helper.get_model_threshold(model_name=recipe_model_3),
+                step=0.00001,
+                format="%.5f",
+                help="Probabilities below threshold will be considered as non-defects.",
+            )
+        # with rc3_col3:
+        #     recipe_model_suf_3 = st.toggle("Model 3 SUF")
+
+        with rc4_col1:
+            recipe_model_4 = st.selectbox(
+                "Model 4", options=available_models, index=0, format_func=helper.format_model_name
+            )
+        with rc4_col2:
+            recipe_model_threshold_4 = st.number_input(
+                label="Model 4 threshold:",
+                value=helper.get_model_threshold(model_name=recipe_model_4),
+                step=0.00001,
+                format="%.5f",
+                help="Probabilities below threshold will be considered as non-defects.",
+            )
+        # with rc4_col3:
+        #     recipe_model_suf_4 = st.toggle("Model 4 SUF")
+
+        with rc5_col1:
+            recipe_model_5 = st.selectbox(
+                "Model 5", options=available_models, index=0, format_func=helper.format_model_name
+            )
+        with rc5_col2:
+            recipe_model_threshold_5 = st.number_input(
+                label="Model 5 threshold:",
+                value=helper.get_model_threshold(model_name=recipe_model_5),
+                step=0.00001,
+                format="%.5f",
+                help="Probabilities below threshold will be considered as non-defects.",
+            )
+        # with rc5_col3:
+        #     recipe_model_suf_5 = st.toggle("Model 5 SUF")
+
+        recipe_models = [recipe_model_1, recipe_model_2, recipe_model_3, recipe_model_4, recipe_model_5]
+        recipe_model_thresholds = [
+            recipe_model_threshold_1,
+            recipe_model_threshold_2,
+            recipe_model_threshold_3,
+            recipe_model_threshold_4,
+            recipe_model_threshold_5,
+        ]
+        # recipe_model_sufs = [
+        #     recipe_model_suf_1,
+        #     recipe_model_suf_2,
+        #     recipe_model_suf_3,
+        #     recipe_model_suf_4,
+        #     recipe_model_suf_5,
+        # ]
+
+        recipe = {"recipes": []}
+        for recipe_model, threshold in zip(recipe_models, recipe_model_thresholds):
+            if recipe_model != BLANK_MODEL:
+                recipe["recipes"].append(
+                    {
+                        "model_name": recipe_model,
+                        "threshold": threshold,
+                    }
+                )
 
     st.divider()
 
+    if recipe is not None:
+        st.subheader("Recipe preview:")
+        st.code(yaml.dump(recipe), language="yaml")
+
+        st.divider()
+
     invalid_input = [output_dir_default, ""]
 
-    if rv_output_dir not in invalid_input and recipe_file is not None:
+    if rv_output_dir not in invalid_input and recipe is not None:
         model_metadata = helper.get_db_metadata_lists(rv_output_dir)[0]
 
         if model_metadata is None:

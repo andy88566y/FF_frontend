@@ -47,7 +47,7 @@ def app() -> None:
     st.subheader("Recipe preview:")
     if recipe_file is not None:
         recipe = yaml.load(recipe_file, Loader=yaml.Loader)
-        st.json(recipe)
+        st.code(yaml.dump(recipe), language="yaml")
 
     if st.button("Start Inference Job", type="primary"):
         # Validate user input first

@@ -1,6 +1,8 @@
 API_ROOT = "http://localhost:6500/api/v1/"
 TIMEOUT = 10
 
+BLANK_MODEL = "[UNUSED]"
+
 OPTIMIZER_TYPE = ["Adam", "AdamW"]
 OPTIMIZER_PARAMS = {
     "Adam": {

@@ -1,5 +1,4 @@
 import base64
-import os
 from pprint import pformat
 from typing import Any, Literal, Optional
 
@@ -9,7 +8,7 @@ import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
+from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT
 
 
 #####################################################################################################
@@ -26,9 +25,11 @@ def gap(size: int) -> None:
         st.write("")
 
 
-def format_model_name(name: str) -> str:
+def format_model_name(name: str | None) -> str:
     if name is None:
         return "SCRATCH"
+    if name == BLANK_MODEL:
+        return BLANK_MODEL
     # For base model name (e.g. base/LTT_SW#x9u#N3#M0-M2#20250124T000000Z#55032dae#55032dae.encrypted.pth)
     if "/" in name:
         model_paths = name.split("/")
@@ -44,7 +45,7 @@ def format_model_name(name: str) -> str:
 # Get model information                                                                             #
 #####################################################################################################
 @st.cache_data(ttl="10s")
-def get_base_models() -> list[str]:
+def get_base_models(include_blank: bool = False) -> list[str]:
     """
     Returns a list of all available models to be used for inference or fine-tuning.
     """
@@ -56,7 +57,7 @@ def get_base_models() -> list[str]:
     else:
         base_model_list = r.json()["model_list"]
         logger.info(f"List of base models: {base_model_list}")
-        return base_model_list
+        return base_model_list if not include_blank else [BLANK_MODEL] + base_model_list
 
 
 @st.cache_data(ttl="300s")
