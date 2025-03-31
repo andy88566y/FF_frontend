@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from plotly.subplots import make_subplots
 
 
@@ -14,8 +14,12 @@ def load_image(path: str) -> Image:
     if path and os.path.exists(path):
         return Image.open(path).convert("RGBA")
     else:
-        return Image.fromarray(np.zeros((256, 256, 4), dtype=np.uint8))
-
+        width, height = 200, 200
+        image = Image.new('RGBA', (width, height), color='white')
+        draw = ImageDraw.Draw(image)
+        draw.line((0, 0, width, height), fill='red', width=10)
+        draw.line((0, height, width, 0), fill='red', width=10)
+        return image
 
 def bresenham_line(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
     points = []
@@ -128,7 +132,7 @@ def create_chart(df: pd.DataFrame, domain: list[str], range_colors: list[str]) -
 
 
 def app(selected_row: pd.DataFrame, image_dir: str) -> None:
-    st.subheader(f"Defect {selected_row.No.values[0]}")
+    st.subheader(f"Defect No {selected_row['No'].values[0]}, UniqueID: {selected_row['UniqueID'].values[0]}")
 
     # Create a single row with three columns for X, Y, and ClassType
     cola, colb, colc = st.columns(3)
@@ -146,33 +150,49 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
     col1, col2, col3 = st.columns(3)
 
     # Construct the file paths_Rt
-    base_path = f"{image_dir}/Images/InstantReviewRt/"
-    no = selected_row.No.values[0]
-    type_options = ["L", "L_p", "U", "U_p"]
+    if not selected_row['UniqueID'].values[0]:
+        # .blrf
+        base_path = f"{image_dir}/Images/InstantReviewTDI_2/"
+        no = selected_row.UniqueID.values[0]
+        test_image_path = f"{base_path}{no}_C.png"
+        diff_image_path = f"{base_path}{no}_M_D.png"
+    else:
+        # .lrf
+        base_path = f"{image_dir}/Images/InstantReviewRt/"
+        no = selected_row.No.values[0]
+        test_image_path = f"{base_path}{no}.png"
+        diff_image_path = f"{base_path}{no}D.png"
 
-    ref_image_path = f"{base_path}{no}.png"
-    diff_image_path = f"{base_path}{no}D.png"
+    type_options = ["L", "L_p", "U", "U_p", "_M", "_M_D"]
 
     # Find the correct test image path
-    test_image_path = None
+    ref_image_path = None
     for type_option in type_options:
         potential_path = f"{base_path}{no}{type_option}.png"
         if os.path.exists(potential_path):
-            test_image_path = potential_path
+            ref_image_path = potential_path
             break
 
     # Construct the file paths_T
     base_path_T = f"{image_dir}/Images/InstantReviewT/"
-    type_options = ["L", "L_p", "U", "U_p"]
-    ref_image_path_T = f"{base_path_T}{no}.png"
-    diff_image_path_T = f"{base_path_T}{no}D.png"
+    
+    if not selected_row['UniqueID'].values[0]:
+        # .blrf
+        base_path_T = f"{image_dir}/Images/InstantReviewTDI_1/"
+        test_image_path_T = f"{base_path_T}{no}_C.png"
+        diff_image_path_T = f"{base_path_T}{no}_M_D.png"
+    else:
+        # .lrf
+        base_path_T = f"{image_dir}/Images/InstantReviewT/"
+        test_image_path_T = f"{base_path_T}{no}.png"
+        diff_image_path_T = f"{base_path_T}{no}D.png"
 
     # Find the correct test image path_T
-    test_image_path_T = None
+    ref_image_path_T = None
     for type_option in type_options:
         potential_path_T = f"{base_path_T}{no}{type_option}.png"
         if os.path.exists(potential_path_T):
-            test_image_path_T = potential_path_T
+            ref_image_path_T = potential_path_T
             break
 
     # Load images
