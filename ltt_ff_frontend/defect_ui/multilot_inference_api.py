@@ -144,7 +144,9 @@ def app() -> None:
             ]
 
             # Get detailed statuses for each inference job and combine into one df
-            st.session_state.detailed_df_multi_inf = helper.request_multilot_inference_statuses(
-                selected_multilot_inference_id
-            )
+            raw_df_multi_inf = helper.request_multilot_inference_statuses(selected_multilot_inference_id)
+            # Set up display
+            st.session_state.detailed_df_multi_inf = raw_df_multi_inf
             st.dataframe(st.session_state.detailed_df_multi_inf, use_container_width=True)
+            # Stop job button
+            helper.add_stop_job_button(raw_df_multi_inf)
