@@ -344,4 +344,4 @@ def app(result_dir: str, image_dir: str) -> None:
         selected_data = df[df["No"] == defect_number]
 
     if selected_data is not None:
-        detail_view.app(selected_data, image_dir)
+        detail_view.app(selected_data, image_dir, db_metadata['input_lrf_ext'])

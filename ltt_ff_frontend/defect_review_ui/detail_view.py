@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from loguru import logger
 from PIL import Image, ImageDraw, ImageFont
 from plotly.subplots import make_subplots
 
@@ -130,8 +131,8 @@ def create_chart(df: pd.DataFrame, domain: list[str], range_colors: list[str]) -
     )
     return chart
 
-
-def app(selected_row: pd.DataFrame, image_dir: str) -> None:
+# ext= "lrf" or "blrf"
+def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
     st.subheader(f"Defect No {selected_row['No'].values[0]}, UniqueID: {selected_row['UniqueID'].values[0]}")
 
     # Create a single row with three columns for X, Y, and ClassType
@@ -150,18 +151,20 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
     col1, col2, col3 = st.columns(3)
 
     # Construct the file paths_Rt
-    if not selected_row['UniqueID'].values[0]:
+    if ext == 'blrf':
         # .blrf
         base_path = f"{image_dir}/Images/InstantReviewTDI_2/"
         no = selected_row.UniqueID.values[0]
         test_image_path = f"{base_path}{no}_C.png"
         diff_image_path = f"{base_path}{no}_M_D.png"
-    else:
+    elif ext == 'lrf':
         # .lrf
         base_path = f"{image_dir}/Images/InstantReviewRt/"
         no = selected_row.No.values[0]
         test_image_path = f"{base_path}{no}.png"
         diff_image_path = f"{base_path}{no}D.png"
+    else:
+        logger.error('unkown format when infering image file name.')
 
     type_options = ["L", "L_p", "U", "U_p", "_M", "_M_D"]
 
@@ -174,19 +177,18 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
             break
 
     # Construct the file paths_T
-    base_path_T = f"{image_dir}/Images/InstantReviewT/"
-    
-    if not selected_row['UniqueID'].values[0]:
+    if ext == 'blrf':
         # .blrf
         base_path_T = f"{image_dir}/Images/InstantReviewTDI_1/"
         test_image_path_T = f"{base_path_T}{no}_C.png"
         diff_image_path_T = f"{base_path_T}{no}_M_D.png"
-    else:
+    elif ext == 'lrf':
         # .lrf
         base_path_T = f"{image_dir}/Images/InstantReviewT/"
         test_image_path_T = f"{base_path_T}{no}.png"
         diff_image_path_T = f"{base_path_T}{no}D.png"
-
+    else:
+        logger.error('unkown format when infering image file name.')
     # Find the correct test image path_T
     ref_image_path_T = None
     for type_option in type_options:
