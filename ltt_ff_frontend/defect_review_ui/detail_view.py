@@ -150,13 +150,19 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
     # Create three columns
     col1, col2, col3 = st.columns(3)
 
+    type_options = ["L", "L_p", "U", "U_p", "_M", "_L", "_U"]
+    ref_image_path, diff_image_path = None, None
     # Construct the file paths_Rt
     if ext == 'blrf':
         # .blrf
         base_path = f"{image_dir}/Images/InstantReviewTDI_2/"
         no = selected_row.UniqueID.values[0]
         test_image_path = f"{base_path}{no}_C.png"
-        diff_image_path = f"{base_path}{no}_M_D.png"
+        for type_option in ["_M_D", "_U_D", "_L_D"]:
+            potential_path = f"{base_path}{no}{type_option}.png"
+            if os.path.exists(potential_path):
+                diff_image_path = potential_path
+                break
     elif ext == 'lrf':
         # .lrf
         base_path = f"{image_dir}/Images/InstantReviewRt/"
@@ -166,10 +172,7 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
     else:
         logger.error('unkown format when infering image file name.')
 
-    type_options = ["L", "L_p", "U", "U_p", "_M", "_M_D"]
-
     # Find the correct test image path
-    ref_image_path = None
     for type_option in type_options:
         potential_path = f"{base_path}{no}{type_option}.png"
         if os.path.exists(potential_path):
@@ -177,11 +180,16 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
             break
 
     # Construct the file paths_T
+    ref_image_path_T, diff_image_path_T = None, None
     if ext == 'blrf':
         # .blrf
         base_path_T = f"{image_dir}/Images/InstantReviewTDI_1/"
         test_image_path_T = f"{base_path_T}{no}_C.png"
-        diff_image_path_T = f"{base_path_T}{no}_M_D.png"
+        for type_option in ["_M_D", "_U_D", "_L_D"]:
+            potential_path = f"{base_path}{no}{type_option}.png"
+            if os.path.exists(potential_path):
+                diff_image_path_T = potential_path
+                break
     elif ext == 'lrf':
         # .lrf
         base_path_T = f"{image_dir}/Images/InstantReviewT/"
@@ -190,7 +198,6 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
     else:
         logger.error('unkown format when infering image file name.')
     # Find the correct test image path_T
-    ref_image_path_T = None
     for type_option in type_options:
         potential_path_T = f"{base_path_T}{no}{type_option}.png"
         if os.path.exists(potential_path_T):
