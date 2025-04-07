@@ -131,9 +131,9 @@ def create_chart(df: pd.DataFrame, domain: list[str], range_colors: list[str]) -
     )
     return chart
 
-# ext= "lrf" or "blrf"
 def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
-    st.subheader(f"Defect No {selected_row['No'].values[0]}, UniqueID: {selected_row['UniqueID'].values[0]}")
+    display_no = selected_row['No'].values[0] if ext == 'lrf' else selected_row['UniqueID'].values[0]
+    st.subheader(f"Defect No {display_no}")
 
     # Create a single row with three columns for X, Y, and ClassType
     cola, colb, colc = st.columns(3)
