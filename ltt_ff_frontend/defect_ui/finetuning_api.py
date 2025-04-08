@@ -184,6 +184,9 @@ def app() -> None:
                 st.session_state.status_df_fin.iloc[i]["training_id"] for i in event_fin.selection["rows"]
             ]
 
-            # Get detailed statuses for each finetuning job and combine into one df
-            st.session_state.detailed_df_fin = helper.request_finetuning_statuses(selected_finetuning_id)
+            # Get detailed statuses for each inference job and combine into one df
+            raw_df_fin = helper.request_finetuning_statuses(selected_finetuning_id)
+            st.session_state.detailed_df_fin = raw_df_fin
             st.dataframe(st.session_state.detailed_df_fin, use_container_width=True)
+            # Stop job button
+            helper.add_stop_job_button(raw_df_fin)

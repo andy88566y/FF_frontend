@@ -1214,10 +1214,31 @@ def get_predictions(
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-def format_url(params: dict[str, str]):
+def format_url(params: dict[str, str]) -> str:
     # TODO: Get correct base url
     base_url = "http://xxx:6501"
     param_strs = []
     for k, v in params.items():
         param_strs.append(f"{k}={base64.urlsafe_b64encode(str.encode(v)).decode()}")
     return f"{base_url}/?{'&'.join(param_strs)}"
+
+
+#####################################################################################################
+# Common API                                                                                        #
+#####################################################################################################
+@st.cache_data(ttl="1s")
+def request_stop_job(job_id: str) -> str:
+    r = requests.post(f"{API_ROOT}stop_job?job_id={job_id}", timeout=TIMEOUT)
+    
+    return f"{r.status_code}: {r.json().get('message', 'message not found...')}"
+
+def add_stop_job_button(df: pd.DataFrame) -> None:
+    render_cols = st.columns(len(df.columns) + 1, vertical_alignment="top")
+    for job_id, render_col in zip(df.columns, render_cols[1:]):
+        with render_col:
+            cannot_stop = df.loc["status", job_id] in ["completed", "error", "stopped", "stopping"]
+            if st.button(
+                f"stop {job_id}", key=f"stop-{job_id}", use_container_width=True, disabled=cannot_stop
+            ):
+                message = request_stop_job(job_id)
+                st.write(message)
