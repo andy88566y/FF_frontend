@@ -1209,7 +1209,6 @@ def get_predictions(
     output_dir: str,
     recipe: dict[str, Any],
     defect_list: Optional[list[list[str]]] = None,
-    top_k: Optional[int] = None,
 ) -> list[list[int]]:
     """
     Read a list of the ground truths from a database.
@@ -1227,7 +1226,6 @@ def get_predictions(
             "output_dir": output_dir,
             "defect_id_list": defect_list,
             "recipe": recipe,
-            "top_k": top_k,
         },
         timeout=TIMEOUT,
     )
@@ -1254,16 +1252,15 @@ def format_url(params: dict[str, str]) -> str:
 @st.cache_data(ttl="1s")
 def request_stop_job(job_id: str) -> str:
     r = requests.post(f"{API_ROOT}stop_job?job_id={job_id}", timeout=TIMEOUT)
-    
+
     return f"{r.status_code}: {r.json().get('message', 'message not found...')}"
+
 
 def add_stop_job_button(df: pd.DataFrame) -> None:
     render_cols = st.columns(len(df.columns) + 1, vertical_alignment="top")
     for job_id, render_col in zip(df.columns, render_cols[1:]):
         with render_col:
             cannot_stop = df.loc["status", job_id] in ["completed", "error", "stopped", "stopping"]
-            if st.button(
-                f"stop {job_id}", key=f"stop-{job_id}", use_container_width=True, disabled=cannot_stop
-            ):
+            if st.button(f"stop {job_id}", key=f"stop-{job_id}", use_container_width=True, disabled=cannot_stop):
                 message = request_stop_job(job_id)
                 st.write(message)
