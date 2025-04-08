@@ -15,12 +15,15 @@ def load_image(path: str) -> Image:
     if path and os.path.exists(path):
         return Image.open(path).convert("RGBA")
     else:
-        width, height = 200, 200
-        image = Image.new('RGBA', (width, height), color='white')
-        draw = ImageDraw.Draw(image)
-        draw.line((0, 0, width, height), fill='red', width=10)
-        draw.line((0, height, width, 0), fill='red', width=10)
-        return image
+        return draw_red_cross()
+
+def draw_red_cross() -> Image:
+    width, height = 200, 200
+    image = Image.new('RGBA', (width, height), color='white')
+    draw = ImageDraw.Draw(image)
+    draw.line((0, 0, width, height), fill='red', width=10)
+    draw.line((0, height, width, 0), fill='red', width=10)
+    return image
 
 def bresenham_line(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
     points = []
