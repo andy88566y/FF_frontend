@@ -1182,7 +1182,6 @@ def get_predictions(
     output_dir: str,
     recipe: dict[str, Any],
     defect_list: Optional[list[list[str]]] = None,
-    recipe_mode: Literal["FILTER", "CATCHER"] = "FILTER",
     top_k: Optional[int] = None,
 ) -> list[list[int]]:
     """
@@ -1201,7 +1200,6 @@ def get_predictions(
             "output_dir": output_dir,
             "defect_id_list": defect_list,
             "recipe": recipe,
-            "recipe_mode": recipe_mode,
             "top_k": top_k,
         },
         timeout=TIMEOUT,

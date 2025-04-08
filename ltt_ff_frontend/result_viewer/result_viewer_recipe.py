@@ -88,7 +88,6 @@ def app() -> None:
         rv_output_dir = st.text_input("Inference (Recipe) Result Directory", value=output_dir_default)
     with r1_col2:
         st_recipe_type = st.segmented_control("Recipe UI", ["yaml", "creator"], default="yaml")
-
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
             return
