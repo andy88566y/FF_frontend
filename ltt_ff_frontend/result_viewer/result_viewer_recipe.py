@@ -75,7 +75,7 @@ def app() -> None:
     st.title("False Filter Result Viewer (Recipe)")
     st.caption("Visualize False Filter Result")
 
-    r1_col1, r1_col2 = st.columns([1, 1])
+    r1_col1, r1_col2, r1_col3 = st.columns([2, 2, 1])
     # TODO: Switch to list
     rc1_col1, rc1_col2, rc1_col3 = st.columns([3, 2, 2])
     rc2_col1, rc2_col2, rc2_col3 = st.columns([3, 2, 2])
@@ -88,7 +88,6 @@ def app() -> None:
         rv_output_dir = st.text_input("Inference (Recipe) Result Directory", value=output_dir_default)
     with r1_col2:
         st_recipe_type = st.segmented_control("Recipe UI", ["yaml", "creator"], default="yaml")
-
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
             return
@@ -236,6 +235,19 @@ def app() -> None:
             with r1_col2:
                 st.error(f"Error getting result data from {rv_output_dir}")
                 return
+
+        with r1_col3:
+            if st.button("Generate new lrf with Recipe"):
+                request = helper.request_recipe_lrf(output_dir=rv_output_dir, recipe=recipe, lot_id="")
+
+                if request.json().get("status") == "error":
+                    code = request.json().get("code")
+                    message = request.json().get("message")
+                    st.error(f".lrf file not generated!\nError code: {code}\nError message: {message}")
+                    logger.error(f".lrf file not generated!\nError code: {code}\nError message: {message}")
+                else:
+                    st.success(f"New .lrf file using recipe generated at {rv_output_dir}!")
+                    logger.info(f"New .lrf file using recipe generated at {rv_output_dir}!")
 
         # Show result database details
         st.subheader(f"Lot ID: {model_metadata['lot_id']}")

@@ -80,10 +80,37 @@ def get_model_threshold(model_name: str) -> float:
 #####################################################################################################
 # Generate LRF                                                                                      #
 #####################################################################################################
+def request_recipe_lrf(output_dir: str, recipe: dict[str, Any], lot_id: str) -> requests.Response:
+    """
+    Args:
+        output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
+        recipe: Recipe for lrf generation
+        lot_id: Name of the lot of defect images.
+
+    Returns the reponse of the API request.
+    """
+    r = requests.post(
+        API_ROOT + "generate_lrf",
+        json={
+            "output_dir": output_dir,
+            "recipe": recipe,
+            "lot_id": lot_id,
+        },
+        timeout=TIMEOUT,
+    )
+
+    status = r.json()["status"]
+
+    if status == "started":
+        logger.info(".lrf generation requested successfully!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+
+    return r
+
+
 def request_threshold_lrf(output_dir: str, confidence_threshold: float, lot_id: str) -> requests.Response:
     """
-    Calls FalseFilter API with use_cache=True.
-
     Args:
         output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
         confidence_threshold: Images with defect probability lower than confidence threshold
@@ -1182,7 +1209,6 @@ def get_predictions(
     output_dir: str,
     recipe: dict[str, Any],
     defect_list: Optional[list[list[str]]] = None,
-    recipe_mode: Literal["FILTER", "CATCHER"] = "FILTER",
     top_k: Optional[int] = None,
 ) -> list[list[int]]:
     """
@@ -1201,7 +1227,6 @@ def get_predictions(
             "output_dir": output_dir,
             "defect_id_list": defect_list,
             "recipe": recipe,
-            "recipe_mode": recipe_mode,
             "top_k": top_k,
         },
         timeout=TIMEOUT,
