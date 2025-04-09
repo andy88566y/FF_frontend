@@ -140,3 +140,5 @@ def app() -> None:
             # Get detailed statuses for each inference job and combine into one df
             st.session_state.detailed_df_inf = helper.request_inference_statuses(selected_inference_id)
             st.dataframe(st.session_state.detailed_df_inf, use_container_width=True)
+            # Stop job button
+            helper.add_stop_job_button(st.session_state.detailed_df_inf)
