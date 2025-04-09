@@ -1,6 +1,6 @@
 import base64
 from pprint import pformat
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -564,7 +564,8 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
         if column not in sorted_inference_statuses_df.columns:
             sorted_inference_statuses_df[column] = inference_status[column]
 
-    return sorted_inference_statuses_df
+    # st.dataframe will complain when converting non-string type objects
+    return sorted_inference_statuses_df.astype(str)
 
 
 def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) -> pd.DataFrame:
