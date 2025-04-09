@@ -527,6 +527,10 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
                 else None
             )
 
+        # If error_message is not in the DF then it shows up as 'nan' on the DF table
+        if "error_message" not in inference_status.columns:
+            inference_status["error_message"] = "None"
+
         # TODO: Make hyper-link work
         # inference_status['Review Link'] = inference_status[["output_dir", "image_dir"]].apply(
         #     lambda x: format_url({'result_dir': x['output_dir'], 'image_dir': x['image_dir']}), axis=1
