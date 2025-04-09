@@ -641,7 +641,7 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
         if column not in sorted_multilot_inference_statuses_df.columns:
             sorted_multilot_inference_statuses_df[column] = multilot_inference_status[column]
 
-    return sorted_multilot_inference_statuses_df
+    return sorted_multilot_inference_statuses_df.astype(str)
 
 
 #####################################################################################################
@@ -776,7 +776,7 @@ def request_basetrain(
 
 
 @st.cache_data(ttl="1s")
-def request_paginated_finetuning_status(page_size: int, current_page: int) -> dict[str, Any]:
+def request_paginated_finetuning_status(page_size: int, current_page: int) -> pd.DataFrame:
     """
     Gets pagainated inference status by calling FalseFilter API
 
@@ -970,7 +970,7 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
         if column not in sorted_finetuning_statuses_df.columns:
             sorted_finetuning_statuses_df[column] = finetuning_status[column]
 
-    return sorted_finetuning_statuses_df
+    return sorted_finetuning_statuses_df.astype(str)
 
 
 #####################################################################################################
