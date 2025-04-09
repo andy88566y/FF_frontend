@@ -18,7 +18,7 @@ def load_image(path: str) -> Image:
         return draw_red_cross()
 
 def draw_red_cross() -> Image:
-    width, height = 200, 200
+    width, height = 256, 256
     image = Image.new('RGBA', (width, height), color='white')
     draw = ImageDraw.Draw(image)
     draw.line((0, 0, width, height), fill='red', width=10)
@@ -234,13 +234,12 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
         ),
     )
 
-    # Add images to the subplot
-    fig.add_trace(go.Image(z=np.array(ref_image)), row=1, col=1)
-    fig.add_trace(go.Image(z=np.array(test_image)), row=1, col=2)
-    fig.add_trace(go.Image(z=np.array(diff_image)), row=1, col=3)
-    fig.add_trace(go.Image(z=np.array(ref_image_T)), row=2, col=1)
-    fig.add_trace(go.Image(z=np.array(test_image_T)), row=2, col=2)
-    fig.add_trace(go.Image(z=np.array(diff_image_T)), row=2, col=3)
+    fig.add_trace(go.Image(z=np.flipud(np.array(ref_image))), row=1, col=1)
+    fig.add_trace(go.Image(z=np.flipud(np.array(test_image))), row=1, col=2)
+    fig.add_trace(go.Image(z=np.flipud(np.array(diff_image))), row=1, col=3)
+    fig.add_trace(go.Image(z=np.flipud(np.array(ref_image_T))), row=2, col=1)
+    fig.add_trace(go.Image(z=np.flipud(np.array(test_image_T))), row=2, col=2)
+    fig.add_trace(go.Image(z=np.flipud(np.array(diff_image_T))), row=2, col=3)
 
     # Add a scatter trace
     fig.add_trace(go.Scatter(x=[0, 200 * 1], y=[0, 200 * 1], mode="markers", marker_opacity=0), row=1, col=1)
@@ -266,13 +265,13 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
     fig.update_yaxes(
         scaleanchor="x",
         scaleratio=1,
-        range=[0, 200],
+        range=[0, 256],
         matches="y",
     )
     fig.update_xaxes(
         scaleanchor="y",
         scaleratio=1,
-        range=[0, 200],
+        range=[0, 256],
         matches="x",
     )
     # # Autoscale the images
