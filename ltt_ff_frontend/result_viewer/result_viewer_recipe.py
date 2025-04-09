@@ -67,6 +67,10 @@ def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
         by="ClassType", ascending=True
     )
 
+    # Reset index after sorting, and let it start from 1 instead of 0
+    classtype_counter_df.reset_index(inplace=True, drop=True)
+    classtype_counter_df.index = range(1, len(classtype_counter_df) + 1)
+
     return classtype_counter_df
 
 
