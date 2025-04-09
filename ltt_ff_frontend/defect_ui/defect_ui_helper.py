@@ -549,8 +549,6 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
             "image_dir",
             "lrf_path",
             "lrf_type",
-            "model_name",
-            "threshold",
             "output_dir",
             "message",
             "error_message",
