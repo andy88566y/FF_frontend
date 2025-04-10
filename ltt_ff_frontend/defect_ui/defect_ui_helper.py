@@ -293,9 +293,14 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
         f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT
     )
     paged_statuses = r.json()
+
+    if paged_statuses["status"] == "error":
+        logger.error(f"Error occurred when retrieving inference status from RedisDB: {r.json()['message']}")
+        raise ValueError(f"Error occurred when retrieving inference status from RedisDB: {r.json()['message']}")
+
     logger.info(f"Status of inference request [{current_page}, {page_size}]: {paged_statuses}")
 
-    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
+    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 
     if not paged_statuses_df.empty:
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
@@ -359,9 +364,15 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         timeout=TIMEOUT,
     )
     paged_statuses = r.json()
+    if paged_statuses["status"] == "error":
+        logger.error(f"Error occurred when retrieving multilot inference status from RedisDB: {r.json()['message']}")
+        raise ValueError(
+            f"Error occurred when retrieving multilot inference status from RedisDB: {r.json()['message']}"
+        )
+
     logger.info(f"Status of multilot inference request [{current_page}, {page_size}]: {paged_statuses}")
 
-    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
+    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 
     if not paged_statuses_df.empty:
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
@@ -790,9 +801,12 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> pd
         f"{API_ROOT}finetune/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT
     )
     paged_statuses = r.json()
+    if paged_statuses["status"] == "error":
+        logger.error(f"Error occurred when retrieving finetuning status from RedisDB: {r.json()['message']}")
+        raise ValueError(f"Error occurred when retrieving finetuning status from RedisDB: {r.json()['message']}")
     logger.info(f"Status of finetuning request [{current_page}, {page_size}]: {paged_statuses}")
 
-    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
+    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 
     if not paged_statuses_df.empty:
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
