@@ -67,15 +67,16 @@ def get_pixel_values(
     fig_rt: go.Figure,
     fig_t: go.Figure
 ) -> list[np.ndarray]:
+    # (x0, y0) stands for right down vertex point
+    # (x1, y1) stands for left up vertex point
     x0, x1 = selection["box"][-1]["x"][0], selection["box"][-1]["x"][1]
     y0, y1 = selection["box"][-1]["y"][0], selection["box"][-1]["y"][1]
     pixel_values = []
 
-    # TODO: extract direction to CONST
     if direction == HORIZONTAL:
         y_midpoint = (y0 + y1) / 2
-        for img in images:
-            img_array = np.array(img)
+        for i, img in enumerate(images):
+            img_array = np.flipud(np.array(img))
             row_values = img_array[int(y_midpoint), int(x0) : int(x1)]
             pixel_values.append(row_values)
         add_red_line_to_fig(fig_rt, x0, y_midpoint, x1, y_midpoint, "Line Pos (RT)")
@@ -84,7 +85,7 @@ def get_pixel_values(
     elif direction == VERTIAL:
         x_midpoint = (x0 + x1) / 2
         for img in images:
-            img_array = np.array(img)
+            img_array = np.flipud(np.array(img))
             col_values = img_array[int(y1) : int(y0), int(x_midpoint)]
             pixel_values.append(col_values[::-1])
         add_red_line_to_fig(fig_rt, x_midpoint, y0, x_midpoint, y1, "Line Pos (RT)")
@@ -93,7 +94,7 @@ def get_pixel_values(
     elif direction == RIGHT_DIAGONAL:
         points = bresenham_line(int(x0), int(y1), int(x1), int(y0))
         for img in images:
-            img_array = np.array(img)
+            img_array = np.flipud(np.array(img))
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
         add_red_line_to_fig(fig_rt, x0, y1, x1, y0, "Line Pos (RT)")
@@ -102,7 +103,7 @@ def get_pixel_values(
     elif direction == LEFT_DIAGONAL:
         points = bresenham_line(int(x0), int(y0), int(x1), int(y1))
         for img in images:
-            img_array = np.array(img)
+            img_array = np.flipud(np.array(img))
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
         add_red_line_to_fig(fig_rt, x0, y0, x1, y1, "Line Pos (RT)")
