@@ -10,6 +10,10 @@ from loguru import logger
 from PIL import Image, ImageDraw, ImageFont
 from plotly.subplots import make_subplots
 
+HORIZONTAL = 'horizontal'
+VERTIAL = 'vertical'
+RIGHT_DIAGONAL = 'right_diagonal'
+LEFT_DIAGONAL = 'left_diagonal'
 
 def load_image(path: str) -> Image:
     if path and os.path.exists(path):
@@ -48,7 +52,7 @@ def bresenham_line(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
     return points
 
 
-def add_shape_to_fig(fig: go.Figure, shape_type: str, x0: float, y0: float, x1: float, y1: float, title: str) -> None:
+def add_red_line_to_fig(fig: go.Figure, x0: float, y0: float, x1: float, y1: float, title: str) -> None:
     if fig is not None:
         fig.add_shape(type="line", x0=x0, y0=y0, x1=x1, y1=y1, line=dict(color="red", width=3))
         fig.update_layout(
@@ -57,54 +61,59 @@ def add_shape_to_fig(fig: go.Figure, shape_type: str, x0: float, y0: float, x1: 
 
 
 def get_pixel_values(
-    images: list[Image], selection: dict[str, Any], direction: str, fig2: go.Figure, fig3: go.Figure
+    images: list[Image],
+    selection: dict[str, Any],
+    direction: str,
+    fig_rt: go.Figure,
+    fig_t: go.Figure
 ) -> list[np.ndarray]:
     x0, x1 = selection["box"][-1]["x"][0], selection["box"][-1]["x"][1]
     y0, y1 = selection["box"][-1]["y"][0], selection["box"][-1]["y"][1]
     pixel_values = []
 
-    if direction == "horizontal":
+    # TODO: extract direction to CONST
+    if direction == HORIZONTAL:
         y_midpoint = (y0 + y1) / 2
         for img in images:
             img_array = np.array(img)
             row_values = img_array[int(y_midpoint), int(x0) : int(x1)]
             pixel_values.append(row_values)
-        add_shape_to_fig(fig2, "line", x0, y_midpoint, x1, y_midpoint, "Line Pos (RT)")
-        add_shape_to_fig(fig3, "line", x0, y_midpoint, x1, y_midpoint, "Line Pos (T)")
+        add_red_line_to_fig(fig_rt, x0, y_midpoint, x1, y_midpoint, "Line Pos (RT)")
+        add_red_line_to_fig(fig_t, x0, y_midpoint, x1, y_midpoint, "Line Pos (T)")
 
-    elif direction == "vertical":
+    elif direction == VERTIAL:
         x_midpoint = (x0 + x1) / 2
         for img in images:
             img_array = np.array(img)
             col_values = img_array[int(y1) : int(y0), int(x_midpoint)]
             pixel_values.append(col_values[::-1])
-        add_shape_to_fig(fig2, "line", x_midpoint, y0, x_midpoint, y1, "Line Pos (RT)")
-        add_shape_to_fig(fig3, "line", x_midpoint, y0, x_midpoint, y1, "Line Pos (T)")
+        add_red_line_to_fig(fig_rt, x_midpoint, y0, x_midpoint, y1, "Line Pos (RT)")
+        add_red_line_to_fig(fig_t, x_midpoint, y0, x_midpoint, y1, "Line Pos (T)")
 
-    elif direction == "right_diagonal":
+    elif direction == RIGHT_DIAGONAL:
         points = bresenham_line(int(x0), int(y1), int(x1), int(y0))
         for img in images:
             img_array = np.array(img)
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
-        add_shape_to_fig(fig2, "line", x0, y1, x1, y0, "Line Pos (RT)")
-        add_shape_to_fig(fig3, "line", x0, y1, x1, y0, "Line Pos (T)")
+        add_red_line_to_fig(fig_rt, x0, y1, x1, y0, "Line Pos (RT)")
+        add_red_line_to_fig(fig_t, x0, y1, x1, y0, "Line Pos (T)")
 
-    elif direction == "left_diagonal":
+    elif direction == LEFT_DIAGONAL:
         points = bresenham_line(int(x0), int(y0), int(x1), int(y1))
         for img in images:
             img_array = np.array(img)
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
-        add_shape_to_fig(fig2, "line", x0, y0, x1, y1, "Line Pos (RT)")
-        add_shape_to_fig(fig3, "line", x0, y0, x1, y1, "Line Pos (T)")
+        add_red_line_to_fig(fig_rt, x0, y0, x1, y1, "Line Pos (RT)")
+        add_red_line_to_fig(fig_t, x0, y0, x1, y1, "Line Pos (T)")
 
     return pixel_values
 
 
 def create_figure(image: Image) -> go.Figure:
     fig = go.Figure()
-    fig.add_trace(go.Image(z=np.array(image)))
+    fig.add_trace(go.Image(z=np.flipud(np.array(image))))
     fig.update_layout(
         width=100,
         height=150,
@@ -279,40 +288,46 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
     # fig.update_yaxes(autorange=True)
 
     # Create figures for the test images
-    fig2 = create_figure(test_image)
-    fig3 = create_figure(test_image_T)
+    fig_rt = create_figure(test_image)
+    fig_t = create_figure(test_image_T)
 
     # show image and enable selection
-    event = st.plotly_chart(fig, use_container_width=True, key="images", on_select="rerun")
+    event = st.plotly_chart(
+        fig, 
+        use_container_width=True, 
+        key="images",
+        selection_mode=('box'),
+        on_select="rerun"
+    )
 
     # Ensure direction is set in session state
     if "direction" not in st.session_state:
-        st.session_state.direction = "horizontal"
+        st.session_state.direction = HORIZONTAL
 
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     with col1:
-        if st.button("Horizontal", icon=":material/east:", key="horizontal_button", use_container_width=True):
-            st.session_state.direction = "horizontal"
+        if st.button(f"{HORIZONTAL}", icon=":material/east:", key="horizontal_button", use_container_width=True):
+            st.session_state.direction = HORIZONTAL
     with col2:
-        if st.button("Vertical", icon=":material/south:", key="vertical_button", use_container_width=True):
-            st.session_state.direction = "vertical"
+        if st.button(f"{VERTIAL}", icon=":material/south:", key="vertical_button", use_container_width=True):
+            st.session_state.direction = VERTIAL
     with col3:
         if st.button(
             "Downward Diagonal", icon=":material/south_east:", key="left_diagonal_button", use_container_width=True
         ):
-            st.session_state.direction = "left_diagonal"
+            st.session_state.direction = LEFT_DIAGONAL
     with col4:
         if st.button(
             "Upward Diagonal", icon=":material/north_east:", key="right_diagonal_button", use_container_width=True
         ):
-            st.session_state.direction = "right_diagonal"
+            st.session_state.direction = RIGHT_DIAGONAL
 
     # Get the selection result
     try:
         selection = event.selection
 
         if selection and "box" in selection and len(selection["box"]) > 0:
-            pixel_values = get_pixel_values(images, selection, st.session_state.direction, fig2, fig3)
+            pixel_values = get_pixel_values(images, selection, st.session_state.direction, fig_rt, fig_t)
             extracted_data = {index: array[:, 0] for index, array in enumerate(pixel_values)}
 
             # data change to dataFrame
@@ -341,7 +356,8 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
                 with col111:
                     st.altair_chart(chart_1)
                 with col112:
-                    st.plotly_chart(fig2, use_container_width=True, key="images2", config=config)
+                    pass
+                    st.plotly_chart(fig_rt, use_container_width=True, key="images2", config=config)
 
             with col12:
                 chart_2 = create_chart(df_pixel_2, ["Reference Image T", "Test Image T"], ["darkblue", "lightblue"])
@@ -349,11 +365,10 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
                 with col121:
                     st.altair_chart(chart_2)
                 with col122:
-                    st.plotly_chart(fig3, use_container_width=True, key="images3", config=config)
+                    st.plotly_chart(fig_t, use_container_width=True, key="images3", config=config)
 
     except KeyError as e:
         st.write(f"KeyError: {e}. Please make a valid selection.")
-
 
 # def overlay_images(base_image, overlay_image, alpha=0.5):
 #     return Image.blend(base_image, overlay_image, alpha)
