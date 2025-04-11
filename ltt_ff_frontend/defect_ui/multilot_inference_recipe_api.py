@@ -6,6 +6,11 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
+def disable_gen_optimized_recipe() -> None:
+    if "inf_gen_optimized_recipe" in st.session_state and st.session_state.inf_gen_optimized_recipe:
+        st.session_state.inf_gen_optimized_recipe = False
+
+
 def app() -> None:
     #####################################################################################################
     # Running inference                                                                                 #
@@ -41,7 +46,7 @@ def app() -> None:
         )
 
     helper.gap(1)
-    r2_col1, _r2_col2, r2_col3 = st.columns([10, 1, 10])
+    r2_col1, _r2_col2, r2_col3, _r2_col4, r2_col5 = st.columns([10, 1, 4, 2, 4])
     with r2_col1:
         inf_output_dir = st.text_input(
             label="Result directory",
@@ -49,8 +54,22 @@ def app() -> None:
             help="The directory to store generated .lrf and .db files.",
         )
     with r2_col3:
-        inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
+        inf_overwrite = st.toggle(
+            label="Overwrite files in output directory",
+            value=False,
+            on_change=disable_gen_optimized_recipe,
+        )
         st.caption(":red[If Overwrite is set to true, all existing files in Result Directory will be removed.]")
+    with r2_col5:
+        inf_gen_optimized_recipe = st.toggle(
+            label="Generate optimized recipe",
+            value=False,
+            disabled=(not inf_overwrite),
+            key="inf_gen_optimized_recipe",
+        )
+        st.caption(":grey[Generate a recipe with optimized thresholds in the Result Directory.]")
+        if not inf_overwrite:
+            st.caption(":red[Overwrite must be enabled to generate optimized recipe.]")
 
     # Show recipe and multilot config previews
     r3_col1, r3_col2 = st.columns([1, 1])
@@ -91,6 +110,7 @@ def app() -> None:
             multilot_config=inf_config,
             recipe=recipe,
             overwrite=inf_overwrite,
+            gen_optimized_recipe=inf_gen_optimized_recipe,
         )
 
         if request.json().get("status") == "error":

@@ -237,6 +237,7 @@ def request_multilot_inference(
     confidence_threshold: Optional[float] = 0.0,
     inference_batch_size: int = 32,
     overwrite: bool = False,
+    gen_optimized_recipe: bool = False,
 ) -> requests.Response:
     """
     Calls FalseFilter API to run multilot inference.
@@ -250,6 +251,7 @@ def request_multilot_inference(
         inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
         overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
                    If overwrite=True, the entire result directory will be cleared.
+        gen_optimized_recipe: If set to True, generate a new recipe with optimized threshold by threshold picker.
 
     Returns the reponse of the API request.
     """
@@ -264,6 +266,7 @@ def request_multilot_inference(
             "recipe": recipe,
             "batch_size": inference_batch_size,
             "overwrite": overwrite,
+            "gen_optimized_recipe": gen_optimized_recipe,
         },
         timeout=TIMEOUT,
     )
