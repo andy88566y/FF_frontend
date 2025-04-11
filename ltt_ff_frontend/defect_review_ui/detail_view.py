@@ -67,8 +67,8 @@ def get_pixel_values(
     fig_rt: go.Figure,
     fig_t: go.Figure
 ) -> list[np.ndarray]:
-    # (x0, y0) stands for right down vertex point
-    # (x1, y1) stands for left up vertex point
+    # (x0, y0) stands for top left vertex point
+    # (x1, y1) stands for down right vertex point
     x0, x1 = selection["box"][-1]["x"][0], selection["box"][-1]["x"][1]
     y0, y1 = selection["box"][-1]["y"][0], selection["box"][-1]["y"][1]
     pixel_values = []
@@ -97,6 +97,8 @@ def get_pixel_values(
             img_array = np.flipud(np.array(img))
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
+        logger.debug(len(pixel_values))
+        logger.debug(f"from ({x1}, {y0}) to ({x0}, {y1})")
         add_red_line_to_fig(fig_rt, x0, y1, x1, y0, "Line Pos (RT)")
         add_red_line_to_fig(fig_t, x0, y1, x1, y0, "Line Pos (T)")
 
