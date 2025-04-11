@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 from plotly.subplots import make_subplots
 
 HORIZONTAL = 'horizontal'
-VERTIAL = 'vertical'
+VERTICAL = 'vertical'
 RIGHT_DIAGONAL = 'right_diagonal'
 LEFT_DIAGONAL = 'left_diagonal'
 
@@ -82,7 +82,7 @@ def get_pixel_values(
         add_red_line_to_fig(fig_rt, x0, y_midpoint, x1, y_midpoint, "Line Pos (RT)")
         add_red_line_to_fig(fig_t, x0, y_midpoint, x1, y_midpoint, "Line Pos (T)")
 
-    elif direction == VERTIAL:
+    elif direction == VERTICAL:
         x_midpoint = (x0 + x1) / 2
         for img in images:
             img_array = np.flipud(np.array(img))
@@ -310,8 +310,8 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
         if st.button(f"{HORIZONTAL}", icon=":material/east:", key="horizontal_button", use_container_width=True):
             st.session_state.direction = HORIZONTAL
     with col2:
-        if st.button(f"{VERTIAL}", icon=":material/south:", key="vertical_button", use_container_width=True):
-            st.session_state.direction = VERTIAL
+        if st.button(f"{VERTICAL}", icon=":material/south:", key="vertical_button", use_container_width=True):
+            st.session_state.direction = VERTICAL
     with col3:
         if st.button(
             "Downward Diagonal", icon=":material/south_east:", key="left_diagonal_button", use_container_width=True
