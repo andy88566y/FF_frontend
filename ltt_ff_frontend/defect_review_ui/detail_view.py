@@ -97,8 +97,6 @@ def get_pixel_values(
             img_array = np.flipud(np.array(img))
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
-        logger.debug(len(pixel_values))
-        logger.debug(f"from ({x1}, {y0}) to ({x0}, {y1})")
         add_red_line_to_fig(fig_rt, x0, y1, x1, y0, "Line Pos (RT)")
         add_red_line_to_fig(fig_t, x0, y1, x1, y0, "Line Pos (T)")
 
@@ -185,7 +183,7 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
         test_image_path = f"{base_path}{no}.png"
         diff_image_path = f"{base_path}{no}D.png"
     else:
-        logger.error('unkown format when infering image file name.')
+        logger.error('unknown format when infering image file name.')
 
     # Find the correct test image path
     for type_option in type_options:
@@ -211,7 +209,7 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
         test_image_path_T = f"{base_path_T}{no}.png"
         diff_image_path_T = f"{base_path_T}{no}D.png"
     else:
-        logger.error('unkown format when infering image file name.')
+        logger.error('unknown format when infering image file name.')
     # Find the correct test image path_T
     for type_option in type_options:
         potential_path_T = f"{base_path_T}{no}{type_option}.png"
@@ -359,7 +357,6 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
                 with col111:
                     st.altair_chart(chart_1)
                 with col112:
-                    pass
                     st.plotly_chart(fig_rt, use_container_width=True, key="images2", config=config)
 
             with col12:
