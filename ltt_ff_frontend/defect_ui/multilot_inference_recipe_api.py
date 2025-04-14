@@ -7,11 +7,14 @@ from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
 def app() -> None:
+    #####################################################################################################
+    # Running inference                                                                                 #
+    #####################################################################################################
     logger.debug("Loading Multilot Inference Dashboard...")
     st.title("False Filter Multilot Inference Recipe")
     st.caption("Inference multiple lot data with recipe")
 
-    r1_col1, _r1_col2, r1_col3 = st.columns([3, 1, 3])
+    r1_col1, _r1_col2, r1_col3 = st.columns([10, 1, 10])
     with r1_col1:
         yaml_help_text = """
         **Example of a valid recipe:**\n
@@ -23,11 +26,6 @@ def app() -> None:
         """
         recipe_file = st.file_uploader("Upload Inference Recipe (.yaml)", type=".yaml", help=yaml_help_text)
     with r1_col3:
-        inf_overwrite = st.toggle(label="Overwrite files in output directory", value=False)
-        st.caption(":red[If Overwrite is set to true, all existing files in Result Directory will be removed.]")
-
-    r2_col1, _r2_col2, r2_col3 = st.columns([3, 1, 3])
-    with r2_col1:
         yaml_help_text = """
         **Example of a valid .yaml config file:**\n
         data_paths:\n
@@ -41,12 +39,28 @@ def app() -> None:
         inf_configfile = st.file_uploader(
             "Upload Multi-lot Inference Config (.yaml)", type=".yaml", help=yaml_help_text
         )
-    with r2_col3:
+
+    helper.gap(1)
+    r2_col1, _r2_col2, r2_col3, _r2_col4, r2_col5 = st.columns([10, 1, 4, 2, 4])
+    with r2_col1:
         inf_output_dir = st.text_input(
             label="Result directory",
             value="/mnt/dbpc/xxx",
             help="The directory to store generated .lrf and .db files.",
         )
+    with r2_col3:
+        inf_overwrite = st.toggle(
+            label="Overwrite files in output directory",
+            value=False,
+        )
+        st.caption(":red[If Overwrite is set to true, all existing files in Result Directory will be removed.]")
+    with r2_col5:
+        inf_gen_optimized_recipe = st.toggle(
+            label="Generate optimized recipe",
+            value=False,
+            key="inf_gen_optimized_recipe",
+        )
+        st.caption(":grey[Generate a recipe with optimized thresholds in the Result Directory.]")
 
     # Show recipe and multilot config previews
     r3_col1, r3_col2 = st.columns([1, 1])
@@ -87,6 +101,7 @@ def app() -> None:
             multilot_config=inf_config,
             recipe=recipe,
             overwrite=inf_overwrite,
+            gen_optimized_recipe=inf_gen_optimized_recipe,
         )
 
         if request.json().get("status") == "error":
@@ -99,6 +114,9 @@ def app() -> None:
 
     st.divider()
 
+    #####################################################################################################
+    # Multilot job status                                                                               #
+    #####################################################################################################
     if "status_df_multi_inf" not in st.session_state:
         st.session_state.status_df_multi_inf = pd.DataFrame()
     if "detailed_df_multi_inf" not in st.session_state:
@@ -119,7 +137,7 @@ def app() -> None:
     # Pagination settings
     with col2:
         page_size = 10
-        current_page = st.number_input("Page number", min_value=1, value=1, step=1)
+        current_page = st.number_input("Page number", min_value=1, value=1, step=1, key="multilot_page")
         st.session_state.status_df_multi_inf = helper.request_paginated_multilot_inference_status(
             page_size, current_page
         )
@@ -154,3 +172,59 @@ def app() -> None:
                 selected_multilot_inference_id
             )
             st.dataframe(st.session_state.detailed_df_multi_inf, use_container_width=True)
+
+    helper.gap(1)
+    #####################################################################################################
+    # Per lot job status                                                                                #
+    #####################################################################################################
+    if "status_df_inf" not in st.session_state:
+        st.session_state.status_df_inf = pd.DataFrame()
+    if "detailed_df_inf" not in st.session_state:
+        st.session_state.detailed_df_inf = pd.DataFrame()
+
+    col1, col2 = st.columns(2, vertical_alignment="bottom")
+
+    with col1:
+        if st.button("Check all inference jobs"):
+            page_size = 10
+            current_page = 1
+            st.session_state.status_df_inf = helper.request_paginated_inference_status(page_size, current_page)
+
+    progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
+
+    # Pagination settings
+    with col2:
+        page_size = 10
+        current_page = st.number_input("Page number", min_value=1, value=1, step=1, key="per_lot_page")
+        st.session_state.status_df_inf = helper.request_paginated_inference_status(page_size, current_page)
+
+    st.header("All inference jobs") if not st.session_state.status_df_inf.empty else st.write("")
+
+    # Selection to find more detail
+    event_inf = (
+        st.dataframe(
+            st.session_state.status_df_inf,
+            key="statuses_inference",
+            on_select="rerun",
+            selection_mode="multi-row",
+            use_container_width=True,
+            column_config={"progress": progress_column},
+        )
+        if not st.session_state.status_df_inf.empty
+        else st.write("")
+    )
+
+    if event_inf and event_inf.selection:
+        # Check if the 'row' value's list is not empty
+        if event_inf.selection["rows"]:
+            # Get list of inference_id for all selected inference jobs
+            selected_inference_id = [
+                st.session_state.status_df_inf.iloc[i]["inference_id"] for i in event_inf.selection["rows"]
+            ]
+
+            # Get detailed statuses for each inference job and combine into one df
+            raw_df_inf = helper.request_inference_statuses(selected_inference_id)
+            st.session_state.detailed_df_inf = raw_df_inf
+            st.dataframe(st.session_state.detailed_df_inf, use_container_width=True)
+            # Stop job button
+            helper.add_stop_job_button(raw_df_inf)

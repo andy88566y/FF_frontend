@@ -1,6 +1,6 @@
 import base64
 from pprint import pformat
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -237,6 +237,7 @@ def request_multilot_inference(
     confidence_threshold: Optional[float] = 0.0,
     inference_batch_size: int = 32,
     overwrite: bool = False,
+    gen_optimized_recipe: bool = False,
 ) -> requests.Response:
     """
     Calls FalseFilter API to run multilot inference.
@@ -250,6 +251,7 @@ def request_multilot_inference(
         inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
         overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
                    If overwrite=True, the entire result directory will be cleared.
+        gen_optimized_recipe: If set to True, generate a new recipe with optimized threshold by threshold picker.
 
     Returns the reponse of the API request.
     """
@@ -264,6 +266,7 @@ def request_multilot_inference(
             "recipe": recipe,
             "batch_size": inference_batch_size,
             "overwrite": overwrite,
+            "gen_optimized_recipe": gen_optimized_recipe,
         },
         timeout=TIMEOUT,
     )
@@ -293,9 +296,14 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
         f"{API_ROOT}inference/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT
     )
     paged_statuses = r.json()
+
+    if paged_statuses["status"] == "error":
+        logger.error(f"Error occurred when retrieving inference status from RedisDB: {r.json()['message']}")
+        raise ValueError(f"Error occurred when retrieving inference status from RedisDB: {r.json()['message']}")
+
     logger.info(f"Status of inference request [{current_page}, {page_size}]: {paged_statuses}")
 
-    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
+    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 
     if not paged_statuses_df.empty:
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
@@ -359,9 +367,15 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         timeout=TIMEOUT,
     )
     paged_statuses = r.json()
+    if paged_statuses["status"] == "error":
+        logger.error(f"Error occurred when retrieving multilot inference status from RedisDB: {r.json()['message']}")
+        raise ValueError(
+            f"Error occurred when retrieving multilot inference status from RedisDB: {r.json()['message']}"
+        )
+
     logger.info(f"Status of multilot inference request [{current_page}, {page_size}]: {paged_statuses}")
 
-    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
+    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 
     if not paged_statuses_df.empty:
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
@@ -527,6 +541,10 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
                 else None
             )
 
+        # If error_message is not in the DF then it shows up as 'nan' on the DF table
+        if "error_message" not in inference_status.columns:
+            inference_status["error_message"] = "None"
+
         # TODO: Make hyper-link work
         # inference_status['Review Link'] = inference_status[["output_dir", "image_dir"]].apply(
         #     lambda x: format_url({'result_dir': x['output_dir'], 'image_dir': x['image_dir']}), axis=1
@@ -549,8 +567,6 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
             "image_dir",
             "lrf_path",
             "lrf_type",
-            "model_name",
-            "threshold",
             "output_dir",
             "message",
             "error_message",
@@ -562,7 +578,8 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
         if column not in sorted_inference_statuses_df.columns:
             sorted_inference_statuses_df[column] = inference_status[column]
 
-    return sorted_inference_statuses_df
+    # st.dataframe will complain when converting non-string type objects
+    return sorted_inference_statuses_df.astype(str)
 
 
 def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) -> pd.DataFrame:
@@ -638,7 +655,7 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
         if column not in sorted_multilot_inference_statuses_df.columns:
             sorted_multilot_inference_statuses_df[column] = multilot_inference_status[column]
 
-    return sorted_multilot_inference_statuses_df
+    return sorted_multilot_inference_statuses_df.astype(str)
 
 
 #####################################################################################################
@@ -773,7 +790,7 @@ def request_basetrain(
 
 
 @st.cache_data(ttl="1s")
-def request_paginated_finetuning_status(page_size: int, current_page: int) -> dict[str, Any]:
+def request_paginated_finetuning_status(page_size: int, current_page: int) -> pd.DataFrame:
     """
     Gets pagainated inference status by calling FalseFilter API
 
@@ -787,9 +804,12 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> di
         f"{API_ROOT}finetune/get_paginated_status?page_size={page_size}&current_page={current_page}", timeout=TIMEOUT
     )
     paged_statuses = r.json()
+    if paged_statuses["status"] == "error":
+        logger.error(f"Error occurred when retrieving finetuning status from RedisDB: {r.json()['message']}")
+        raise ValueError(f"Error occurred when retrieving finetuning status from RedisDB: {r.json()['message']}")
     logger.info(f"Status of finetuning request [{current_page}, {page_size}]: {paged_statuses}")
 
-    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses).T
+    paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 
     if not paged_statuses_df.empty:
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
@@ -967,7 +987,7 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
         if column not in sorted_finetuning_statuses_df.columns:
             sorted_finetuning_statuses_df[column] = finetuning_status[column]
 
-    return sorted_finetuning_statuses_df
+    return sorted_finetuning_statuses_df.astype(str)
 
 
 #####################################################################################################
