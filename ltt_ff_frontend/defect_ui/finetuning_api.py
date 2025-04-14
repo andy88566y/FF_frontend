@@ -53,7 +53,7 @@ def app() -> None:
     else:
         with r1_col1:
             ft_configfile = st.file_uploader(
-                "Upload Multi-lot Fine-Tuning Config (.yaml)", type=".yaml", help=yaml_help_text
+                "Upload Multi-lot Base-training Config (.yaml)", type=".yaml", help=yaml_help_text
             )
 
     r2_col1, r2_col2, r2_col3, r2_col4 = st.columns([1, 1, 2, 2])

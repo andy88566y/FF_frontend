@@ -6,11 +6,6 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
-def disable_gen_optimized_recipe() -> None:
-    if "inf_gen_optimized_recipe" in st.session_state and st.session_state.inf_gen_optimized_recipe:
-        st.session_state.inf_gen_optimized_recipe = False
-
-
 def app() -> None:
     #####################################################################################################
     # Running inference                                                                                 #
@@ -57,19 +52,15 @@ def app() -> None:
         inf_overwrite = st.toggle(
             label="Overwrite files in output directory",
             value=False,
-            on_change=disable_gen_optimized_recipe,
         )
         st.caption(":red[If Overwrite is set to true, all existing files in Result Directory will be removed.]")
     with r2_col5:
         inf_gen_optimized_recipe = st.toggle(
             label="Generate optimized recipe",
             value=False,
-            disabled=(not inf_overwrite),
             key="inf_gen_optimized_recipe",
         )
         st.caption(":grey[Generate a recipe with optimized thresholds in the Result Directory.]")
-        if not inf_overwrite:
-            st.caption(":red[Overwrite must be enabled to generate optimized recipe.]")
 
     # Show recipe and multilot config previews
     r3_col1, r3_col2 = st.columns([1, 1])
