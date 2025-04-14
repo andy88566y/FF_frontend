@@ -4,7 +4,6 @@ from loguru import logger
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 from ltt_ff_frontend.result_viewer import result_viewer
 
-
 def app(output_dir_default: str, rv_m1_output_dir: str, rv_m2_output_dir: str, st_gen_lrf_type: str) -> None:
     # Column for printing error message
     r2_col1, _r2_col2 = st.columns([3, 2])
