@@ -6,16 +6,28 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from PIL import Image
+from loguru import logger
+from PIL import Image, ImageDraw, ImageFont
 from plotly.subplots import make_subplots
 
+HORIZONTAL = 'horizontal'
+VERTICAL = 'vertical'
+RIGHT_DIAGONAL = 'right_diagonal'
+LEFT_DIAGONAL = 'left_diagonal'
 
 def load_image(path: str) -> Image:
     if path and os.path.exists(path):
         return Image.open(path).convert("RGBA")
     else:
-        return Image.fromarray(np.zeros((256, 256, 4), dtype=np.uint8))
+        return draw_red_cross()
 
+def draw_red_cross() -> Image:
+    width, height = 256, 256
+    image = Image.new('RGBA', (width, height), color='white')
+    draw = ImageDraw.Draw(image)
+    draw.line((0, 0, width, height), fill='red', width=10)
+    draw.line((0, height, width, 0), fill='red', width=10)
+    return image
 
 def bresenham_line(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
     points = []
@@ -40,7 +52,7 @@ def bresenham_line(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
     return points
 
 
-def add_shape_to_fig(fig: go.Figure, shape_type: str, x0: float, y0: float, x1: float, y1: float, title: str) -> None:
+def add_red_line_to_fig(fig: go.Figure, x0: float, y0: float, x1: float, y1: float, title: str) -> None:
     if fig is not None:
         fig.add_shape(type="line", x0=x0, y0=y0, x1=x1, y1=y1, line=dict(color="red", width=3))
         fig.update_layout(
@@ -49,54 +61,60 @@ def add_shape_to_fig(fig: go.Figure, shape_type: str, x0: float, y0: float, x1: 
 
 
 def get_pixel_values(
-    images: list[Image], selection: dict[str, Any], direction: str, fig2: go.Figure, fig3: go.Figure
+    images: list[Image],
+    selection: dict[str, Any],
+    direction: str,
+    fig_rt: go.Figure,
+    fig_t: go.Figure
 ) -> list[np.ndarray]:
+    # (x0, y0) stands for top left vertex point
+    # (x1, y1) stands for down right vertex point
     x0, x1 = selection["box"][-1]["x"][0], selection["box"][-1]["x"][1]
     y0, y1 = selection["box"][-1]["y"][0], selection["box"][-1]["y"][1]
     pixel_values = []
 
-    if direction == "horizontal":
+    if direction == HORIZONTAL:
         y_midpoint = (y0 + y1) / 2
-        for img in images:
-            img_array = np.array(img)
+        for i, img in enumerate(images):
+            img_array = np.flipud(np.array(img))
             row_values = img_array[int(y_midpoint), int(x0) : int(x1)]
             pixel_values.append(row_values)
-        add_shape_to_fig(fig2, "line", x0, y_midpoint, x1, y_midpoint, "Line Pos (RT)")
-        add_shape_to_fig(fig3, "line", x0, y_midpoint, x1, y_midpoint, "Line Pos (T)")
+        add_red_line_to_fig(fig_rt, x0, y_midpoint, x1, y_midpoint, "Line Pos (RT)")
+        add_red_line_to_fig(fig_t, x0, y_midpoint, x1, y_midpoint, "Line Pos (T)")
 
-    elif direction == "vertical":
+    elif direction == VERTICAL:
         x_midpoint = (x0 + x1) / 2
         for img in images:
-            img_array = np.array(img)
+            img_array = np.flipud(np.array(img))
             col_values = img_array[int(y1) : int(y0), int(x_midpoint)]
             pixel_values.append(col_values[::-1])
-        add_shape_to_fig(fig2, "line", x_midpoint, y0, x_midpoint, y1, "Line Pos (RT)")
-        add_shape_to_fig(fig3, "line", x_midpoint, y0, x_midpoint, y1, "Line Pos (T)")
+        add_red_line_to_fig(fig_rt, x_midpoint, y0, x_midpoint, y1, "Line Pos (RT)")
+        add_red_line_to_fig(fig_t, x_midpoint, y0, x_midpoint, y1, "Line Pos (T)")
 
-    elif direction == "right_diagonal":
+    elif direction == RIGHT_DIAGONAL:
         points = bresenham_line(int(x0), int(y1), int(x1), int(y0))
         for img in images:
-            img_array = np.array(img)
+            img_array = np.flipud(np.array(img))
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
-        add_shape_to_fig(fig2, "line", x0, y1, x1, y0, "Line Pos (RT)")
-        add_shape_to_fig(fig3, "line", x0, y1, x1, y0, "Line Pos (T)")
+        add_red_line_to_fig(fig_rt, x0, y1, x1, y0, "Line Pos (RT)")
+        add_red_line_to_fig(fig_t, x0, y1, x1, y0, "Line Pos (T)")
 
-    elif direction == "left_diagonal":
+    elif direction == LEFT_DIAGONAL:
         points = bresenham_line(int(x0), int(y0), int(x1), int(y1))
         for img in images:
-            img_array = np.array(img)
+            img_array = np.flipud(np.array(img))
             diag_values = [img_array[y][x] for x, y in points]
             pixel_values.append(np.vstack(diag_values))
-        add_shape_to_fig(fig2, "line", x0, y0, x1, y1, "Line Pos (RT)")
-        add_shape_to_fig(fig3, "line", x0, y0, x1, y1, "Line Pos (T)")
+        add_red_line_to_fig(fig_rt, x0, y0, x1, y1, "Line Pos (RT)")
+        add_red_line_to_fig(fig_t, x0, y0, x1, y1, "Line Pos (T)")
 
     return pixel_values
 
 
 def create_figure(image: Image) -> go.Figure:
     fig = go.Figure()
-    fig.add_trace(go.Image(z=np.array(image)))
+    fig.add_trace(go.Image(z=np.flipud(np.array(image))))
     fig.update_layout(
         width=100,
         height=150,
@@ -126,9 +144,9 @@ def create_chart(df: pd.DataFrame, domain: list[str], range_colors: list[str]) -
     )
     return chart
 
-
-def app(selected_row: pd.DataFrame, image_dir: str) -> None:
-    st.subheader(f"Defect {selected_row.No.values[0]}")
+def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
+    display_no = selected_row['No'].values[0] if ext == 'lrf' else selected_row['UniqueID'].values[0]
+    st.subheader(f"Defect No {display_no}")
 
     # Create a single row with three columns for X, Y, and ClassType
     cola, colb, colc = st.columns(3)
@@ -145,34 +163,58 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
     # Create three columns
     col1, col2, col3 = st.columns(3)
 
+    type_options = ["L", "L_p", "U", "U_p", "_M", "_L", "_U"]
+    ref_image_path, diff_image_path = None, None
     # Construct the file paths_Rt
-    base_path = f"{image_dir}/Images/InstantReviewRt/"
-    no = selected_row.No.values[0]
-    type_options = ["L", "L_p", "U", "U_p"]
-
-    ref_image_path = f"{base_path}{no}.png"
-    diff_image_path = f"{base_path}{no}D.png"
+    if ext == 'blrf':
+        # .blrf
+        base_path = f"{image_dir}/Images/InstantReviewTDI_2/"
+        no = selected_row.UniqueID.values[0]
+        test_image_path = f"{base_path}{no}_C.png"
+        for type_option in ["_M_D", "_U_D", "_L_D"]:
+            potential_path = f"{base_path}{no}{type_option}.png"
+            if os.path.exists(potential_path):
+                diff_image_path = potential_path
+                break
+    elif ext == 'lrf':
+        # .lrf
+        base_path = f"{image_dir}/Images/InstantReviewRt/"
+        no = selected_row.No.values[0]
+        test_image_path = f"{base_path}{no}.png"
+        diff_image_path = f"{base_path}{no}D.png"
+    else:
+        logger.error('unknown format when infering image file name.')
 
     # Find the correct test image path
-    test_image_path = None
     for type_option in type_options:
         potential_path = f"{base_path}{no}{type_option}.png"
         if os.path.exists(potential_path):
-            test_image_path = potential_path
+            ref_image_path = potential_path
             break
 
     # Construct the file paths_T
-    base_path_T = f"{image_dir}/Images/InstantReviewT/"
-    type_options = ["L", "L_p", "U", "U_p"]
-    ref_image_path_T = f"{base_path_T}{no}.png"
-    diff_image_path_T = f"{base_path_T}{no}D.png"
-
+    ref_image_path_T, diff_image_path_T = None, None
+    if ext == 'blrf':
+        # .blrf
+        base_path_T = f"{image_dir}/Images/InstantReviewTDI_1/"
+        test_image_path_T = f"{base_path_T}{no}_C.png"
+        for type_option in ["_M_D", "_U_D", "_L_D"]:
+            potential_path = f"{base_path}{no}{type_option}.png"
+            if os.path.exists(potential_path):
+                diff_image_path_T = potential_path
+                break
+    elif ext == 'lrf':
+        # .lrf
+        base_path_T = f"{image_dir}/Images/InstantReviewT/"
+        test_image_path_T = f"{base_path_T}{no}.png"
+        diff_image_path_T = f"{base_path_T}{no}D.png"
+    else:
+        logger.error('unknown format when infering image file name.')
     # Find the correct test image path_T
-    test_image_path_T = None
     for type_option in type_options:
         potential_path_T = f"{base_path_T}{no}{type_option}.png"
         if os.path.exists(potential_path_T):
-            test_image_path_T = potential_path_T
+            ref_image_path_T = potential_path_T
             break
 
     # Load images
@@ -202,13 +244,12 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
         ),
     )
 
-    # Add images to the subplot
-    fig.add_trace(go.Image(z=np.array(ref_image)), row=1, col=1)
-    fig.add_trace(go.Image(z=np.array(test_image)), row=1, col=2)
-    fig.add_trace(go.Image(z=np.array(diff_image)), row=1, col=3)
-    fig.add_trace(go.Image(z=np.array(ref_image_T)), row=2, col=1)
-    fig.add_trace(go.Image(z=np.array(test_image_T)), row=2, col=2)
-    fig.add_trace(go.Image(z=np.array(diff_image_T)), row=2, col=3)
+    fig.add_trace(go.Image(z=np.flipud(np.array(ref_image))), row=1, col=1)
+    fig.add_trace(go.Image(z=np.flipud(np.array(test_image))), row=1, col=2)
+    fig.add_trace(go.Image(z=np.flipud(np.array(diff_image))), row=1, col=3)
+    fig.add_trace(go.Image(z=np.flipud(np.array(ref_image_T))), row=2, col=1)
+    fig.add_trace(go.Image(z=np.flipud(np.array(test_image_T))), row=2, col=2)
+    fig.add_trace(go.Image(z=np.flipud(np.array(diff_image_T))), row=2, col=3)
 
     # Add a scatter trace
     fig.add_trace(go.Scatter(x=[0, 200 * 1], y=[0, 200 * 1], mode="markers", marker_opacity=0), row=1, col=1)
@@ -234,13 +275,13 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
     fig.update_yaxes(
         scaleanchor="x",
         scaleratio=1,
-        range=[0, 200],
+        range=[0, 256],
         matches="y",
     )
     fig.update_xaxes(
         scaleanchor="y",
         scaleratio=1,
-        range=[0, 200],
+        range=[0, 256],
         matches="x",
     )
     # # Autoscale the images
@@ -248,40 +289,46 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
     # fig.update_yaxes(autorange=True)
 
     # Create figures for the test images
-    fig2 = create_figure(test_image)
-    fig3 = create_figure(test_image_T)
+    fig_rt = create_figure(test_image)
+    fig_t = create_figure(test_image_T)
 
     # show image and enable selection
-    event = st.plotly_chart(fig, use_container_width=True, key="images", on_select="rerun")
+    event = st.plotly_chart(
+        fig, 
+        use_container_width=True, 
+        key="images",
+        selection_mode=('box'),
+        on_select="rerun"
+    )
 
     # Ensure direction is set in session state
     if "direction" not in st.session_state:
-        st.session_state.direction = "horizontal"
+        st.session_state.direction = HORIZONTAL
 
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     with col1:
-        if st.button("Horizontal", icon=":material/east:", key="horizontal_button", use_container_width=True):
-            st.session_state.direction = "horizontal"
+        if st.button(f"{HORIZONTAL}", icon=":material/east:", key="horizontal_button", use_container_width=True):
+            st.session_state.direction = HORIZONTAL
     with col2:
-        if st.button("Vertical", icon=":material/south:", key="vertical_button", use_container_width=True):
-            st.session_state.direction = "vertical"
+        if st.button(f"{VERTICAL}", icon=":material/south:", key="vertical_button", use_container_width=True):
+            st.session_state.direction = VERTICAL
     with col3:
         if st.button(
             "Downward Diagonal", icon=":material/south_east:", key="left_diagonal_button", use_container_width=True
         ):
-            st.session_state.direction = "left_diagonal"
+            st.session_state.direction = LEFT_DIAGONAL
     with col4:
         if st.button(
             "Upward Diagonal", icon=":material/north_east:", key="right_diagonal_button", use_container_width=True
         ):
-            st.session_state.direction = "right_diagonal"
+            st.session_state.direction = RIGHT_DIAGONAL
 
     # Get the selection result
     try:
         selection = event.selection
 
         if selection and "box" in selection and len(selection["box"]) > 0:
-            pixel_values = get_pixel_values(images, selection, st.session_state.direction, fig2, fig3)
+            pixel_values = get_pixel_values(images, selection, st.session_state.direction, fig_rt, fig_t)
             extracted_data = {index: array[:, 0] for index, array in enumerate(pixel_values)}
 
             # data change to dataFrame
@@ -310,7 +357,7 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
                 with col111:
                     st.altair_chart(chart_1)
                 with col112:
-                    st.plotly_chart(fig2, use_container_width=True, key="images2", config=config)
+                    st.plotly_chart(fig_rt, use_container_width=True, key="images2", config=config)
 
             with col12:
                 chart_2 = create_chart(df_pixel_2, ["Reference Image T", "Test Image T"], ["darkblue", "lightblue"])
@@ -318,11 +365,10 @@ def app(selected_row: pd.DataFrame, image_dir: str) -> None:
                 with col121:
                     st.altair_chart(chart_2)
                 with col122:
-                    st.plotly_chart(fig3, use_container_width=True, key="images3", config=config)
+                    st.plotly_chart(fig_t, use_container_width=True, key="images3", config=config)
 
     except KeyError as e:
         st.write(f"KeyError: {e}. Please make a valid selection.")
-
 
 # def overlay_images(base_image, overlay_image, alpha=0.5):
 #     return Image.blend(base_image, overlay_image, alpha)

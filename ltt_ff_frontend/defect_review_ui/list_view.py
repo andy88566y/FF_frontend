@@ -46,6 +46,7 @@ def reload_data(df: pd.DataFrame):
     selected_columns = [
         "X",
         "Y",
+        "UniqueID",
         "X_norm",
         "Y_norm",
         "ClassType",
@@ -60,13 +61,14 @@ def reload_data(df: pd.DataFrame):
 
 
 def app(result_dir: str, image_dir: str) -> None:
-    defects = helper.get_lrf_data_lists(result_dir, cols=["No", "X", "Y", "ClassType"], include_prob=True)[0]
+    defects = helper.get_lrf_data_lists(result_dir, cols=["No", "UniqueID", "X", "Y", "ClassType"], include_prob=True)[0]
     db_metadata = helper.get_db_metadata_lists(result_dir)[0]
 
     # Extract relevant columns and convert "X" and "Y" to floats
     defect_data = [
         {
             "No": defect["No"],
+            "UniqueID": defect["UniqueID"],
             "X": float(defect["X"]),
             "Y": float(defect["Y"]),
             "ClassType": defect["ClassType"],
@@ -85,6 +87,7 @@ def app(result_dir: str, image_dir: str) -> None:
 
     # Ensure all columns have consistent data types
     df["No"] = df["No"].astype(int)
+    df["UniqueID"] = df["UniqueID"].astype(str)
     df["X"] = df["X"].astype(float)
     df["Y"] = df["Y"].astype(float)
     df["ClassType"] = df["ClassType"].astype(int)
@@ -168,7 +171,7 @@ def app(result_dir: str, image_dir: str) -> None:
     # Add filter options
     with filter_options_col:
         # Define the columns I want to display
-        specific_columns = ["X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster"]
+        specific_columns = ["UniqueID", "X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster"]
         # Filter the DataFrame columns to only include the specific columns
         filtered_columns = [col for col in df.columns if col in specific_columns]
 
@@ -215,7 +218,7 @@ def app(result_dir: str, image_dir: str) -> None:
         st.subheader("List View")
 
         # Select only the columns I want to display
-        selected_columns = ["X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster"]
+        selected_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster"]
         listview_df = st.session_state.filtered_df[selected_columns]
 
         event = st.dataframe(
@@ -341,4 +344,4 @@ def app(result_dir: str, image_dir: str) -> None:
         selected_data = df[df["No"] == defect_number]
 
     if selected_data is not None:
-        detail_view.app(selected_data, image_dir)
+        detail_view.app(selected_data, image_dir, db_metadata['input_lrf_ext'])
