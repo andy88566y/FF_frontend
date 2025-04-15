@@ -7,7 +7,7 @@ import yaml
 from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper, ui_helper
-from ltt_ff_frontend.result_viewer import single_lot_result_viewer_v7
+from ltt_ff_frontend.result_viewer import single_lot_result_viewer_v7, multi_lot_result_viewer_v7
 
 def app() -> None:
     logger.debug("Loading V7 Result Viewer...")
@@ -25,10 +25,11 @@ def app() -> None:
 
     output_dir_default = "/mnt/dbpc/xxx"
     single_lot_single_model_dir = '/home/ronyauw/0411/single_lot_single_model/'
+    multi_lot_single_model_dir = '/home/ronyauw/0411/multi_lot_single_model/'
     st_recipe_type = 'yaml'
     recipe = None
     with r1_col1:
-        rv_output_dir = st.text_input("Inference (Recipe) Result Directory", value=single_lot_single_model_dir)
+        rv_output_dir = st.text_input("Inference Result Directory", value=multi_lot_single_model_dir)
     with r1_col2:
         yaml_help_text = """
         **Example of a valid recipe:**\n
@@ -42,17 +43,17 @@ def app() -> None:
         if recipe_file is not None:
             recipe = yaml.load(recipe_file, Loader=yaml.Loader)
 
-    with gen_lrf_type_button_container:
-        st_gen_lrf_type = st.segmented_control("lrf Generation Option", ["threshold", "top_k"], default="threshold")
-
+    # with gen_lrf_type_button_container:
+    #     st_gen_lrf_type = st.segmented_control("lrf Generation Option", ["threshold", "top_k"], default="threshold")
+    # TODO: develop use, remove this when merge request is ready
+    st_gen_lrf_type = "threshold"
     if st_gen_lrf_type is None:
         st.error("lrf Generation Option can not be None!")
         return
 
     db_files = glob.glob(f"{rv_output_dir}/*.db")
     if len(db_files) > 1:
-        # multi_lot_result_viewer.app()
-        pass
+        multi_lot_result_viewer_v7.app(output_dir_default, rv_output_dir, st_gen_lrf_type)
     else:
         single_lot_result_viewer_v7.app(output_dir_default, rv_output_dir, st_gen_lrf_type)
     st.divider()
