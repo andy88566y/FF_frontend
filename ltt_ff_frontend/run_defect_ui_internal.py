@@ -14,7 +14,7 @@ if __name__ == "__main__":
     logger.debug("Loading main UI ...")
 
     page_result_viewer = st.Page(
-        result_viewer.app_allow_multilot,
+        result_viewer.app,
         url_path="result_viewer",
         title="Result Viewer",
         icon=":material/search_check_2:",

@@ -909,36 +909,6 @@ def app() -> None:
     db_files = glob.glob(f"{rv_m1_output_dir}/*.db")
 
     if len(db_files) > 1:
-        st.error(f"Error: multiple ({len(db_files)}) .db files found in {rv_m1_output_dir}")
-    else:
-        single_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
-
-
-# TODO: Maybe switch to use decorator
-def app_allow_multilot() -> None:
-    logger.debug("Loading Result Viewer...")
-    st.title("False Filter Result Viewer")
-    st.caption("Visualize False Filter Result [Model 1 - Base] [Model 2 - Candidate (optional)]")
-
-    r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 2])
-
-    output_dir_default = "/mnt/dbpc/xxx"
-    with r1_col1:
-        rv_m1_output_dir = st.text_input("Model 1 (Base) Result Directory", value=output_dir_default)
-    with r1_col2:
-        rv_m2_output_dir = st.text_input("Model 2 (Candidate) Result Directory", value=output_dir_default)
-    with r1_col3:
-        st_gen_lrf_type = st.segmented_control("lrf Generation Option", ["threshold", "top_k"], default="threshold")
-
-    if st_gen_lrf_type is None:
-        st.error("lrf Generation Option can not be None!")
-        return
-
-    st.divider()
-
-    db_files = glob.glob(f"{rv_m1_output_dir}/*.db")
-
-    if len(db_files) > 1:
         multi_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
     else:
         single_lot_result_viewer.app(output_dir_default, rv_m1_output_dir, rv_m2_output_dir, st_gen_lrf_type)
