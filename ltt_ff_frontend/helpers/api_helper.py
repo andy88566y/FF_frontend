@@ -5,6 +5,43 @@ import streamlit as st
 from loguru import logger
 from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
 
+def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
+    defect_id_list = api_helper.get_defect_id_lists(output_dir)
+    answer_list = api_helper.get_answer(output_dir=output_dir, defect_id=defect_id_list)[0]
+    prediction_list = api_helper.get_predictions(output_dir=output_dir, recipe=recipe, defect_list=defect_id_list)[0]
+
+    positive = answer_list.count(1)
+    negative = answer_list.count(0)
+    unlabeled = answer_list.count(-1)
+    true_positive = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == 1)
+    false_positive = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == 0)
+    true_negative = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 0 and ans == 0)
+    false_negative = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 0 and ans == 1)
+    filtered_unlabeled_defect_count = sum(
+        1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == -1
+    )
+
+    as_is_defect_count = positive + negative + unlabeled
+    to_be_defect_count = true_positive + false_positive + filtered_unlabeled_defect_count
+
+    capture_rate = true_positive / positive if positive > 0 else -1
+    false_filter_rate = true_negative / negative if negative > 0 else -1
+    filter_rate = 1 - (to_be_defect_count / as_is_defect_count) if as_is_defect_count > 0 else -1
+
+    return {
+        "as_is_defect_count": as_is_defect_count,
+        "to_be_defect_count": to_be_defect_count,
+        "filter_rate": filter_rate,
+        "as_is_true_defect_count": positive,
+        "to_be_true_defect_count": true_positive,
+        "capture_rate": capture_rate,
+        "as_is_non_defect_count": negative,
+        "to_be_non_defect_count": false_positive,
+        "false_filter_rate": false_filter_rate,
+        "unlabeled": unlabeled,
+        "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
+    }
+
 @st.cache_data(ttl="10s")
 def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
     """
