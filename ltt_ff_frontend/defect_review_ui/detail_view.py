@@ -10,10 +10,12 @@ from loguru import logger
 from PIL import Image, ImageDraw, ImageFont
 from plotly.subplots import make_subplots
 
-HORIZONTAL = 'horizontal'
-VERTICAL = 'vertical'
-RIGHT_DIAGONAL = 'right_diagonal'
-LEFT_DIAGONAL = 'left_diagonal'
+
+HORIZONTAL = "horizontal"
+VERTICAL = "vertical"
+RIGHT_DIAGONAL = "right_diagonal"
+LEFT_DIAGONAL = "left_diagonal"
+
 
 def load_image(path: str) -> Image:
     if path and os.path.exists(path):
@@ -21,13 +23,15 @@ def load_image(path: str) -> Image:
     else:
         return draw_red_cross()
 
+
 def draw_red_cross() -> Image:
     width, height = 256, 256
-    image = Image.new('RGBA', (width, height), color='white')
+    image = Image.new("RGBA", (width, height), color="white")
     draw = ImageDraw.Draw(image)
-    draw.line((0, 0, width, height), fill='red', width=10)
-    draw.line((0, height, width, 0), fill='red', width=10)
+    draw.line((0, 0, width, height), fill="red", width=10)
+    draw.line((0, height, width, 0), fill="red", width=10)
     return image
+
 
 def bresenham_line(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
     points = []
@@ -61,11 +65,7 @@ def add_red_line_to_fig(fig: go.Figure, x0: float, y0: float, x1: float, y1: flo
 
 
 def get_pixel_values(
-    images: list[Image],
-    selection: dict[str, Any],
-    direction: str,
-    fig_rt: go.Figure,
-    fig_t: go.Figure
+    images: list[Image], selection: dict[str, Any], direction: str, fig_rt: go.Figure, fig_t: go.Figure
 ) -> list[np.ndarray]:
     # (x0, y0) stands for top left vertex point
     # (x1, y1) stands for down right vertex point
@@ -144,8 +144,9 @@ def create_chart(df: pd.DataFrame, domain: list[str], range_colors: list[str]) -
     )
     return chart
 
-def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
-    display_no = selected_row['No'].values[0] if ext == 'lrf' else selected_row['UniqueID'].values[0]
+
+def app(selected_row: pd.DataFrame, image_dir: str, ext: str = "lrf") -> None:
+    display_no = selected_row["No"].values[0] if ext == "lrf" else selected_row["UniqueID"].values[0]
     st.subheader(f"Defect No {display_no}")
 
     # Create a single row with three columns for X, Y, and ClassType
@@ -166,7 +167,7 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
     type_options = ["L", "L_p", "U", "U_p", "_M", "_L", "_U"]
     ref_image_path, diff_image_path = None, None
     # Construct the file paths_Rt
-    if ext == 'blrf':
+    if ext == "blrf":
         # .blrf
         base_path = f"{image_dir}/Images/InstantReviewTDI_2/"
         no = selected_row.UniqueID.values[0]
@@ -176,14 +177,14 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
             if os.path.exists(potential_path):
                 diff_image_path = potential_path
                 break
-    elif ext == 'lrf':
+    elif ext == "lrf":
         # .lrf
         base_path = f"{image_dir}/Images/InstantReviewRt/"
         no = selected_row.No.values[0]
         test_image_path = f"{base_path}{no}.png"
         diff_image_path = f"{base_path}{no}D.png"
     else:
-        logger.error('unknown format when infering image file name.')
+        logger.error("unknown format when infering image file name.")
 
     # Find the correct test image path
     for type_option in type_options:
@@ -194,7 +195,7 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
 
     # Construct the file paths_T
     ref_image_path_T, diff_image_path_T = None, None
-    if ext == 'blrf':
+    if ext == "blrf":
         # .blrf
         base_path_T = f"{image_dir}/Images/InstantReviewTDI_1/"
         test_image_path_T = f"{base_path_T}{no}_C.png"
@@ -203,13 +204,13 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
             if os.path.exists(potential_path):
                 diff_image_path_T = potential_path
                 break
-    elif ext == 'lrf':
+    elif ext == "lrf":
         # .lrf
         base_path_T = f"{image_dir}/Images/InstantReviewT/"
         test_image_path_T = f"{base_path_T}{no}.png"
         diff_image_path_T = f"{base_path_T}{no}D.png"
     else:
-        logger.error('unknown format when infering image file name.')
+        logger.error("unknown format when infering image file name.")
     # Find the correct test image path_T
     for type_option in type_options:
         potential_path_T = f"{base_path_T}{no}{type_option}.png"
@@ -293,13 +294,7 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
     fig_t = create_figure(test_image_T)
 
     # show image and enable selection
-    event = st.plotly_chart(
-        fig, 
-        use_container_width=True, 
-        key="images",
-        selection_mode=('box'),
-        on_select="rerun"
-    )
+    event = st.plotly_chart(fig, use_container_width=True, key="images", selection_mode=("box"), on_select="rerun")
 
     # Ensure direction is set in session state
     if "direction" not in st.session_state:
@@ -369,6 +364,7 @@ def app(selected_row: pd.DataFrame, image_dir: str, ext: str = 'lrf') -> None:
 
     except KeyError as e:
         st.write(f"KeyError: {e}. Please make a valid selection.")
+
 
 # def overlay_images(base_image, overlay_image, alpha=0.5):
 #     return Image.blend(base_image, overlay_image, alpha)
