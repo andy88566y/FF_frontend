@@ -3,6 +3,7 @@ import streamlit as st
 import yaml
 from loguru import logger
 
+from ltt_ff_frontend.constant import INFERENCE_DEFAULT_RESULT_DIR
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 
 
@@ -45,7 +46,7 @@ def app() -> None:
     with r2_col1:
         inf_output_dir = st.text_input(
             label="Result directory",
-            value="/mnt/dbpc/xxx",
+            value=INFERENCE_DEFAULT_RESULT_DIR,
             help="The directory to store generated .lrf and .db files.",
         )
     with r2_col3:
@@ -77,6 +78,18 @@ def app() -> None:
             st.json(inf_config)
 
     if st.button("Start Multilot Inference Job", type="primary"):
+        # Ensure result directory is not the default value
+        if inf_output_dir == INFERENCE_DEFAULT_RESULT_DIR:
+            logger.error(
+                f"Default Result Directory detected ({INFERENCE_DEFAULT_RESULT_DIR}). "
+                "Please enter an appropriate Result Directory."
+            )
+            st.error(
+                f"Default Result Directory detected ({INFERENCE_DEFAULT_RESULT_DIR}). "
+                "Please enter an appropriate Result Directory."
+            )
+            return
+
         # Validate user input first
         required_input = [inf_configfile, inf_output_dir]
         for item in required_input:
@@ -172,6 +185,7 @@ def app() -> None:
                 selected_multilot_inference_id
             )
             st.dataframe(st.session_state.detailed_df_multi_inf, use_container_width=True)
+            helper.add_stop_job_button(st.session_state.detailed_df_multi_inf)
 
     helper.gap(1)
     #####################################################################################################
@@ -223,8 +237,7 @@ def app() -> None:
             ]
 
             # Get detailed statuses for each inference job and combine into one df
-            raw_df_inf = helper.request_inference_statuses(selected_inference_id)
-            st.session_state.detailed_df_inf = raw_df_inf
+            st.session_state.detailed_df_inf = helper.request_inference_statuses(selected_inference_id)
             st.dataframe(st.session_state.detailed_df_inf, use_container_width=True)
             # Stop job button
-            helper.add_stop_job_button(raw_df_inf)
+            helper.add_stop_job_button(st.session_state.detailed_df_inf)

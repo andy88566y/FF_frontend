@@ -33,6 +33,8 @@ else:  # FF_ENV == Env.DEV:
 
 BLANK_MODEL = "[UNUSED]"
 
+INFERENCE_DEFAULT_RESULT_DIR = "/mnt/dbpc/xxx"
+
 OPTIMIZER_TYPE = ["Adam", "AdamW"]
 OPTIMIZER_PARAMS = {
     "Adam": {
