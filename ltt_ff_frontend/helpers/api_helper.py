@@ -6,9 +6,9 @@ from loguru import logger
 from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
 
 def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
-    defect_id_list = api_helper.get_defect_id_lists(output_dir)
-    answer_list = api_helper.get_answer(output_dir=output_dir, defect_id=defect_id_list)[0]
-    prediction_list = api_helper.get_predictions(output_dir=output_dir, recipe=recipe, defect_list=defect_id_list)[0]
+    defect_id_list = get_defect_id_lists(output_dir)
+    answer_list = get_answer(output_dir=output_dir, defect_id=defect_id_list)[0]
+    prediction_list = get_predictions(output_dir=output_dir, recipe=recipe, defect_list=defect_id_list)[0]
 
     positive = answer_list.count(1)
     negative = answer_list.count(0)
@@ -300,7 +300,7 @@ def gen_lrf(
     if gen_lrf_type == "top_k":
         if top_k is not None and 1 <= top_k <= 999:
             if st.button(label=f"Generate new Model {model_id} lrf", key=f"gen_lrf_top_k_{key_number}"):
-                request = helper.request_top_k_lrf(output_dir=output_dir, top_k=top_k, lot_id=lot_id)
+                request = request_top_k_lrf(output_dir=output_dir, top_k=top_k, lot_id=lot_id)
 
                 if request.json().get("status") == "error":
                     code = request.json().get("code")
@@ -315,7 +315,7 @@ def gen_lrf(
     elif gen_lrf_type == "threshold":
         if threshold is not None and 0.0 <= threshold <= 1.0:
             if st.button(f"Generate new Model {model_id} lrf", key=f"gen_lrf_threshold_{key_number}"):
-                request = helper.request_threshold_lrf(
+                request = request_threshold_lrf(
                     output_dir=output_dir, confidence_threshold=threshold, lot_id=lot_id
                 )
 
@@ -333,14 +333,28 @@ def gen_lrf(
         raise NotImplementedError(f"gen_lrf_type {gen_lrf_type} is not implemented.")
 
 def get_model_data(
-    output_dir: str,
+    output_dir: str
 ) -> tuple[dict[str, Any], tuple[list[int], list[float], list[int]]] | tuple[None, None]:
     try:
-        db_metadata = get_db_metadata_lists(output_dir)
-        defect_id_lists = get_defect_id_lists(output_dir)
-        probability_list = get_probability(output_dir, defect_id_lists)
-        answer_list = get_answer(output_dir, defect_id_lists)
+        model_data_list = get_model_data_list(output_dir)
+        db_metadata = model_data_list[0]
+        defect_id_lists = model_data_list[1][0]
+        probability_list = model_data_list[1][1]
+        answer_list = model_data_list[1][2]
         return db_metadata[0], (defect_id_lists[0], probability_list[0], answer_list[0])
+    except Exception as e:
+        logger.warning(f"Error getting model data from {output_dir}! {e}")
+        return None, None
+
+def get_model_data_list(
+    output_dir: str
+) -> list[tuple[dict[str, Any], tuple[list[int], list[float], list[int]]]] | list[tuple[None, None]]:
+    try:
+        db_metadata = get_db_metadata_lists(output_dir)
+        defect_id_list = get_defect_id_lists(output_dir)
+        probability_list = get_probability(output_dir, defect_id_list)
+        answer_list = get_answer(output_dir, defect_id_list)
+        return db_metadata, (defect_id_list, probability_list, answer_list)
     except Exception as e:
         logger.warning(f"Error getting model data from {output_dir}! {e}")
         return None, None
@@ -363,3 +377,36 @@ def get_roc_threshold_marker_coordinates(
     threshold_coordinates_list = r.json()["threshold_coordinates_list"]
 
     return threshold_coordinates_list
+
+def request_threshold_lrf(output_dir: str, confidence_threshold: float, lot_id: str) -> requests.Response:
+    """
+    Args:
+        output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
+        confidence_threshold: Images with defect probability lower than confidence threshold
+                                is considered defective.
+        lot_id: Name of the lot of defect images.
+
+    Returns the reponse of the API request.
+    """
+    meta = get_db_metadata_lists(output_dir)[0]
+    model_name = meta.get("model_name", meta.get("model_name_0", ""))
+    recipe = {"recipes": [{"model_name": model_name, "threshold": confidence_threshold}]}
+
+    r = requests.post(
+        API_ROOT + "generate_lrf",
+        json={
+            "output_dir": output_dir,
+            "recipe": recipe,
+            "lot_id": lot_id,
+        },
+        timeout=TIMEOUT,
+    )
+
+    status = r.json()["status"]
+
+    if status == "started":
+        logger.info(".lrf generation requested successfully!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+
+    return r
