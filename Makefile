@@ -1,3 +1,5 @@
+include .env
+
 VENV_PREFIX = poetry run
 
 init: init_venv
@@ -46,14 +48,16 @@ formater_isort:
 formater_ruff:
 	$(VENV_PREFIX) ruff format
 
+DEV_PORT = $(shell echo 8590+$(DEV_NUM) | bc)
+
 run_dev_defect_ui_gpu01:
-	$(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui.py --browser.gatherUsageStats false --server.port 8501 --server.address 192.168.201.11
+	FF_ENV="dev" $(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui.py --browser.gatherUsageStats false --server.port $(DEV_PORT) --server.address 192.168.201.11
 
 run_dev_defect_ui_gpu02:
-	$(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui.py --browser.gatherUsageStats false --server.port 8501 --server.address 192.168.201.12
+	FF_ENV="dev" $(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui.py --browser.gatherUsageStats false --server.port $(DEV_PORT) --server.address 192.168.201.12
 
 run_dev_defect_ui_internal_gpu01:
-	$(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui_internal.py --browser.gatherUsageStats false --server.port 8501 --server.address 192.168.201.11
+	FF_ENV="dev" $(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui_internal.py --browser.gatherUsageStats false --server.port $(DEV_PORT) --server.address 192.168.201.11
 
 run_dev_defect_ui_internal_gpu02:
-	$(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui_internal.py --browser.gatherUsageStats false --server.port 8501 --server.address 192.168.201.12
+	FF_ENV="dev" $(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui_internal.py --browser.gatherUsageStats false --server.port $(DEV_PORT) --server.address 192.168.201.12
