@@ -1,13 +1,12 @@
 import glob
-from typing import Any
 
-import pandas as pd
 import streamlit as st
 import yaml
 from loguru import logger
 
-from ltt_ff_frontend.helpers import api_helper, ui_helper
-from ltt_ff_frontend.result_viewer import single_lot_result_viewer_v7, multi_lot_result_viewer_v7
+from ltt_ff_frontend.helpers import api_helper
+from ltt_ff_frontend.result_viewer import multi_lot_result_viewer_v7, single_lot_result_viewer_v7
+
 
 def app() -> None:
     logger.debug("Loading V7 Result Viewer...")
@@ -38,16 +37,16 @@ def app() -> None:
         yaml_help_text = """
         **Example of a valid recipe:**\n
         recipes:\n
-        \- model_name: base/model_1.encrypted.pth\n
+        \\- model_name: base/model_1.encrypted.pth\n
         &nbsp;&nbsp;threshold: 0.5\n
-        \- model_name: base/model_2.encrypted.pth\n
+        \\- model_name: base/model_2.encrypted.pth\n
         &nbsp;&nbsp;threshold: 0.9\n
         """
         recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
         if recipe_file is not None:
             recipe = yaml.load(recipe_file, Loader=yaml.Loader)
         # TODO: develop use, remove this when merge request is ready
-        with open(recipe_of_two_model_path, 'r') as recipe_file:
+        with open(recipe_of_two_model_path) as recipe_file:
             recipe = yaml.load(recipe_file, Loader=yaml.FullLoader)
         # TODO END
     with r1_col3:

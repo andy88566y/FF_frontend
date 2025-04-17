@@ -1,11 +1,13 @@
 from typing import Any
-from ltt_ff_frontend.constant import BLANK_MODEL
-from ltt_ff_frontend.helpers import api_helper
+
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import numpy as np
-import streamlit as st
+
+from ltt_ff_frontend.constant import BLANK_MODEL
+from ltt_ff_frontend.helpers import api_helper
+
 
 DEFECT_COLOR_MAPPING = {
     "D": "darkred",
@@ -54,7 +56,7 @@ def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
     return classtype_counter_df
 
 def generate_1D_plot(
-    data: tuple[list[int], list[float], list[int]], 
+    data: tuple[list[int], list[float], list[int]],
     threshold: float
 ) -> go.Figure:
     defect_ids, probs, ans = data

@@ -34,10 +34,10 @@ def app() -> None:
     yaml_help_text = """
     **Example of a valid .yaml config file:**\n
     data_paths:\n
-    \- lot_id: N0_M0-0_20240101_000000\n
+    \\- lot_id: N0_M0-0_20240101_000000\n
     &nbsp;&nbsp;lrf_path: /mnt/dbpc/xxx/N0_M0-0_20240101_000000_classified.lrf\n
     &nbsp;&nbsp;image_dir: /mnt/dbpc/xxx/N0_M0-0_20240101_000000/N0_M0-0_20240101_000000\n
-    \- lot_id: N0_M0-0_20240101_000000\n
+    \\- lot_id: N0_M0-0_20240101_000000\n
     &nbsp;&nbsp;lrf_path: /mnt/dbpc/xxx/N0_M0-0_20240101_000000_classified.lrf\n
     &nbsp;&nbsp;image_dir: /mnt/dbpc/xxx/N0_M0-0_20240101_000000/N0_M0-0_20240101_000000
 """

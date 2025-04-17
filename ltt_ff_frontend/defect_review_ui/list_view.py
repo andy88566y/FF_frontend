@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
-from loguru import logger
 from sklearn.cluster import DBSCAN
 
 from ltt_ff_frontend.defect_review_ui import detail_view

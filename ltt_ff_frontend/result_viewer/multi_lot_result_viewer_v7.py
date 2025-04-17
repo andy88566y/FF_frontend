@@ -1,9 +1,9 @@
-import pandas as pd
 import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
 from ltt_ff_frontend.result_viewer import result_viewer
+
 
 def highlight_cols(s):
     colors = {
@@ -177,4 +177,3 @@ def app(
 
     else:
         st.caption('Inference Result Directory is invalid.')
-        pass

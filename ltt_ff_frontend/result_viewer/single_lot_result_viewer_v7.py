@@ -1,10 +1,10 @@
+from typing import Any
+
 import streamlit as st
 
-from typing import Any
-from loguru import logger
-from ltt_ff_frontend.helpers import ui_helper, api_helper
-from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
+from ltt_ff_frontend.helpers import api_helper, ui_helper
 from ltt_ff_frontend.shared_components import multi_lot_stats
+
 
 def app(output_dir_default: str, inference_result_dir: str, recipe: Any) -> None:
     # Column for printing error message
@@ -13,7 +13,7 @@ def app(output_dir_default: str, inference_result_dir: str, recipe: Any) -> None
 
     if inference_result_dir in invalid_input:
         with error_msg_container:
-            st.error(f"Inference Result Directory is invalid.")
+            st.error("Inference Result Directory is invalid.")
         return
 
     model_metadata, model_raw_data = api_helper.get_model_data(inference_result_dir)
@@ -21,7 +21,7 @@ def app(output_dir_default: str, inference_result_dir: str, recipe: Any) -> None
         with error_msg_container:
             st.error(f"Error getting result data from {inference_result_dir}")
             return
-    
+
     # Show result database details
     st.subheader(f"Lot ID: {model_metadata['lot_id']}")
 
@@ -44,7 +44,7 @@ def app(output_dir_default: str, inference_result_dir: str, recipe: Any) -> None
         count_rate_data['filtered_unlabeled_defect_count']
     ]]
     multi_lot_stats.gen_stats_df_by_data_list(data_list, key="single_lot_df")
-    
+
     # TODO: Get classtype grouping from backend
     with st.container():
         with st.expander(label="LRF ClassType count"):

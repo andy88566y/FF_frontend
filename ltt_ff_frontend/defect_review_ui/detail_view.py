@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from loguru import logger
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from plotly.subplots import make_subplots
 
 

@@ -108,9 +108,9 @@ def app() -> None:
             yaml_help_text = """
             **Example of a valid recipe:**\n
             recipes:\n
-            \- model_name: base/model_1.encrypted.pth\n
+            \\- model_name: base/model_1.encrypted.pth\n
             &nbsp;&nbsp;threshold: 0.5\n
-            \- model_name: base/model_2.encrypted.pth\n
+            \\- model_name: base/model_2.encrypted.pth\n
             &nbsp;&nbsp;threshold: 0.9\n
             """
             recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)

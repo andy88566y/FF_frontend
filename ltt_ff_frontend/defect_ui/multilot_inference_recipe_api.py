@@ -22,9 +22,9 @@ def app() -> None:
         yaml_help_text = """
         **Example of a valid recipe:**\n
         recipes:\n
-        \- model_name: base/model_1.encrypted.pth\n
+        \\- model_name: base/model_1.encrypted.pth\n
         &nbsp;&nbsp;threshold: 0.5\n
-        \- model_name: base/model_2.encrypted.pth\n
+        \\- model_name: base/model_2.encrypted.pth\n
         &nbsp;&nbsp;threshold: 0.9\n
         """
         recipe_file = st.file_uploader("Upload Inference Recipe (.yaml)", type=".yaml", help=yaml_help_text)
@@ -32,10 +32,10 @@ def app() -> None:
         yaml_help_text = """
         **Example of a valid .yaml config file:**\n
         data_paths:\n
-        \- lot_id: N0_M0-0_20240101_000000\n
+        \\- lot_id: N0_M0-0_20240101_000000\n
         &nbsp;&nbsp;lrf_path: /mnt/dbpc/xxx/N0_M0-0_20240101_000000_classified.lrf\n
         &nbsp;&nbsp;image_dir: /mnt/dbpc/xxx/N0_M0-0_20240101_000000/N0_M0-0_20240101_000000\n
-        \- lot_id: N0_M0-0_20240101_000000\n
+        \\- lot_id: N0_M0-0_20240101_000000\n
         &nbsp;&nbsp;lrf_path: /mnt/dbpc/xxx/N0_M0-0_20240101_000000_classified.lrf\n
         &nbsp;&nbsp;image_dir: /mnt/dbpc/xxx/N0_M0-0_20240101_000000/N0_M0-0_20240101_000000
         """

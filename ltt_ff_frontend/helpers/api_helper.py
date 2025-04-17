@@ -1,9 +1,12 @@
 from typing import Any, Optional, Union
+
 import numpy as np
 import requests
 import streamlit as st
 from loguru import logger
+
 from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
+
 
 def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
     defect_id_list = get_defect_id_lists(output_dir)

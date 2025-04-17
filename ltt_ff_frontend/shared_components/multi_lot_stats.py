@@ -1,17 +1,11 @@
 from typing import Any
-from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
-from loguru import logger
 
 import pandas as pd
 import streamlit as st
-from typing import Any
-from ltt_ff_frontend.constant import BLANK_MODEL
-from ltt_ff_frontend.helpers import api_helper
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-import numpy as np
-import streamlit as st
+from loguru import logger
+
+from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
+
 
 def highlight_capture_rate(column):
     logger.debug('highlight capture rate')
