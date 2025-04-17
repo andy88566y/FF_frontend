@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import streamlit as st
 import yaml
@@ -91,7 +93,7 @@ def app() -> None:
             return
 
         # Ensure input result directory is safe
-        inf_output_dir = helper.ensure_safe_directory(inf_output_dir)
+        inf_output_dir = os.path.normpath(inf_output_dir)
 
         # Validate user input first
         required_input = [inf_configfile, inf_output_dir]

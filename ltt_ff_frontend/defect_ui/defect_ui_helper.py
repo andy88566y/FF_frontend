@@ -42,14 +42,6 @@ def format_model_name(name: str | None) -> str:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
 
-def ensure_safe_directory(input_dir: str) -> str:
-    if os.path.exists(input_dir):
-        return os.path.normpath(input_dir)
-    else:
-        logger.error(f"Input path does not exist: {input_dir}")
-        raise ValueError(f"Input path does not exist: {input_dir}")
-
-
 #####################################################################################################
 # Get model information                                                                             #
 #####################################################################################################
