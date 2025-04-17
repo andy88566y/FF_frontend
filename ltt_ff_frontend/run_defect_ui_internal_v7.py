@@ -7,7 +7,7 @@ from ltt_ff_frontend.defect_ui import (
     finetuning_api,
     inference_recipe_api,
 )
-from ltt_ff_frontend.result_viewer import result_viewer_v7
+from ltt_ff_frontend.result_viewer import result_viewer_v7, result_viewer
 
 
 if __name__ == "__main__":
@@ -16,6 +16,12 @@ if __name__ == "__main__":
     page_result_viewer = st.Page(
         result_viewer_v7.app,
         url_path="result_viewer",
+        title="Result Viewer",
+        icon=":material/search_check_2:",
+    )
+    page_result_viewer_old = st.Page(
+        result_viewer.app_allow_multilot,
+        url_path="result_viewer_old",
         title="Result Viewer",
         icon=":material/search_check_2:",
     )
@@ -44,6 +50,7 @@ if __name__ == "__main__":
     pg = st.navigation(
         [
             page_result_viewer,
+            page_result_viewer_old,
             page_inference,
             page_comparison,
             page_finetuning,

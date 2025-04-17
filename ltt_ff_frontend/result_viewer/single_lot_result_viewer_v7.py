@@ -1,12 +1,13 @@
 from typing import Any
 
 import streamlit as st
-
+import yaml
 from ltt_ff_frontend.helpers import api_helper, ui_helper
 from ltt_ff_frontend.shared_components import multi_lot_stats
+from loguru import logger
 
 
-def app(output_dir_default: str, inference_result_dir: str, recipe: Any) -> None:
+def app(output_dir_default: str, inference_result_dir: str, user_upload_recipe: Any) -> None:
     # Column for printing error message
     error_msg_container, _ = st.columns([3, 2])
     invalid_input = [output_dir_default, ""]
@@ -17,6 +18,9 @@ def app(output_dir_default: str, inference_result_dir: str, recipe: Any) -> None
         return
 
     model_metadata, model_raw_data = api_helper.get_model_data(inference_result_dir)
+    # db_recipe need to format again to match user upload recipe yaml
+    db_recipe = {"recipes": yaml.load(model_metadata['recipe'], Loader=yaml.Loader)}
+    recipe = user_upload_recipe if user_upload_recipe is not None else db_recipe
     if model_metadata is None:
         with error_msg_container:
             st.error(f"Error getting result data from {inference_result_dir}")
@@ -59,7 +63,7 @@ def app(output_dir_default: str, inference_result_dir: str, recipe: Any) -> None
         col_1d_chart, col_roc_curve = st.columns(2)
         # Draw 1D comparison chart
         with col_1d_chart:
-            st.plotly_chart(ui_helper.generate_1D_plot(model_raw_data, st.session_state["input_model_threshold_0"]))
+            st.plotly_chart(ui_helper.generate_1D_plot(model_raw_data, recipe['recipes'][0]['threshold']))
         with col_roc_curve:
             # TODO: This should be done somewhere else
             if 1 not in set(model_raw_data[2]):
@@ -73,7 +77,7 @@ def app(output_dir_default: str, inference_result_dir: str, recipe: Any) -> None
                             (
                                 "Model 1",
                                 model_roc_data,
-                                st.session_state["input_model_threshold_0"],
+                                recipe['recipes'][0]['threshold'],
                                 model_metadata.get("model_threshold_0", ""),
                                 inference_result_dir,
                             )

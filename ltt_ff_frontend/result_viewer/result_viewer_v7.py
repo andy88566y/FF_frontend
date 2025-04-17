@@ -23,15 +23,15 @@ def app() -> None:
     # rc5_col1, rc5_col2, rc5_col3 = st.columns([3, 2, 2])
 
     output_dir_default = "/mnt/dbpc/xxx"
-    # single_lot_single_model_dir = '/home/ronyauw/0411/single_lot_single_model/'
-    # multi_lot_single_model_dir = '/home/ronyauw/0411/multi_lot_single_model/'
-    # single_lot_two_models_recipe_dir = '/home/ronyauw/0411/single_lot_two_model/'
-    # recipe_of_two_model_path = '/home/ronyauw/0411/recipe_two_model.yaml'
-    # single_lot_three_models_recipe_dir = '/home/ronyauw/0411/single_lot_three_model/'
-    # recipe_of_three_model_path = '/home/ronyauw/0411/recipe_three_model.yaml'
-    recipe = None
+    single_lot_single_model_dir = '/home/ronyauw/0411/single_lot_single_model/'
+    multi_lot_single_model_dir = '/home/ronyauw/0411/multi_lot_single_model/'
+    single_lot_two_models_recipe_dir = '/home/ronyauw/0411/single_lot_two_model/'
+    recipe_of_two_model_path = '/home/ronyauw/0411/recipe_two_model.yaml'
+    single_lot_three_models_recipe_dir = '/home/ronyauw/0411/single_lot_three_model/'
+    recipe_of_three_model_path = '/home/ronyauw/0411/recipe_three_model.yaml'
+    user_upload_recipe = None
     with r1_col1:
-        rv_output_dir = st.text_input("Inference Result Directory", value=output_dir_default)
+        rv_output_dir = st.text_input("Inference Result Directory", value=multi_lot_single_model_dir)
     with r1_col2:
         yaml_help_text = """
         **Example of a valid recipe:**\n
@@ -43,14 +43,14 @@ def app() -> None:
         """
         recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
         if recipe_file is not None:
-            recipe = yaml.load(recipe_file, Loader=yaml.Loader)
+            user_upload_recipe = yaml.load(recipe_file, Loader=yaml.Loader)
         # TODO: develop use, remove this when merge request is ready
         # with open(recipe_of_two_model_path) as recipe_file:
         #     recipe = yaml.load(recipe_file, Loader=yaml.FullLoader)
         # TODO END
     with r1_col3:
             if st.button("Generate new lrf with Recipe"):
-                request = api_helper.request_recipe_lrf(output_dir=rv_output_dir, recipe=recipe, lot_id="")
+                request = api_helper.request_recipe_lrf(output_dir=rv_output_dir, recipe=user_upload_recipe, lot_id="")
 
                 if request.json().get("status") == "error":
                     code = request.json().get("code")
@@ -61,13 +61,13 @@ def app() -> None:
                     st.success(f"New .lrf file using recipe generated at {rv_output_dir}!")
                     logger.info(f"New .lrf file using recipe generated at {rv_output_dir}!")
 
-    if recipe is not None:
+    if user_upload_recipe is not None:
         with st.expander("Recipe preview:"):
-            st.code(yaml.dump(recipe), language="yaml")
+            st.code(yaml.dump(user_upload_recipe), language="yaml")
         st.divider()
 
     db_files = glob.glob(f"{rv_output_dir}/*.db")
     if len(db_files) > 1:
-        multi_lot_result_viewer_v7.app(output_dir_default, rv_output_dir)
+        multi_lot_result_viewer_v7.app(output_dir_default, rv_output_dir, user_upload_recipe=user_upload_recipe)
     else:
-        single_lot_result_viewer_v7.app(output_dir_default, rv_output_dir, recipe=recipe)
+        single_lot_result_viewer_v7.app(output_dir_default, rv_output_dir, user_upload_recipe=user_upload_recipe)
