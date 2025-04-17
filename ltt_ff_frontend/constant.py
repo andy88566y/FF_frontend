@@ -1,5 +1,35 @@
-API_ROOT = "http://localhost:6500/api/v1/"
+import os
+from enum import Enum
+
+from dotenv import load_dotenv
+from loguru import logger
+
+
 TIMEOUT = 10
+
+
+### Working Environment
+class Env(Enum):
+    DEV = "dev"
+    PROD = "prod"
+
+
+# Load ENV variables from .env files
+load_dotenv()
+
+ff_env_value = os.environ.get("FF_ENV", Env.DEV.value)
+try:
+    FF_ENV = Env(ff_env_value)
+except Exception as e:  # pylint: disable=broad-exception-caught
+    logger.warning(f"Fail to extract the FF_ENV: {ff_env_value}. Error: {str(e)}. Force set the FF_ENV to {Env.DEV}.")
+    FF_ENV = Env.DEV
+
+
+if FF_ENV == Env.PROD:
+    API_ROOT = "http://localhost:6500/api/v1/"
+else:  # FF_ENV == Env.DEV:
+    API_ROOT = f"http://localhost:{8580 + int(os.environ.get('DEV_NUM', '0'))}/api/v1/"
+
 
 BLANK_MODEL = "[UNUSED]"
 
