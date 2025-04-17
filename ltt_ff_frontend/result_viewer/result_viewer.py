@@ -54,7 +54,6 @@ def get_multilot_model_data(
 ) -> tuple[list[dict[str, Any]], tuple[list[list[int]], list[list[float]], list[list[int]]]] | tuple[None, None]:
     try:
         db_metadata = helper.get_db_metadata_lists(output_dir=output_dir)
-        logger.debug(db_metadata)
         defect_id_list = helper.get_defect_id_lists(output_dir=output_dir)
         probability_list = helper.get_probability(output_dir, defect_id_list)
         answer_list = helper.get_answer(output_dir, defect_id_list)

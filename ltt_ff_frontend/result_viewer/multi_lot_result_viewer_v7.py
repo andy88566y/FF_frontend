@@ -44,8 +44,7 @@ def highlight_to_be_total_defect_count(row):
 
 def app(
     output_dir_default: str,
-    output_dir: str,
-    st_gen_lrf_type: str
+    output_dir: str
 ) -> None:
     # Column for printing error message
     r2_col1, _r2_col2 = st.columns([3, 2])
@@ -95,78 +94,42 @@ def app(
         # Generate lrf by top k, and adjust threshold according to top k
         rv_m1_threshold = 1.0  # init as max value
         for index, meta in enumerate(model_1_metadata):
-            if st_gen_lrf_type == "top_k":
-                with vr1_col3:
-                    # Only show one top k number selector
-                    if index == 0:
-                        st.number_input(
-                            label="Top k",
-                            min_value=0,
-                            max_value=999,
-                            value=150,
-                            step=1,
-                            help="Top-k defects ranked by Probabilities will be considered as defects.",
-                            key="m1_topk",
-                        )
-                with vr1_col4:
-                    gen_lrf_col, lot_id_col = st.columns([2, 3])
-                    with gen_lrf_col:
-                        result_viewer.gen_lrf(
-                            model_id="1",
-                            output_dir=output_dir,
-                            gen_lrf_type=st_gen_lrf_type,
-                            top_k=st.session_state["m1_topk"],
-                            key_number=index,  # unique key for each gen lrf button
-                            lot_id=meta["lot_id"],
-                        )
-                    with lot_id_col:
-                        st.text(f"Lot ID: {meta['lot_id']}")
+            with vr1_col3:
+                if index == 0:
+                    rv_m1_threshold = st.number_input(
+                        label="Confidence threshold:",
+                        value=model_1_threshold,
+                        step=0.00001,
+                        format="%.5f",
+                        help="Probabilities above threshold will be considered as defects.",
+                        key=f"m1_threshold_{index}",
+                    )
 
-                current_threshold = helper.get_topk_model_threshold(
-                    output_dir=output_dir, top_k=st.session_state["m1_topk"], lot_id=meta["lot_id"]
+            # Validate confidence threshold
+            if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
+                logger.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}"
                 )
+                st.error(
+                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}"
+                )
+                return
 
-                # Select lowest calculated threshold to draw dotted line when in top_k mode
-                if current_threshold < rv_m1_threshold:
-                    rv_m1_threshold = current_threshold
+            # with vr1_col4:
+                # gen_lrf_col, lot_id_col = st.columns([2, 3])
+                # with gen_lrf_col:
+                #     # TODO
+                #     result_viewer.gen_lrf(
+                #         model_id="1",
+                #         output_dir=output_dir,
+                #         gen_lrf_type=st_gen_lrf_type,
+                #         threshold=rv_m1_threshold,
+                #         key_number=index,  # unique key for each gen lrf button
+                #         lot_id=meta["lot_id"],
+                #     )
 
-            # Generate lrf by threshold
-            else:
-                with vr1_col3:
-                    if index == 0:
-                        rv_m1_threshold = st.number_input(
-                            label="Confidence threshold:",
-                            value=model_1_threshold,
-                            step=0.00001,
-                            format="%.5f",
-                            help="Probabilities above threshold will be considered as defects.",
-                            key=f"m1_threshold_{index}",
-                        )
-
-                # Validate confidence threshold
-                if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
-                    logger.error(
-                        f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}"
-                    )
-                    st.error(
-                        f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}"
-                    )
-                    return
-
-                with vr1_col4:
-                    gen_lrf_col, lot_id_col = st.columns([2, 3])
-                    with gen_lrf_col:
-                        result_viewer.gen_lrf(
-                            model_id="1",
-                            output_dir=output_dir,
-                            gen_lrf_type=st_gen_lrf_type,
-                            threshold=rv_m1_threshold,
-                            key_number=index,  # unique key for each gen lrf button
-                            lot_id=meta["lot_id"],
-                        )
-
-                    with lot_id_col:
-                        st.text(f"Lot ID: {meta['lot_id']}")
+                # with lot_id_col:
+                #     st.text(f"Lot ID: {meta['lot_id']}")
 
         # Show Total/Defect/Non-defect/unlabeled count
         with r3_header.container():
