@@ -27,7 +27,6 @@ def app(output_dir_default: str, inference_result_dir: str, recipe: Any) -> None
 
     # Show Total/Defect/Non-defect/unlabeled count
     st.text("Inference results")
-    multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
     count_rate_data = api_helper.calculate_recipe_filtered_results(inference_result_dir, recipe=recipe)
     data_list = [[
         model_metadata['lot_id'],

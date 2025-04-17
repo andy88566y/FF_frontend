@@ -23,16 +23,15 @@ def app() -> None:
     # rc5_col1, rc5_col2, rc5_col3 = st.columns([3, 2, 2])
 
     output_dir_default = "/mnt/dbpc/xxx"
-    single_lot_single_model_dir = '/home/ronyauw/0411/single_lot_single_model/'
-    multi_lot_single_model_dir = '/home/ronyauw/0411/multi_lot_single_model/'
-    single_lot_two_models_recipe_dir = '/home/ronyauw/0411/single_lot_two_model/'
-    recipe_of_two_model_path = '/home/ronyauw/0411/recipe_two_model.yaml'
-    single_lot_three_models_recipe_dir = '/home/ronyauw/0411/single_lot_three_model/'
-    recipe_of_three_model_path = '/home/ronyauw/0411/recipe_three_model.yaml'
-    st_recipe_type = 'yaml'
+    # single_lot_single_model_dir = '/home/ronyauw/0411/single_lot_single_model/'
+    # multi_lot_single_model_dir = '/home/ronyauw/0411/multi_lot_single_model/'
+    # single_lot_two_models_recipe_dir = '/home/ronyauw/0411/single_lot_two_model/'
+    # recipe_of_two_model_path = '/home/ronyauw/0411/recipe_two_model.yaml'
+    # single_lot_three_models_recipe_dir = '/home/ronyauw/0411/single_lot_three_model/'
+    # recipe_of_three_model_path = '/home/ronyauw/0411/recipe_three_model.yaml'
     recipe = None
     with r1_col1:
-        rv_output_dir = st.text_input("Inference Result Directory", value=single_lot_two_models_recipe_dir)
+        rv_output_dir = st.text_input("Inference Result Directory", value=output_dir_default)
     with r1_col2:
         yaml_help_text = """
         **Example of a valid recipe:**\n
@@ -46,8 +45,8 @@ def app() -> None:
         if recipe_file is not None:
             recipe = yaml.load(recipe_file, Loader=yaml.Loader)
         # TODO: develop use, remove this when merge request is ready
-        with open(recipe_of_two_model_path) as recipe_file:
-            recipe = yaml.load(recipe_file, Loader=yaml.FullLoader)
+        # with open(recipe_of_two_model_path) as recipe_file:
+        #     recipe = yaml.load(recipe_file, Loader=yaml.FullLoader)
         # TODO END
     with r1_col3:
             if st.button("Generate new lrf with Recipe"):
@@ -72,5 +71,3 @@ def app() -> None:
         multi_lot_result_viewer_v7.app(output_dir_default, rv_output_dir)
     else:
         single_lot_result_viewer_v7.app(output_dir_default, rv_output_dir, recipe=recipe)
-
-    invalid_input = [output_dir_default, ""]

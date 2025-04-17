@@ -108,10 +108,12 @@ def app(
             # Validate confidence threshold
             if rv_m1_threshold < 0.0 or rv_m1_threshold > 1.0:
                 logger.error(
-                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}"
+                    f"""Confidence threshold must be between 0.0 and 1.0!\n
+                    Selected confidence threshold: {rv_m1_threshold}"""
                 )
                 st.error(
-                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {rv_m1_threshold}"
+                    f"""Confidence threshold must be between 0.0 and 1.0!\n
+                    Selected confidence threshold: {rv_m1_threshold}"""
                 )
                 return
 

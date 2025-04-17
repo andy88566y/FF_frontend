@@ -2,21 +2,17 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
-from loguru import logger
 
 from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
 
 
 def highlight_capture_rate(column):
-    logger.debug('highlight capture rate')
     styles = []
     for val in column:
         numeric_val = float(val)
-        logger.debug(val)
         color = "red" if numeric_val != 1.0 and numeric_val != -1.0 else ""
         font_weight = "bold" if numeric_val != 1.0 and numeric_val != -1.0 else ""
         styles.append(f"color: {color}; font-weight: {font_weight};")
-    logger.debug(styles)
     return styles
 
 def highlight_to_be_total_defect_count(row):
@@ -45,10 +41,7 @@ def draw_column_background_color(s):
         "Non Defect Count": colors["green"],
         "Unlabeled Count": colors["blue"],
     }
-    logger.debug(s)
-    logger.debug([first_index for first_index in s.index.get_level_values(0)])
     foo =  [col_to_colors.get(first_index, colors["default"]) for first_index in s.index.get_level_values(0)]
-    logger.debug(foo)
     return foo
 
 def calculate_filtered_results(
@@ -66,9 +59,6 @@ def calculate_filtered_results(
         1 for prob, ans in zip(probability_list, answer_list) if prob >= selected_threshold and ans == 0
     )
     true_negative = sum(1 for prob, ans in zip(probability_list, answer_list) if prob < selected_threshold and ans == 0)
-    false_negative = sum(
-        1 for prob, ans in zip(probability_list, answer_list) if prob < selected_threshold and ans == 1
-    )
     filtered_unlabeled_defect_count = sum(
         1 for prob, ans in zip(probability_list, answer_list) if prob >= selected_threshold and ans == -1
     )
@@ -108,7 +98,12 @@ def draw_stats_df(
     )
 
     data = []
-    for id_list, prob_list, ans_list, meta in zip(defect_id_lists, probability_lists, answer_lists, model_metadata_list):
+    for id_list, prob_list, ans_list, meta in zip(
+        defect_id_lists,
+        probability_lists,
+        answer_lists,
+        model_metadata_list
+    ):
         count_rate_data = calculate_filtered_results((id_list, prob_list, ans_list), selected_threshold)
         data.append(
             [
