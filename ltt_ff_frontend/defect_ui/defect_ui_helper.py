@@ -646,6 +646,7 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
             "model_name",
             "threshold",
             "output_dir",
+            "gen_optimized_recipe",
             "message",
             "error_message",
         ]
