@@ -80,17 +80,8 @@ def app() -> None:
             st.json(inf_config)
 
     if st.button("Start Multilot Inference Job", type="primary"):
-        # Ensure result directory is not the default value
-        if inf_output_dir == INFERENCE_DEFAULT_RESULT_DIR:
-            logger.error(
-                f"Default Result Directory detected ({INFERENCE_DEFAULT_RESULT_DIR}). "
-                "Please enter an appropriate Result Directory."
-            )
-            st.error(
-                f"Default Result Directory detected ({INFERENCE_DEFAULT_RESULT_DIR}). "
-                "Please enter an appropriate Result Directory."
-            )
-            return
+        # Block invalid result directory (i.e. default output dir, or directories outside /mnt/dbpc or /mnt/output)
+        helper.disallow_invalid_output_dir(inf_output_dir)
 
         # Ensure input result directory is safe
         inf_output_dir = os.path.normpath(inf_output_dir)
