@@ -90,6 +90,9 @@ def app() -> None:
             )
             return
 
+        # Ensure input result directory is safe
+        inf_output_dir = helper.ensure_safe_directory(inf_output_dir)
+
         # Validate user input first
         required_input = [inf_configfile, inf_output_dir]
         for item in required_input:

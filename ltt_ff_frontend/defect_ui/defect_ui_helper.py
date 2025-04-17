@@ -1,4 +1,5 @@
 import base64
+import os
 from pprint import pformat
 from typing import Any, Optional
 
@@ -39,6 +40,14 @@ def format_model_name(name: str | None) -> str:
     # For output model name (e.g. 13feb_minye#x9u#tl#lg20250213T151435Z#55032dae#5fb1017f)
     else:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
+
+
+def ensure_safe_directory(input_dir: str) -> str:
+    if os.path.exists(input_dir):
+        return os.path.normpath(input_dir)
+    else:
+        logger.error(f"Input path does not exist: {input_dir}")
+        raise ValueError(f"Input path does not exist: {input_dir}")
 
 
 #####################################################################################################

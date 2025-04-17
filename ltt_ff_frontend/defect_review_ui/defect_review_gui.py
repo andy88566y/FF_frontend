@@ -7,7 +7,7 @@ from loguru import logger
 from ltt_ff_frontend.defect_review_ui import list_view
 
 
-def app():
+def app() -> None:
     st.title("Defect Review")
 
     # TODO: Remove image_dir once our own image generation process is done
