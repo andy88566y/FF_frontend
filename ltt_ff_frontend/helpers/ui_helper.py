@@ -28,50 +28,6 @@ def format_model_name(name: str | None) -> str:
     else:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
-def calculate_filtered_results(
-    raw_data: tuple[list[int], list[float], list[int]], selected_threshold: float
-) -> dict[str, Any]:
-    _, probability_list, answer_list = raw_data
-
-    positive = answer_list.count(1)
-    negative = answer_list.count(0)
-    unlabeled = answer_list.count(-1)
-    true_positive = sum(
-        1 for prob, ans in zip(probability_list, answer_list) if prob >= selected_threshold and ans == 1
-    )
-    false_positive = sum(
-        1 for prob, ans in zip(probability_list, answer_list) if prob >= selected_threshold and ans == 0
-    )
-    true_negative = sum(1 for prob, ans in zip(probability_list, answer_list) if prob < selected_threshold and ans == 0)
-    false_negative = sum(
-        1 for prob, ans in zip(probability_list, answer_list) if prob < selected_threshold and ans == 1
-    )
-    filtered_unlabeled_defect_count = sum(
-        1 for prob, ans in zip(probability_list, answer_list) if prob >= selected_threshold and ans == -1
-    )
-
-    as_is_defect_count = positive + negative + unlabeled
-    to_be_defect_count = true_positive + false_positive + filtered_unlabeled_defect_count
-
-    capture_rate = true_positive / positive if positive > 0 else -1
-    capture_rate = true_positive / positive if positive > 0 else -1
-    false_filter_rate = true_negative / negative if negative > 0 else -1
-    filter_rate = 1 - (to_be_defect_count / as_is_defect_count) if as_is_defect_count > 0 else -1
-
-    return {
-        "as_is_defect_count": as_is_defect_count,
-        "to_be_defect_count": to_be_defect_count,
-        "filter_rate": filter_rate,
-        "as_is_true_defect_count": positive,
-        "to_be_true_defect_count": true_positive,
-        "capture_rate": capture_rate,
-        "as_is_non_defect_count": negative,
-        "to_be_non_defect_count": false_positive,
-        "false_filter_rate": false_filter_rate,
-        "unlabeled": unlabeled,
-        "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
-    }
-
 def get_classtype_count(defect_list: list[dict[str, Any]]) -> pd.DataFrame:
     classtype_counter: dict[str, int] = {}
 

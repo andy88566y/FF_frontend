@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 import numpy as np
 import requests
 import streamlit as st
@@ -344,6 +344,40 @@ def get_model_data(
         return db_metadata[0], (defect_id_lists[0], probability_list[0], answer_list[0])
     except Exception as e:
         logger.warning(f"Error getting model data from {output_dir}! {e}")
+        return None, None
+class MultiLotModelData:
+    def __init__(
+        self,
+        model_metadata_list: list[dict[str, Any]],
+        defect_id_lists: list[list[int]],
+        probability_lists: list[list[float]],
+        answer_lists: list[list[int]]
+    ):
+        self.model_metadata_list = model_metadata_list
+        self.defect_id_lists = defect_id_lists
+        self.probability_lists = probability_lists
+        self.answer_lists = answer_lists
+
+    def __repr__(self) -> str:
+        return f"""MultiLotModelData(model_metadata_list={self.model_metadata_list}, 
+                defect_id_lists={self.defect_id_lists}, 
+                probability_lists={self.probability_lists}, 
+                answer_lists={self.answer_lists})"""
+
+def get_multilot_model_data(
+    output_dir: str,
+) -> Union[MultiLotModelData, None]:
+    try:
+        db_metadata = get_db_metadata_lists(output_dir=output_dir)
+        defect_id_lists = get_defect_id_lists(output_dir=output_dir)
+        probability_lists = get_probability(output_dir, defect_id_lists)
+        answer_lists = get_answer(output_dir, defect_id_lists)
+        assert len(defect_id_lists) == len(probability_lists), f"IDs: {len(defect_id_lists)} Prob: {len(probability_lists)}"
+        assert len(defect_id_lists) == len(answer_lists), f"IDs: {len(defect_id_lists)} Ans: {len(answer_lists)}"
+
+        return MultiLotModelData(db_metadata, defect_id_lists, probability_lists, answer_lists)
+    except Exception as e:
+        logger.warning(f"Error getting model data from {output_dir}! {type(e)} {e}")
         return None, None
 
 def get_model_data_list(
