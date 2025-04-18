@@ -12,6 +12,8 @@ def app(
     inference_result_dir: str, 
     recipe: dict[str, list[dict[str, str]]]
 ) -> None:
+    logger.debug("Loading Single Lot Result Viewer...")
+
     model_metadata, model_raw_data = api_helper.get_model_data(inference_result_dir)
     if model_metadata is None:
         with error_msg_container:

@@ -14,7 +14,7 @@ CREATOR_MODE = "Creator"
 RECIPE_INPUT_MODES = [YAML_MODE, DB_MODE, CREATOR_MODE]
 
 def app() -> None:
-    logger.debug("Loading V7 Result Viewer...")
+    logger.debug("Loading Result Viewer...")
     st.title("False Filter Result Viewer (Recipe)")
     st.caption("Visualize False Filter Result")
 
@@ -45,7 +45,7 @@ def app() -> None:
             st.error(f"Error getting result data from {inference_result_dir}")
             return
         
-        st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=YAML_MODE)
+        st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=DB_MODE)
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
             return
@@ -122,7 +122,11 @@ def app() -> None:
         st.divider()
 
     db_files = glob.glob(f"{inference_result_dir}/*.db")
+    if st_recipe_type == YAML_MODE and recipe is None:
+        st.warning("Yaml mode, wating for uploading yaml file.")
+        return
+
     if len(db_files) > 1:
         multi_lot_result_viewer_v7.app(output_dir_default, inference_result_dir, recipe=recipe)
     else:
-        single_lot_result_viewer_v7.app(output_dir_default, inference_result_dir, user_upload_recipe=user_upload_recipe)
+        single_lot_result_viewer_v7.app(output_dir_default, inference_result_dir, recipe=recipe)

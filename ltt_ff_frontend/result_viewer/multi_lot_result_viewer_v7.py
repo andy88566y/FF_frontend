@@ -12,6 +12,8 @@ def app(
     inference_result_dir: str,
     recipe: dict[str, list[dict[str, str]]]
 ) -> None:
+    logger.debug("Loading Multi Lot Result Viewer...")
+
     multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
     if multi_lot_model_data is None:
         with error_msg_container:
