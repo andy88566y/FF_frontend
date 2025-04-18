@@ -149,7 +149,13 @@ def gen_stats_df_by_data_list(
         .apply(highlight_capture_rate, subset=[("True Defect Count", "Capture Rate")], axis=0)
     )
     event = st.dataframe(
-        styled_df, key=key, use_container_width=True, hide_index=True, on_select="rerun", selection_mode="multi-row"
+        styled_df, 
+        key=key, 
+        use_container_width=True, 
+        hide_index=True, 
+        on_select="rerun", 
+        selection_mode="multi-row",
+        height=35 * (len(data) + 2)
     )
 
     selected_rows = event.selection.rows
