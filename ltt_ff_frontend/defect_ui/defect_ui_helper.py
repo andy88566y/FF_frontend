@@ -9,7 +9,7 @@ import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, FF_ENV, INFERENCE_DEFAULT_RESULT_DIR, TIMEOUT, Env
+from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR, TIMEOUT
 
 
 #####################################################################################################
@@ -1306,7 +1306,7 @@ def disallow_invalid_output_dir(output_dir: str) -> None:
         )
 
     # Block directories not in /mnt/dbpc or /mnt/output (for PROD)
-    if FF_ENV == Env.PROD:
+    if RESTRICT_OUTPUT_DIR:
         allowed_directories = ("/mnt/dbpc", "/mnt/output")
         if not output_dir.startswith(allowed_directories):
             logger.error(f"Result Directory does not belong to one of the allowed directories: {allowed_directories}")

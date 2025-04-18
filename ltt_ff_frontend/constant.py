@@ -27,8 +27,10 @@ except Exception as e:  # pylint: disable=broad-exception-caught
 
 if FF_ENV == Env.PROD:
     API_ROOT = "http://localhost:6500/api/v1/"
+    RESTRICT_OUTPUT_DIR = True
 else:  # FF_ENV == Env.DEV:
     API_ROOT = f"http://localhost:{8580 + int(os.environ.get('DEV_NUM', '0'))}/api/v1/"
+    RESTRICT_OUTPUT_DIR = False
 
 
 BLANK_MODEL = "[UNUSED]"
