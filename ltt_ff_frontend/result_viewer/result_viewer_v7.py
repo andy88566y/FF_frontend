@@ -8,9 +8,10 @@ from ltt_ff_frontend.constant import BLANK_MODEL
 from ltt_ff_frontend.helpers import api_helper, ui_helper
 from ltt_ff_frontend.result_viewer import multi_lot_result_viewer_v7, single_lot_result_viewer_v7
 
-DB_OR_YAML_MODE = "DB_OR_YAML"
-CREATOR_MODE = "CREATOR"
-RECIPE_INPUT_MODES = [DB_OR_YAML_MODE, CREATOR_MODE]
+YAML_MODE = "Yaml"
+DB_MODE = "Database"
+CREATOR_MODE = "Creator"
+RECIPE_INPUT_MODES = [YAML_MODE, DB_MODE, CREATOR_MODE]
 
 def app() -> None:
     logger.debug("Loading V7 Result Viewer...")
@@ -20,6 +21,7 @@ def app() -> None:
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1], border=True)
 
     output_dir_default = "/mnt/dbpc/xxx"
+    invalid_input = [output_dir_default, ""]
     single_lot_single_model_dir = '/home/ronyauw/0411/single_lot_single_model/'
     single_lot_two_models_recipe_dir = '/home/ronyauw/0411/single_lot_two_model/'
     single_lot_three_models_recipe_dir = '/home/ronyauw/0411/single_lot_three_model/'
@@ -31,25 +33,29 @@ def app() -> None:
     recipe_of_three_model_path = '/home/ronyauw/0411/recipe_three_model.yaml'
     user_upload_recipe = None
     with r1_col1:
-        rv_output_dir = st.text_input("Inference Result Directory", value=multi_lot_single_model_dir)
+        inference_result_dir = st.text_input("Inference Result Directory", value=multi_lot_single_model_dir)
     with r1_col2:
-        st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=DB_OR_YAML_MODE)
+        if inference_result_dir in invalid_input:
+            st.error("Inference Result Directory is invalid.")
+            return
+        st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=YAML_MODE)
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
             return
     with r1_col3:
         if st.button("Generate new lrf with Recipe"):
-            request = api_helper.request_recipe_lrf(output_dir=rv_output_dir, recipe=user_upload_recipe, lot_id="")
+            request = api_helper.request_recipe_lrf(output_dir=inference_result_dir, recipe=user_upload_recipe, lot_id="")
             if request.json().get("status") == "error":
                 code = request.json().get("code")
                 message = request.json().get("message")
                 st.error(f".lrf file not generated!\nError code: {code}\nError message: {message}")
                 logger.error(f".lrf file not generated!\nError code: {code}\nError message: {message}")
             else:
-                st.success(f"New .lrf file using recipe generated at {rv_output_dir}!")
-                logger.info(f"New .lrf file using recipe generated at {rv_output_dir}!")
+                st.success(f"New .lrf file using recipe generated at {inference_result_dir}!")
+                logger.info(f"New .lrf file using recipe generated at {inference_result_dir}!")
 
-    if st_recipe_type == DB_OR_YAML_MODE:
+    recipe = None
+    if st_recipe_type == YAML_MODE:
         col1, col2, col3 = st.columns([3, 2, 2])
         with col1:
             yaml_help_text = """
@@ -62,7 +68,11 @@ def app() -> None:
             """
             recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
             if recipe_file is not None:
-                user_upload_recipe = yaml.load(recipe_file, Loader=yaml.Loader)
+                recipe = yaml.load(recipe_file, Loader=yaml.Loader)
+    elif st_recipe_type == DB_MODE:
+        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
+        first_model_metadata = multi_lot_model_data.model_metadata_list[0]
+        recipe = {"recipes": yaml.load(first_model_metadata['recipe'], Loader=yaml.Loader)}
     elif st_recipe_type == CREATOR_MODE:
         available_models = api_helper.get_base_models(include_blank=True)
         recipe_models = []
@@ -99,15 +109,14 @@ def app() -> None:
         if recipe is not None:
             st.subheader("Recipe preview:")
             st.code(yaml.dump(recipe), language="yaml")
-
-            st.divider()
-    if user_upload_recipe is not None:
-        with st.expander("Recipe preview:"):
-            st.code(yaml.dump(user_upload_recipe), language="yaml")
+    st.divider()
+    if recipe is not None:
+        with st.expander(f"{st_recipe_type} Recipe preview:"):
+            st.code(yaml.dump(recipe), language="yaml")
         st.divider()
 
-    db_files = glob.glob(f"{rv_output_dir}/*.db")
+    db_files = glob.glob(f"{inference_result_dir}/*.db")
     if len(db_files) > 1:
-        multi_lot_result_viewer_v7.app(output_dir_default, rv_output_dir, user_upload_recipe=user_upload_recipe)
+        multi_lot_result_viewer_v7.app(output_dir_default, inference_result_dir, recipe=recipe)
     else:
-        single_lot_result_viewer_v7.app(output_dir_default, rv_output_dir, user_upload_recipe=user_upload_recipe)
+        single_lot_result_viewer_v7.app(output_dir_default, inference_result_dir, user_upload_recipe=user_upload_recipe)

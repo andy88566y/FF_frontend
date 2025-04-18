@@ -10,28 +10,19 @@ from ltt_ff_frontend.shared_components import multi_lot_stats, prob_distribution
 def app(
     default_output_dir: str,
     inference_result_dir: str,
-    user_upload_recipe: Any
+    recipe: dict[str, list[dict[str, str]]]
 ) -> None:
-    # Column for printing error message
-    error_msg_container, _ = st.columns([3, 2])
-    invalid_input = [default_output_dir, ""]
-
-    if inference_result_dir in invalid_input:
-        with error_msg_container:
-            st.error("Inference Result Directory is invalid.")
-        return
-    
     multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
     if multi_lot_model_data is None:
         with error_msg_container:
             st.error(f"Error getting result data from {inference_result_dir}")
             return
     model_metadata_list = multi_lot_model_data.model_metadata_list
-    # db_recipe need to format again to match user upload recipe yaml
-    # for multilot inference, recipe will be the same across all model metadata
-    # using the first one
-    db_recipe = {"recipes": yaml.load(model_metadata_list[0]['recipe'], Loader=yaml.Loader)}
-    recipe = user_upload_recipe if user_upload_recipe is not None else db_recipe
+    # # db_recipe need to format again to match user upload recipe yaml
+    # # for multilot inference, recipe will be the same across all model metadata
+    # # using the first one
+    # db_recipe = {"recipes": yaml.load(model_metadata_list[0]['recipe'], Loader=yaml.Loader)}
+    # recipe = user_upload_recipe if user_upload_recipe is not None else db_recipe
 
     # Columns for printing Model info for 1 or 2 models (Model #1/2, model name, threshold, lot ID + gen lrf button)
     vr1_col1, vr1_col2, vr1_col3, vr1_col4 = st.columns([1, 3, 3, 4])
@@ -72,7 +63,7 @@ def app(
                 st.caption(f"LRF type: {meta['input_lrf_type']}")
                 st.dataframe(data=classtype_counter_df)
                 st.divider()
-    if len(db_recipe['recipes']) == 1:
+    if recipe is not None and len(recipe['recipes']) == 1:
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart_column, col_roc_curve_column = st.columns(2)
         model_raw_data = (
