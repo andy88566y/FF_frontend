@@ -5,7 +5,7 @@ from typing import Any
 
 from ltt_ff_frontend.helpers import ui_helper, api_helper
 from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
-from ltt_ff_frontend.shared_components import multi_lot_stats, prob_distribution_fig
+from ltt_ff_frontend.shared_components import multi_lot_stats, prob_distribution_fig, roc_fig
 
 def app(
     default_output_dir: str,
@@ -73,16 +73,15 @@ def app(
                 st.dataframe(data=classtype_counter_df)
                 st.divider()
     if len(db_recipe['recipes']) == 1:
-        logger.debug(db_recipe['recipes'])
         # Columns for drawing distribution chart and ROC curve
-        col_1d_chart, col_roc_curve = st.columns(2)
+        col_1d_chart_column, col_roc_curve_column = st.columns(2)
         model_raw_data = (
             multi_lot_model_data.defect_id_lists,
             multi_lot_model_data.probability_lists,
             multi_lot_model_data.answer_lists
         )
         # Draw 1D comparison chart
-        with col_1d_chart:
+        with col_1d_chart_column:
             st.plotly_chart(
                 prob_distribution_fig.generate_multilot_1D_plot(
                     model_raw_data,
@@ -91,24 +90,11 @@ def app(
                     selected_lot_id_list
                 )
             )
-        # with col_roc_curve:
-        #     # TODO: This should be done somewhere else
-        #     if 1 not in set(model_raw_data[2]):
-        #         # All data is unlabeled or dataset consists of only non-defects
-        #         st.markdown("##### All data is unlabeled or no defects found! Skipping chart.")
-        #     else:
-        #         model_roc_data = api_helper.get_roc_data(inference_result_dir, return_curve=True)[0]
-        #         st.plotly_chart(
-        #             ui_helper.plot_roc(
-        #                 [
-        #                     (
-        #                         "Model 1",
-        #                         model_roc_data,
-        #                         st.session_state["input_model_threshold_0"],
-        #                         model_metadata.get("model_threshold_0", ""),
-        #                         inference_result_dir,
-        #                     )
-        #                 ]
-        #             )
-        #         )
+        with col_roc_curve_column:
+            roc_fig.gen_fig(inference_result_dir, 
+                model_raw_data, 
+                model_metadata_list, 
+                0.5, 
+                selected_lot_id_list
+            )
     st.divider()
