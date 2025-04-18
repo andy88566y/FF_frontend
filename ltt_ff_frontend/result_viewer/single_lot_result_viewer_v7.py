@@ -18,13 +18,17 @@ def app(output_dir_default: str, inference_result_dir: str, user_upload_recipe: 
         return
 
     model_metadata, model_raw_data = api_helper.get_model_data(inference_result_dir)
-    # db_recipe need to format again to match user upload recipe yaml
-    db_recipe = {"recipes": yaml.load(model_metadata['recipe'], Loader=yaml.Loader)}
-    recipe = user_upload_recipe if user_upload_recipe is not None else db_recipe
     if model_metadata is None:
         with error_msg_container:
             st.error(f"Error getting result data from {inference_result_dir}")
             return
+    db_recipe_string = model_metadata.get('recipe', None)
+    if db_recipe_string is None:
+        with error_msg_container:
+            st.error(f"inference result does not contain recipe, please provide recipe.yaml")
+    # db_recipe need to format again to match user upload recipe yaml
+    db_recipe = {"recipes": yaml.load(db_recipe_string, Loader=yaml.Loader)}
+    recipe = user_upload_recipe if user_upload_recipe is not None else db_recipe
 
     # Show result database details
     st.subheader(f"Lot ID: {model_metadata['lot_id']}")
