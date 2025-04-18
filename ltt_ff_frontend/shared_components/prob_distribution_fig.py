@@ -1,4 +1,44 @@
+from typing import Any
+
+import re
+import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
+
+DEFECT_COLOR_MAPPING = {
+    "D": "darkred",
+    "ND": "olivedrab",
+    "UNK": "blue",
+}
+
+def get_color_map(legends_list: list[str]) -> dict[str, Any]:
+    unique_legends = set(legends_list)
+    color_map = {}
+
+    for legend in unique_legends:
+        if re.search("Non-defect", legend) is not None:
+            color_map[legend] = DEFECT_COLOR_MAPPING["ND"]
+        elif re.search("Unlabeled", legend) is not None:
+            color_map[legend] = DEFECT_COLOR_MAPPING["UNK"]
+        else:
+            color_map[legend] = DEFECT_COLOR_MAPPING["D"]
+
+    return color_map
+
+def aggregate_lists(
+    raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
+    meta_list: list[dict[str, Any]]
+) -> tuple[list[int], list[float], list[int], list[str]]:
+    defect_id_lists, prob_lists, ans_lists = raw_data
+    lot_id_lists = [meta["lot_id"] for meta in meta_list]
+    aggregate_id_list, aggregate_prob_list, aggregate_ans_list, aggregate_lot_id_list = [], [], [], []
+    for defect_id_list, prob_list, ans_list, lot_id in zip(defect_id_lists, prob_lists, ans_lists, lot_id_lists):
+        aggregate_id_list.extend(defect_id_list)
+        aggregate_prob_list.extend(prob_list)
+        aggregate_ans_list.extend(ans_list)
+        aggregate_lot_id_list.extend([lot_id] * len(defect_id_list))
+
+    return (aggregate_id_list, aggregate_prob_list, aggregate_ans_list, aggregate_lot_id_list)
 
 def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_threshold: float) -> go.Figure:
     m1_defect_ids, m1_probs, m1_ans = m1_data
@@ -56,9 +96,13 @@ def generate_1D_plot(m1_data: tuple[list[int], list[float], list[int]], m1_thres
 
 
 def generate_multilot_1D_plot(
-    m1_data: tuple[list[int], list[float], list[int], list[str]], threshold: float, selected_lot_id_list: list[str] = []
+    # m1_data: tuple[list[int], list[float], list[int], list[str]], threshold: float, selected_lot_id_list: list[str] = []
+    raw_data: tuple[list[int], list[float], list[int]],
+    model_metadata_list: list[dict[str, Any]],
+    threshold: float,
+    selected_lot_id_list: list[str] = []
 ) -> go.Figure:
-    id_list, prob_list, ans_list, lot_id_list = m1_data
+    id_list, prob_list, ans_list, lot_id_list = aggregate_lists(raw_data, model_metadata_list)
     df = pd.DataFrame(
         data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
     )

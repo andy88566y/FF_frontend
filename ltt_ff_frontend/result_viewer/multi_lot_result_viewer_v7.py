@@ -72,8 +72,8 @@ def app(
                 st.caption(f"LRF type: {meta['input_lrf_type']}")
                 st.dataframe(data=classtype_counter_df)
                 st.divider()
-    logger.debug(model_metadata_list)
-    if len(model_metadata_list) == 1:
+    if len(db_recipe['recipes']) == 1:
+        logger.debug(db_recipe['recipes'])
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart, col_roc_curve = st.columns(2)
         model_raw_data = (
@@ -85,8 +85,10 @@ def app(
         with col_1d_chart:
             st.plotly_chart(
                 prob_distribution_fig.generate_multilot_1D_plot(
-                    model_raw_data, 
-                    st.session_state["input_model_threshold_0"]
+                    model_raw_data,
+                    model_metadata_list,
+                    0.5, 
+                    selected_lot_id_list
                 )
             )
         # with col_roc_curve:
