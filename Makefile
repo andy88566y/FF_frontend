@@ -61,6 +61,3 @@ run_dev_defect_ui_internal_gpu01:
 
 run_dev_defect_ui_internal_gpu02:
 	FF_ENV="dev" $(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui_internal.py --browser.gatherUsageStats false --server.port $(DEV_PORT) --server.address 192.168.201.12
-
-run_dev_defect_ui_v7:
-	$(VENV_PREFIX) streamlit run ltt_ff_frontend/run_defect_ui_internal_v7.py --browser.gatherUsageStats false --server.port 8596 --server.address 192.168.201.11
