@@ -4,9 +4,40 @@ import numpy as np
 import requests
 import streamlit as st
 from loguru import logger
+from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT
 
-from ltt_ff_frontend.constant import API_ROOT, TIMEOUT
+#####################################################################################################
+# Get model information                                                                             #
+#####################################################################################################
+@st.cache_data(ttl="10s")
+def get_base_models(include_blank: bool = False) -> list[str]:
+    """
+    Returns a list of all available models to be used for inference or fine-tuning.
+    """
+    r = requests.get(f"{API_ROOT}get_model_list", timeout=TIMEOUT)
 
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        return []
+    else:
+        base_model_list = r.json()["model_list"]
+        return base_model_list if not include_blank else [BLANK_MODEL] + base_model_list
+
+@st.cache_data(ttl="300s")
+def get_model_threshold(model_name: str) -> float:
+    """
+    Return model threshold for selected model
+    """
+    params = {"model_name": model_name}
+    r = requests.get(f"{API_ROOT}get_model_threshold", params=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        return 0.0
+    else:
+        model_threshold = r.json()["model_threshold"]
+        logger.info(f"Model threshold for {model_name}: {model_threshold}")
+        return model_threshold
 
 def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
     defect_id_list = get_defect_id_lists(output_dir)
