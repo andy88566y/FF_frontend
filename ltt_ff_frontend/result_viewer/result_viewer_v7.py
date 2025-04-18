@@ -18,7 +18,7 @@ def app() -> None:
     st.title("False Filter Result Viewer (Recipe)")
     st.caption("Visualize False Filter Result")
 
-    r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1], border=True)
+    r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
 
     output_dir_default = "/mnt/dbpc/xxx"
     invalid_input = [output_dir_default, ""]
@@ -31,20 +31,27 @@ def app() -> None:
 
     recipe_of_two_model_path = '/home/ronyauw/0411/recipe_two_model.yaml'
     recipe_of_three_model_path = '/home/ronyauw/0411/recipe_three_model.yaml'
-    user_upload_recipe = None
+    recipe = None
+
     with r1_col1:
-        inference_result_dir = st.text_input("Inference Result Directory", value=multi_lot_single_model_dir)
+        inference_result_dir = st.text_input("Inference Result Directory", value=output_dir_default)
     with r1_col2:
         if inference_result_dir in invalid_input:
             st.error("Inference Result Directory is invalid.")
             return
+
+        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
+        if multi_lot_model_data is None:
+            st.error(f"Error getting result data from {inference_result_dir}")
+            return
+        
         st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=YAML_MODE)
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
             return
     with r1_col3:
         if st.button("Generate new lrf with Recipe"):
-            request = api_helper.request_recipe_lrf(output_dir=inference_result_dir, recipe=user_upload_recipe, lot_id="")
+            request = api_helper.request_recipe_lrf(output_dir=inference_result_dir, recipe=recipe, lot_id="")
             if request.json().get("status") == "error":
                 code = request.json().get("code")
                 message = request.json().get("message")
@@ -54,7 +61,6 @@ def app() -> None:
                 st.success(f"New .lrf file using recipe generated at {inference_result_dir}!")
                 logger.info(f"New .lrf file using recipe generated at {inference_result_dir}!")
 
-    recipe = None
     if st_recipe_type == YAML_MODE:
         col1, col2, col3 = st.columns([3, 2, 2])
         with col1:
@@ -70,7 +76,7 @@ def app() -> None:
             if recipe_file is not None:
                 recipe = yaml.load(recipe_file, Loader=yaml.Loader)
     elif st_recipe_type == DB_MODE:
-        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
+        
         first_model_metadata = multi_lot_model_data.model_metadata_list[0]
         recipe = {"recipes": yaml.load(first_model_metadata['recipe'], Loader=yaml.Loader)}
     elif st_recipe_type == CREATOR_MODE:

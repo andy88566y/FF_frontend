@@ -400,7 +400,7 @@ class MultiLotModelData:
 
 def get_multilot_model_data(
     output_dir: str,
-) -> Union[MultiLotModelData, None]:
+) -> Optional[MultiLotModelData]:
     try:
         db_metadata = get_db_metadata_lists(output_dir=output_dir)
         defect_id_lists = get_defect_id_lists(output_dir=output_dir)
@@ -412,7 +412,7 @@ def get_multilot_model_data(
         return MultiLotModelData(db_metadata, defect_id_lists, probability_lists, answer_lists)
     except Exception as e:
         logger.warning(f"Error getting model data from {output_dir}! {type(e)} {e}")
-        return None, None
+        return None
 
 def get_model_data_list(
     output_dir: str
