@@ -207,3 +207,153 @@ def plot_multilot_roc(
     # )
 
     return fig
+
+def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float, str]]) -> go.Figure:
+    fig = go.Figure()
+
+    for curve_data in roc_data:
+        model_name, data, selected_threshold, inference_threshold, output_dir = curve_data
+        fpr, tpr, threshold = data
+        tnr = 1 - fpr
+
+        # Draw the main curve
+        fig.add_trace(
+            go.Scatter(
+                x=tnr,
+                y=tpr,
+                mode="lines",
+                name=model_name,
+                hoverinfo="text+name",
+                hovertext=[
+                    f"Capture rate: {x}<br>False Filter Rate: {y}<br>Threshold: {z}"
+                    for x, y, z in zip(tpr, tnr, threshold)
+                ],
+            )
+        )
+
+        # Add a diagonal grey dotted-line
+        fig.add_trace(
+            go.Scatter(x=[1, 0], y=[0, 1], mode="lines", line={"dash": "dash", "color": "grey"}, name="Random")
+        )
+
+        ##################################################################
+        # Highest FFR when CR = 100%                                     #
+        ##################################################################
+        # Search for index of highest FR when CR = 1
+        highest_fr_idx = np.where(tpr == 1.0)[0][0]
+
+        # Draw highest FR when CR = 1
+        fig.add_trace(
+            go.Scatter(
+                x=[tnr[highest_fr_idx]],
+                y=[tpr[highest_fr_idx]],
+                mode="markers",
+                marker={"color": "blue", "size": 10},
+                name="Highest False Filter Rate at 100% Capture Rate",
+                hoverinfo="text",
+                hovertext=f"""Highest False Filter Rate at 100% Capture Rate<br>
+    Capture rate: {tpr[highest_fr_idx]}<br>
+    False Filter Rate: {tnr[highest_fr_idx]}<br>
+    Threshold: {threshold[highest_fr_idx]:.6f}""",
+            )
+        )
+
+        # Add annotation below the highest FR marker
+        fig.add_annotation(
+            x=tnr[highest_fr_idx],
+            y=tpr[highest_fr_idx],
+            text=f"""{model_name} Threshold = {threshold[highest_fr_idx]:.6f} <br>
+    Capture Rate: {tpr[highest_fr_idx]:.4f} <br>
+    False Filter Rate: {tnr[highest_fr_idx]:.4f}""",
+            showarrow=False,
+            yshift=-30,
+        )
+
+        ##################################################################
+        # Selected threshold                                             #
+        ##################################################################
+        # TODO: do not call api_helper, use argument instead
+        x_value, y_value = api_helper.get_roc_threshold_marker_coordinates(
+            output_dir=output_dir, selected_threshold=selected_threshold
+        )[0]
+
+        # Draw marker for current selected model threshold
+        fig.add_trace(
+            go.Scatter(
+                x=[x_value],
+                y=[y_value],
+                mode="markers",
+                marker={"color": "red", "size": 10},
+                name=f"Selected Threshold ({selected_threshold:.6f})",
+                hoverinfo="text",
+                hovertext=f"""Selected Threshold<br>
+    Capture rate: {y_value}<br>
+    False Filter Rate: {x_value}<br>
+    Threshold: {selected_threshold:.6f}""",
+            )
+        )
+
+        # Add annotation above current selected model threshold
+        fig.add_annotation(
+            x=x_value,
+            y=y_value,
+            text=f"""{model_name} Threshold = {selected_threshold:.6f} <br>
+    Capture Rate: {y_value:.4f} <br>
+    False Filter Rate: {x_value:.4f}""",
+            showarrow=False,
+            yshift=30,
+        )
+
+        ##################################################################
+        # Default threshold                                              #
+        ##################################################################
+        # Draw inference threshold
+        if selected_threshold != inference_threshold:
+            # TODO: do not call api_helper, use argument instead
+            x_value, y_value = api_helper.get_roc_threshold_marker_coordinates(
+                output_dir=output_dir, selected_threshold=inference_threshold
+            )[0]
+
+            fig.add_trace(
+                go.Scatter(
+                    x=[x_value],
+                    y=[y_value],
+                    mode="markers",
+                    marker={"color": "black", "size": 10},
+                    name=f"Inference ({inference_threshold:.6f})",
+                    hoverinfo="text",
+                    hovertext=f"""Inference Threshold<br>
+        Capture rate: {y_value}<br>
+        False Filter Rate: {x_value}<br>
+        Threshold: {inference_threshold:.6f}""",
+                )
+            )
+
+            fig.add_annotation(
+                x=x_value,
+                y=y_value,
+                text=f"""{model_name} Inference threshold = {inference_threshold:.6f} <br>
+        Capture Rate: {y_value:.4f} <br>
+        False Filter Rate: {x_value:.4f}""",
+                showarrow=False,
+                yshift=-30,
+            )
+
+    fig.update_layout(
+        title="Capture Rate / False Filter Rate Curve",
+        xaxis_title="False Filter Rate",
+        yaxis_title="Capture Rate",
+        legend_title="Legends",
+        template="plotly_white",
+        showlegend=True,
+        xaxis={"range": [0.0, 1.05]},
+        yaxis={"range": [0.0, 1.05]},
+    )
+
+    # TODO: Make it square and can show properly on wide screen
+    # fig.update_yaxes(
+    #     scaleanchor="x",
+    #     scaleratio=1,
+    # )
+
+    return fig

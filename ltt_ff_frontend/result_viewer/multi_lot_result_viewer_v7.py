@@ -3,9 +3,9 @@ import yaml
 from loguru import logger
 from typing import Any
 
-from ltt_ff_frontend.helpers import ui_helper, api_helper
+from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
-from ltt_ff_frontend.shared_components import multi_lot_stats, prob_distribution_fig, roc_fig
+from ltt_ff_frontend.shared_components import multi_lot_stats, prob_distribution_fig, roc_fig, class_type_component
 
 def app(
     default_output_dir: str,
@@ -20,11 +20,6 @@ def app(
             st.error(f"Error getting result data from {inference_result_dir}")
             return
     model_metadata_list = multi_lot_model_data.model_metadata_list
-    # # db_recipe need to format again to match user upload recipe yaml
-    # # for multilot inference, recipe will be the same across all model metadata
-    # # using the first one
-    # db_recipe = {"recipes": yaml.load(model_metadata_list[0]['recipe'], Loader=yaml.Loader)}
-    # recipe = user_upload_recipe if user_upload_recipe is not None else db_recipe
 
     # Columns for printing Model info for 1 or 2 models (Model #1/2, model name, threshold, lot ID + gen lrf button)
     vr1_col1, vr1_col2, vr1_col3, vr1_col4 = st.columns([1, 3, 3, 4])
@@ -56,15 +51,7 @@ def app(
     # TODO: Get classtype grouping from backend
     with classtype_count:
         with st.expander(label="LRF ClassType count"):
-            defect_lists = api_helper.get_lrf_data_lists(
-                output_dir=inference_result_dir, cols=["ClassType"], include_prob=False
-            )
-            for defect_list, meta in zip(defect_lists, model_metadata_list):
-                classtype_counter_df = ui_helper.get_classtype_count(defect_list)
-                st.text(f"Lot ID: {meta['lot_id']}")
-                st.caption(f"LRF type: {meta['input_lrf_type']}")
-                st.dataframe(data=classtype_counter_df)
-                st.divider()
+            class_type_component.gen(inference_result_dir, model_metadata_list)
     if recipe is not None and len(recipe['recipes']) == 1:
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart_column, col_roc_curve_column = st.columns(2)

@@ -5,8 +5,9 @@ import yaml
 from loguru import logger
 
 from ltt_ff_frontend.constant import BLANK_MODEL
-from ltt_ff_frontend.helpers import api_helper, ui_helper
+from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.result_viewer import multi_lot_result_viewer_v7, single_lot_result_viewer_v7
+from ltt_ff_frontend.shared_components import helper
 
 YAML_MODE = "Yaml"
 DB_MODE = "Database"
@@ -34,7 +35,7 @@ def app() -> None:
     recipe = None
 
     with r1_col1:
-        inference_result_dir = st.text_input("Inference Result Directory", value=output_dir_default)
+        inference_result_dir = st.text_input("Inference Result Directory", value=multi_lot_three_model_dir)
     with r1_col2:
         if inference_result_dir in invalid_input:
             st.error("Inference Result Directory is invalid.")
@@ -89,7 +90,7 @@ def app() -> None:
                 recipe_model = st.selectbox(
                     f"Model {i+1}",
                     options=available_models,
-                    format_func=ui_helper.format_model_name
+                    format_func=helper.format_model_name
                 )
                 recipe_models.append(recipe_model)
             with col2:

@@ -2,8 +2,8 @@ from typing import Any
 
 import streamlit as st
 import yaml
-from ltt_ff_frontend.helpers import api_helper, ui_helper
-from ltt_ff_frontend.shared_components import multi_lot_stats
+from ltt_ff_frontend.helpers import api_helper
+from ltt_ff_frontend.shared_components import multi_lot_stats, prob_distribution_fig, class_type_component, roc_fig
 from loguru import logger
 
 
@@ -45,19 +45,14 @@ def app(
     # TODO: Get classtype grouping from backend
     with st.container():
         with st.expander(label="LRF ClassType count"):
-            defects = api_helper.get_lrf_data_lists(
-                output_dir=inference_result_dir, cols=["ClassType"], include_prob=False
-            )[0]
-            classtype_counter_df = ui_helper.get_classtype_count(defects)
-            st.caption(f"LRF type: {model_metadata['input_lrf_type']}")
-            st.dataframe(data=classtype_counter_df)
+            class_type_component.gen(inference_result_dir, [model_metadata])
 
     if model_metadata.get('model_count', 0) == 1:
     # Columns for drawing distribution chart and ROC curve
         col_1d_chart, col_roc_curve = st.columns(2)
         # Draw 1D comparison chart
         with col_1d_chart:
-            st.plotly_chart(ui_helper.generate_1D_plot(model_raw_data, recipe['recipes'][0]['threshold']))
+            st.plotly_chart(prob_distribution_fig.generate_1D_plot(model_raw_data, recipe['recipes'][0]['threshold']))
         with col_roc_curve:
             # TODO: This should be done somewhere else
             if 1 not in set(model_raw_data[2]):
@@ -66,7 +61,7 @@ def app(
             else:
                 model_roc_data = api_helper.get_roc_data(inference_result_dir, return_curve=True)[0]
                 st.plotly_chart(
-                    ui_helper.plot_roc(
+                    roc_fig.plot_roc(
                         [
                             (
                                 "Model 1",
