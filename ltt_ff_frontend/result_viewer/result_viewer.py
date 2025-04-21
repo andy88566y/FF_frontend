@@ -28,9 +28,9 @@ def app() -> None:
     with r1_col1:
         inference_result_dir = st.text_input("Inference Result Directory", value=output_dir_default)
     with r1_col2:
-        if inference_result_dir in invalid_input:
-            st.error("Inference Result Directory is invalid.")
-            return
+        # if inference_result_dir in invalid_input:
+        #     st.error("Inference Result Directory is invalid.")
+        #     return
 
         multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
         if multi_lot_model_data is None:
@@ -88,11 +88,12 @@ def app() -> None:
                 input_threshold = st.number_input(
                     label=f"Model {i+1} threshold:",
                     value=api_helper.get_model_threshold(model_name=recipe_model),
-                    step=0.00001,
+                    step=1e-5,
                     format="%.5f",
                     help="Probabilities below threshold will be considered as non-defects.",
                 )
-                recipe_model_thresholds.append(input_threshold)
+                rounded_threshold = round(input_threshold, 5)
+                recipe_model_thresholds.append(rounded_threshold)
             # with col3:
             #     recipe_model_suf = st.toggle("Model 1 SUF")
         recipe = {"recipes": []}
