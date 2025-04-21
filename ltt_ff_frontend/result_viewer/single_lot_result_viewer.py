@@ -9,7 +9,6 @@ from loguru import logger
 
 
 def app(
-    output_dir_default: str,
     inference_result_dir: str,
     recipe: dict[str, list[dict[str, str]]],
     multi_lot_model_data: MultiLotModelData
