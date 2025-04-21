@@ -66,7 +66,7 @@ def app(
                 prob_distribution_fig.generate_multilot_1D_plot(
                     model_raw_data,
                     model_metadata_list,
-                    0.5, 
+                    recipe['recipes'][0]['threshold'],
                     selected_lot_id_list
                 )
             )

@@ -209,6 +209,30 @@ def plot_multilot_roc(
     return fig
 
 def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float, str]]) -> go.Figure:
+    """
+    Plots ROC curves for multiple models.
+
+    Parameters:
+    roc_data (list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float, str]]): 
+        A list of tuples where each tuple contains:
+
+        - model_name (str): Name of the model.
+        
+        - data (tuple[np.ndarray, np.ndarray, np.ndarray]): Tuple containing three numpy arrays:
+            
+            - fpr (np.ndarray): False Positive Rates.
+            - tpr (np.ndarray): True Positive Rates.
+            - thresholds (np.ndarray): Thresholds used to compute fpr and tpr.
+        
+        - selected_threshold (float): Use this value to draw red dot line.
+        
+        - inference_threshold (float): The threshold used during inference.
+        
+        - output_dir (str): Directory to save the output.
+
+    Returns:
+    go.Figure: Plotly figure object with ROC curves.
+    """
     fig = go.Figure()
 
     for curve_data in roc_data:

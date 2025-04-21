@@ -84,9 +84,34 @@ def generate_1D_plot(raw_data: tuple[list[int], list[float], list[int]], thresho
 def generate_multilot_1D_plot(
     raw_data: tuple[list[int], list[float], list[int]],
     model_metadata_list: list[dict[str, Any]],
-    threshold: float,
+    selected_threshold: float,
     selected_lot_id_list: list[str] = []
 ) -> go.Figure:
+    """
+    Generates a 1D plot for defect probability distribution across multiple lots.
+
+    Parameters:
+    raw_data (tuple[list[int], list[float], list[int]]): 
+        A tuple containing three lists:
+        - list[int]: List of defect IDs.
+        - list[float]: List of probabilities.
+        - list[int]: List of labels (0 for non-defect, 1 for defect, other values for unlabeled).
+
+    model_metadata_list (list[dict[str, Any]]): 
+        A list of dictionaries containing metadata for each model.
+
+    selected_threshold (float): 
+        The threshold value for classification.
+        Used to draw red dot line.
+
+    selected_lot_id_list (list[str], optional): 
+        A list of lot IDs to filter the data. Defaults to an empty list.
+
+    Returns:
+    go.Figure: 
+        Plotly figure object with the defect probability distribution histogram.
+    """
+
     id_list, prob_list, ans_list, lot_id_list = helper.aggregate_lists(raw_data, model_metadata_list)
     df = pd.DataFrame(
         data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
@@ -125,8 +150,8 @@ def generate_multilot_1D_plot(
     # Add threshold line
     fig.add_shape(
         type="line",
-        x0=threshold,
-        x1=threshold,
+        x0=selected_threshold,
+        x1=selected_threshold,
         y0=0,
         y1=1,
         xref="x",
