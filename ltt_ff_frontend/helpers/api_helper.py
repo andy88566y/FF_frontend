@@ -4,7 +4,9 @@ import numpy as np
 import requests
 import streamlit as st
 from loguru import logger
+
 from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT
+
 
 #####################################################################################################
 # Get model information                                                                             #
@@ -23,6 +25,7 @@ def get_base_models(include_blank: bool = False) -> list[str]:
         base_model_list = r.json()["model_list"]
         return base_model_list if not include_blank else [BLANK_MODEL] + base_model_list
 
+
 @st.cache_data(ttl="300s")
 def get_model_threshold(model_name: str) -> float:
     """
@@ -38,6 +41,7 @@ def get_model_threshold(model_name: str) -> float:
         model_threshold = r.json()["model_threshold"]
         logger.info(f"Model threshold for {model_name}: {model_threshold}")
         return model_threshold
+
 
 def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
     defect_id_lists = get_defect_id_lists(output_dir)
@@ -64,20 +68,23 @@ def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -
         false_filter_rate = true_negative / negative if negative > 0 else -1
         filter_rate = 1 - (to_be_defect_count / as_is_defect_count) if as_is_defect_count > 0 else -1
 
-        filtered_results.append({
-            "as_is_defect_count": as_is_defect_count,
-            "to_be_defect_count": to_be_defect_count,
-            "filter_rate": filter_rate,
-            "as_is_true_defect_count": positive,
-            "to_be_true_defect_count": true_positive,
-            "capture_rate": capture_rate,
-            "as_is_non_defect_count": negative,
-            "to_be_non_defect_count": false_positive,
-            "false_filter_rate": false_filter_rate,
-            "unlabeled": unlabeled,
-            "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
-        })
+        filtered_results.append(
+            {
+                "as_is_defect_count": as_is_defect_count,
+                "to_be_defect_count": to_be_defect_count,
+                "filter_rate": filter_rate,
+                "as_is_true_defect_count": positive,
+                "to_be_true_defect_count": true_positive,
+                "capture_rate": capture_rate,
+                "as_is_non_defect_count": negative,
+                "to_be_non_defect_count": false_positive,
+                "false_filter_rate": false_filter_rate,
+                "unlabeled": unlabeled,
+                "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
+            }
+        )
     return filtered_results
+
 
 @st.cache_data(ttl="10s")
 def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
@@ -98,6 +105,7 @@ def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
+
 @st.cache_data(ttl="10s")
 def get_answer(output_dir: str, defect_id_lists: list[list[str]]) -> list[list[int]]:
     """
@@ -111,7 +119,9 @@ def get_answer(output_dir: str, defect_id_lists: list[list[str]]) -> list[list[i
         A list of the ground truths of a lot of images.
     """
     r = requests.get(
-        API_ROOT + "result/get_answer", json={"output_dir": output_dir, "defect_id_list": defect_id_lists}, timeout=TIMEOUT
+        API_ROOT + "result/get_answer",
+        json={"output_dir": output_dir, "defect_id_list": defect_id_lists},
+        timeout=TIMEOUT,
     )
 
     if r.json()["status"] == "completed":
@@ -119,6 +129,7 @@ def get_answer(output_dir: str, defect_id_lists: list[list[str]]) -> list[list[i
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
 
 @st.cache_data(ttl="10s")
 def get_probability(output_dir: str, defect_id: list[list[int]]) -> list[list[float]]:
@@ -144,6 +155,7 @@ def get_probability(output_dir: str, defect_id: list[list[int]]) -> list[list[fl
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
+
 @st.cache_data(ttl="10s")
 def get_defect_id_lists(output_dir: str) -> list[list[str]]:
     """
@@ -162,6 +174,7 @@ def get_defect_id_lists(output_dir: str) -> list[list[str]]:
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
 
 @st.cache_data(ttl="10s")
 def get_predictions(
@@ -253,6 +266,7 @@ def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = Fa
     else:
         return lrf_data_with_ans_list
 
+
 @st.cache_data(ttl="10s")
 def get_roc_data(output_dir: str, return_curve: bool = True) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
     """
@@ -277,6 +291,7 @@ def get_roc_data(output_dir: str, return_curve: bool = True) -> list[tuple[np.nd
 
     return roc_data_ndarray_list
 
+
 @st.cache_data(ttl="1s")
 def get_topk_model_threshold(output_dir: str, top_k: int = 150, lot_id: str = "") -> float:
     """
@@ -292,6 +307,7 @@ def get_topk_model_threshold(output_dir: str, top_k: int = 150, lot_id: str = ""
         model_threshold = r.json()["threshold"]
         logger.info(f"Model threshold for `{output_dir}` top_k={top_k}: {model_threshold}")
         return model_threshold
+
 
 #####################################################################################################
 # Generate LRF                                                                                      #
@@ -324,15 +340,10 @@ def request_recipe_lrf(output_dir: str, recipe: dict[str, Any], lot_id: str) -> 
 
     return r
 
+
 # TODO: split this into two funtion: api request + ui update
 def gen_lrf(
-    model_id: str,
-    output_dir: str,
-    gen_lrf_type: str,
-    threshold=None,
-    top_k=None,
-    key_number: int = 0,
-    lot_id: str = ""
+    model_id: str, output_dir: str, gen_lrf_type: str, threshold=None, top_k=None, key_number: int = 0, lot_id: str = ""
 ) -> None:
     if gen_lrf_type == "top_k":
         if top_k is not None and 1 <= top_k <= 999:
@@ -352,9 +363,7 @@ def gen_lrf(
     elif gen_lrf_type == "threshold":
         if threshold is not None and 0.0 <= threshold <= 1.0:
             if st.button(f"Generate new Model {model_id} lrf", key=f"gen_lrf_threshold_{key_number}"):
-                request = request_threshold_lrf(
-                    output_dir=output_dir, confidence_threshold=threshold, lot_id=lot_id
-                )
+                request = request_threshold_lrf(output_dir=output_dir, confidence_threshold=threshold, lot_id=lot_id)
 
                 if request.json().get("status") == "error":
                     code = request.json().get("code")
@@ -369,8 +378,9 @@ def gen_lrf(
     else:
         raise NotImplementedError(f"gen_lrf_type {gen_lrf_type} is not implemented.")
 
+
 def get_model_data(
-    output_dir: str
+    output_dir: str,
 ) -> tuple[dict[str, Any], tuple[list[int], list[float], list[int]]] | tuple[None, None]:
     try:
         model_data_list = get_model_data_list(output_dir)
@@ -382,13 +392,15 @@ def get_model_data(
     except Exception as e:
         logger.warning(f"Error getting model data from {output_dir}! {e}")
         return None, None
+
+
 class MultiLotModelData:
     def __init__(
         self,
         model_metadata_list: list[dict[str, Any]],
         defect_id_lists: list[list[int]],
         probability_lists: list[list[float]],
-        answer_lists: list[list[int]]
+        answer_lists: list[list[int]],
     ):
         self.model_metadata_list = model_metadata_list
         self.defect_id_lists = defect_id_lists
@@ -401,6 +413,7 @@ class MultiLotModelData:
                 probability_lists={self.probability_lists}, 
                 answer_lists={self.answer_lists})"""
 
+
 def get_multilot_model_data(
     output_dir: str,
 ) -> Optional[MultiLotModelData]:
@@ -409,7 +422,9 @@ def get_multilot_model_data(
         defect_id_lists = get_defect_id_lists(output_dir=output_dir)
         probability_lists = get_probability(output_dir, defect_id_lists)
         answer_lists = get_answer(output_dir, defect_id_lists)
-        assert len(defect_id_lists) == len(probability_lists), f"IDs: {len(defect_id_lists)} Prob: {len(probability_lists)}"
+        assert len(defect_id_lists) == len(probability_lists), (
+            f"IDs: {len(defect_id_lists)} Prob: {len(probability_lists)}"
+        )
         assert len(defect_id_lists) == len(answer_lists), f"IDs: {len(defect_id_lists)} Ans: {len(answer_lists)}"
 
         return MultiLotModelData(db_metadata, defect_id_lists, probability_lists, answer_lists)
@@ -417,8 +432,9 @@ def get_multilot_model_data(
         logger.warning(f"Error getting model data from {output_dir}! {type(e)} {e}")
         return None
 
+
 def get_model_data_list(
-    output_dir: str
+    output_dir: str,
 ) -> list[tuple[dict[str, Any], tuple[list[int], list[float], list[int]]]] | list[tuple[None, None]]:
     try:
         db_metadata = get_db_metadata_lists(output_dir)
@@ -429,6 +445,7 @@ def get_model_data_list(
     except Exception as e:
         logger.warning(f"Error getting model data from {output_dir}! {e}")
         return None, None
+
 
 @st.cache_data(ttl="10s")
 def get_roc_threshold_marker_coordinates(
@@ -448,6 +465,7 @@ def get_roc_threshold_marker_coordinates(
     threshold_coordinates_list = r.json()["threshold_coordinates_list"]
 
     return threshold_coordinates_list
+
 
 def request_threshold_lrf(output_dir: str, confidence_threshold: float, lot_id: str) -> requests.Response:
     """

@@ -1,16 +1,19 @@
-from typing import Any
-from ltt_ff_frontend.shared_components import helper
-
 import re
+from typing import Any
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+
+from ltt_ff_frontend.shared_components import helper
+
 
 DEFECT_COLOR_MAPPING = {
     "D": "darkred",
     "ND": "olivedrab",
     "UNK": "blue",
 }
+
 
 def get_color_map(legends_list: list[str]) -> dict[str, Any]:
     unique_legends = set(legends_list)
@@ -25,6 +28,7 @@ def get_color_map(legends_list: list[str]) -> dict[str, Any]:
             color_map[legend] = DEFECT_COLOR_MAPPING["D"]
 
     return color_map
+
 
 def generate_1D_plot(raw_data: tuple[list[int], list[float], list[int]], threshold: float) -> go.Figure:
     defect_ids, probs, ans = raw_data
@@ -85,30 +89,30 @@ def generate_multilot_1D_plot(
     raw_data: tuple[list[int], list[float], list[int]],
     model_metadata_list: list[dict[str, Any]],
     selected_threshold: float,
-    selected_lot_id_list: list[str] = []
+    selected_lot_id_list: list[str] = [],
 ) -> go.Figure:
     """
     Generates a 1D plot for defect probability distribution across multiple lots.
 
     Parameters:
-    raw_data (tuple[list[int], list[float], list[int]]): 
+    raw_data (tuple[list[int], list[float], list[int]]):
         A tuple containing three lists:
         - list[int]: List of defect IDs.
         - list[float]: List of probabilities.
         - list[int]: List of labels (0 for non-defect, 1 for defect, other values for unlabeled).
 
-    model_metadata_list (list[dict[str, Any]]): 
+    model_metadata_list (list[dict[str, Any]]):
         A list of dictionaries containing metadata for each model.
 
-    selected_threshold (float): 
+    selected_threshold (float):
         The threshold value for classification.
         Used to draw red dot line.
 
-    selected_lot_id_list (list[str], optional): 
+    selected_lot_id_list (list[str], optional):
         A list of lot IDs to filter the data. Defaults to an empty list.
 
     Returns:
-    go.Figure: 
+    go.Figure:
         Plotly figure object with the defect probability distribution histogram.
     """
 

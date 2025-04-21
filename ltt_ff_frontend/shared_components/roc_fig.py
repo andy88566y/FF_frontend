@@ -1,17 +1,19 @@
 from typing import Any
-from ltt_ff_frontend.shared_components import helper
-from ltt_ff_frontend.helpers import api_helper
 
-import plotly.graph_objects as go
 import numpy as np
+import plotly.graph_objects as go
 import streamlit as st
+
+from ltt_ff_frontend.helpers import api_helper
+from ltt_ff_frontend.shared_components import helper
+
 
 def gen_fig(
     inference_result_dir: str,
     raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
     meta_list: list[dict[str, Any]],
     threshold: float,
-    selected_lot_id_list: list[str] = []
+    selected_lot_id_list: list[str] = [],
 ) -> None:
     aggregated_data_lists = helper.aggregate_lists(raw_data, meta_list)
     # TODO: This should be done somewhere else
@@ -23,6 +25,7 @@ def gen_fig(
         roc_data = api_helper.get_roc_data(inference_result_dir, return_curve=True)
         params = [("Recipe", roc_data, threshold, meta_list, inference_result_dir)]
         st.plotly_chart(plot_multilot_roc(params, selected_lot_id_list))
+
 
 def plot_multilot_roc(
     # The outermost list is actually not needed; remove it and spread them into separate params.
@@ -208,26 +211,27 @@ def plot_multilot_roc(
 
     return fig
 
+
 def plot_roc(roc_data: list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float, str]]) -> go.Figure:
     """
     Plots ROC curves for multiple models.
 
     Parameters:
-    roc_data (list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float, str]]): 
+    roc_data (list[tuple[str, tuple[np.ndarray, np.ndarray, np.ndarray], float, float, str]]):
         A list of tuples where each tuple contains:
 
         - model_name (str): Name of the model.
-        
+
         - data (tuple[np.ndarray, np.ndarray, np.ndarray]): Tuple containing three numpy arrays:
-            
+
             - fpr (np.ndarray): False Positive Rates.
             - tpr (np.ndarray): True Positive Rates.
             - thresholds (np.ndarray): Thresholds used to compute fpr and tpr.
-        
+
         - selected_threshold (float): Use this value to draw red dot line.
-        
+
         - inference_threshold (float): The threshold used during inference.
-        
+
         - output_dir (str): Directory to save the output.
 
     Returns:

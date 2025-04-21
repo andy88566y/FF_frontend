@@ -3,10 +3,11 @@ from loguru import logger
 
 from ltt_ff_frontend.defect_review_ui import defect_review_gui
 from ltt_ff_frontend.defect_ui import (
-    retraining_api,
     inference_api,
+    retraining_api,
 )
 from ltt_ff_frontend.result_viewer import result_viewer
+
 
 if __name__ == "__main__":
     logger.debug("Loading main UI ...")
@@ -26,9 +27,7 @@ if __name__ == "__main__":
     page_defect_review_gui = st.Page(
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
-    page_retraining = st.Page(
-        retraining_api.app, url_path="retraining", title="Retraining", icon=":material/build:"
-    )
+    page_retraining = st.Page(retraining_api.app, url_path="retraining", title="Retraining", icon=":material/build:")
 
     pg = st.navigation(
         [

@@ -1,7 +1,10 @@
 from typing import Any
+
 import streamlit as st
 from loguru import logger
+
 from ltt_ff_frontend.helpers import api_helper
+
 
 def gen(container: st.container, inference_result_dir: str, recipe: dict[str, Any]) -> None:
     with container:

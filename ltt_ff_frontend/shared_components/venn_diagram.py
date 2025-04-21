@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 #                                                                #
 ##################################################################
 
+
 def gen_venn_diagram() -> go.Figure:
     fig = go.Figure()
 

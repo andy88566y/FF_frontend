@@ -17,6 +17,7 @@ def highlight_capture_rate(column):
         styles.append(f"color: {color}; font-weight: {font_weight};")
     return styles
 
+
 def highlight_to_be_total_defect_count(row):
     numeric_total_to_be_count = float(row[("Total Defect Count", "To-be")])
     numeric_true_defect_count = float(row[("True Defect Count", "Before")])
@@ -28,6 +29,7 @@ def highlight_to_be_total_defect_count(row):
     else:
         pass
     return row_styles
+
 
 def draw_column_background_color(s):
     colors = {
@@ -43,8 +45,9 @@ def draw_column_background_color(s):
         "Non Defect Count": colors["green"],
         "Unlabeled Count": colors["blue"],
     }
-    foo =  [col_to_colors.get(first_index, colors["default"]) for first_index in s.index.get_level_values(0)]
+    foo = [col_to_colors.get(first_index, colors["default"]) for first_index in s.index.get_level_values(0)]
     return foo
+
 
 def calculate_filtered_results(
     raw_data: tuple[list[int], list[float], list[int]], selected_threshold: float
@@ -87,13 +90,13 @@ def calculate_filtered_results(
         "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
     }
 
+
 def draw_stats_df(
     multi_lot_model_data: MultiLotModelData,
     recipe: dict[str, Any],
     inference_result_dir: str,
     key: str,
 ) -> list[str]:
-
     rows = []
     # count_rate_data = calculate_filtered_results((id_list, prob_list, ans_list), selected_threshold)
     count_rate_data = api_helper.calculate_recipe_filtered_results(inference_result_dir, recipe=recipe)
@@ -115,6 +118,7 @@ def draw_stats_df(
             ]
         )
     return gen_stats_df_by_data_list(rows, key)
+
 
 def gen_stats_df_by_data_list(
     data: list[list[str]],
@@ -142,13 +146,13 @@ def gen_stats_df_by_data_list(
         .apply(highlight_capture_rate, subset=[("True Defect Count", "Capture Rate")], axis=0)
     )
     event = st.dataframe(
-        styled_df, 
-        key=key, 
-        use_container_width=True, 
-        hide_index=True, 
-        on_select="rerun", 
+        styled_df,
+        key=key,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
         selection_mode="multi-row",
-        height=35 * (len(data) + 2)
+        height=35 * (len(data) + 2),
     )
 
     selected_rows = event.selection.rows
