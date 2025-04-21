@@ -7,7 +7,7 @@ from loguru import logger
 from ltt_ff_frontend.defect_review_ui import list_view
 
 
-def app():
+def app() -> None:
     st.title("Defect Review")
 
     # TODO: Remove image_dir once our own image generation process is done
@@ -39,10 +39,12 @@ def app():
     with col1:
         text_input_result_dir = st.text_input(label="Result Directory", value=st.session_state.result_dir)
         if text_input_result_dir:
+            text_input_result_dir = os.path.normpath(text_input_result_dir)
             st.query_params.result_dir = base64.urlsafe_b64encode(str.encode(text_input_result_dir)).decode()
     with col2:
         text_input_image_dir = st.text_input(label="Image Directory", value=st.session_state.image_dir)
         if text_input_image_dir:
+            text_input_image_dir = os.path.normpath(text_input_image_dir)
             st.query_params.image_dir = base64.urlsafe_b64encode(str.encode(text_input_image_dir)).decode()
 
     if not text_input_result_dir or not text_input_image_dir:

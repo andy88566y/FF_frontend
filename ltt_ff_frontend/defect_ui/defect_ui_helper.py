@@ -1,4 +1,5 @@
 import base64
+import os
 from pprint import pformat
 from typing import Any, Optional
 
@@ -8,7 +9,7 @@ import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT
+from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR, TIMEOUT
 
 
 #####################################################################################################
@@ -645,6 +646,7 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
             "model_name",
             "threshold",
             "output_dir",
+            "gen_optimized_recipe",
             "message",
             "error_message",
         ]
@@ -1284,3 +1286,30 @@ def add_stop_job_button(df: pd.DataFrame) -> None:
             if st.button(f"stop {job_id}", key=f"stop-{job_id}", use_container_width=True, disabled=cannot_stop):
                 message = request_stop_job(job_id)
                 st.write(message)
+
+
+def disallow_invalid_output_dir(output_dir: str) -> None:
+    """
+    Disallow:
+    - default output dir ("/mnt/dbpc/xxx")
+    - directories not in /mnt/dbpc or /mnt/output
+    """
+    # Block default output directory
+    if output_dir == INFERENCE_DEFAULT_RESULT_DIR:
+        logger.error(
+            f"Default Result Directory detected ({INFERENCE_DEFAULT_RESULT_DIR}). "
+            "Please enter an appropriate Result Directory."
+        )
+        raise ValueError(
+            f"Default Result Directory detected ({INFERENCE_DEFAULT_RESULT_DIR}). "
+            "Please enter an appropriate Result Directory."
+        )
+
+    # Block directories not in /mnt/dbpc or /mnt/output (for PROD)
+    if RESTRICT_OUTPUT_DIR:
+        allowed_directories = ("/mnt/dbpc", "/mnt/output")
+        if not output_dir.startswith(allowed_directories):
+            logger.error(f"Result Directory does not belong to one of the allowed directories: {allowed_directories}")
+            raise ValueError(
+                f"Result Directory does not belong to one of the allowed directories: {allowed_directories}"
+            )
