@@ -4,7 +4,7 @@ from loguru import logger
 from ltt_ff_frontend.defect_review_ui import defect_review_gui
 from ltt_ff_frontend.defect_ui import (
     retraining_api,
-    multilot_inference_recipe_api,
+    inference_api,
 )
 from ltt_ff_frontend.result_viewer import result_viewer
 
@@ -17,8 +17,8 @@ if __name__ == "__main__":
         title="Result Viewer",
         icon=":material/search_check_2:",
     )
-    page_multilot_inference_recipe_api = st.Page(
-        multilot_inference_recipe_api.app,
+    inference_api = st.Page(
+        inference_api.app,
         url_path="multilot_inference_recipe_api",
         title="Multilot Inference Recipe",
         icon=":material/action_key:",
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     pg = st.navigation(
         [
             page_result_viewer,
-            page_multilot_inference_recipe_api,
+            inference_api,
             page_defect_review_gui,
             page_retraining,
         ]
