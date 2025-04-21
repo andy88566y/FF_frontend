@@ -4,7 +4,7 @@ from loguru import logger
 from ltt_ff_frontend.defect_review_ui import defect_review_gui
 from ltt_ff_frontend.defect_ui import (
     multilot_inference_recipe_api,
-    finetuning_api,
+    retraining_api,
 )
 from ltt_ff_frontend.result_viewer import result_viewer
 from ltt_ff_frontend.comparison_ui import comparison_viewer
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
     page_retraining = st.Page(
-        finetuning_api.app, url_path="training_api", title="Fine-tuning", icon=":material/build:"
+        retraining_api.app, url_path="retraining", title="Retraining", icon=":material/build:"
     )
 
     pg = st.navigation(
