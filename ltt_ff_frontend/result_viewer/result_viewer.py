@@ -6,8 +6,7 @@ from loguru import logger
 
 from ltt_ff_frontend.constant import BLANK_MODEL
 from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.result_viewer import multi_lot_result_viewer, single_lot_result_viewer
-from ltt_ff_frontend.shared_components import helper, new_lrf_button
+from ltt_ff_frontend.shared_components import helper, new_lrf_button, multi_lot_stats, class_type_component, prob_distribution_fig, roc_fig
 
 YAML_MODE = "Yaml"
 DB_MODE = "Database"
@@ -28,9 +27,9 @@ def app() -> None:
     with r1_col1:
         inference_result_dir = st.text_input("Inference Result Directory", value=output_dir_default)
     with r1_col2:
-        # if inference_result_dir in invalid_input:
-        #     st.error("Inference Result Directory is invalid.")
-        #     return
+        if inference_result_dir in invalid_input:
+            st.error("Inference Result Directory is invalid.")
+            return
 
         multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
         if multi_lot_model_data is None:
@@ -57,7 +56,6 @@ def app() -> None:
             if recipe_file is not None:
                 recipe = yaml.load(recipe_file, Loader=yaml.Loader)
     elif st_recipe_type == DB_MODE:
-        
         first_model_metadata = multi_lot_model_data.model_metadata_list[0]
         recipe = {"recipes": yaml.load(first_model_metadata['recipe'], Loader=yaml.Loader)}
     elif st_recipe_type == CREATOR_MODE:
@@ -107,15 +105,56 @@ def app() -> None:
         st.warning("Yaml mode, wating for uploading yaml file.")
         return
 
-    if len(db_files) > 1:
-        multi_lot_result_viewer.app(
+    # Defining columns to display filter results (capture rate, filter rate, etc.)
+    with st.container():
+        r3_header = st.empty()
+        model_statistics = st.empty()
+    with st.container():
+        classtype_count = st.empty()
+
+    st.divider()
+
+    # Show Total/Defect/Non-defect/unlabeled count
+    with r3_header:
+        st.subheader("Recipe Results")
+
+    with model_statistics.container():
+        selected_lot_id_list = multi_lot_stats.draw_stats_df(
+            multi_lot_model_data,
+            recipe,
             inference_result_dir,
-            recipe=recipe,
-            multi_lot_model_data=multi_lot_model_data
+            key="recipe_stats_df"
         )
-    else:
-        single_lot_result_viewer.app(
-            inference_result_dir, 
-            recipe=recipe, 
-            multi_lot_model_data=multi_lot_model_data
+
+    # TODO: Get classtype grouping from backend
+    with classtype_count:
+        with st.expander(label="LRF ClassType count"):
+            class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
+    if recipe is not None and len(recipe['recipes']) == 1:
+        recipe_threshold = recipe['recipes'][0]['threshold']
+        # Columns for drawing distribution chart and ROC curve
+        col_1d_chart_column, col_roc_curve_column = st.columns(2)
+        model_raw_data = (
+            multi_lot_model_data.defect_id_lists,
+            multi_lot_model_data.probability_lists,
+            multi_lot_model_data.answer_lists
         )
+        # Draw 1D comparison chart
+        with col_1d_chart_column:
+            st.plotly_chart(
+                prob_distribution_fig.generate_multilot_1D_plot(
+                    model_raw_data,
+                    multi_lot_model_data.model_metadata_list,
+                    recipe_threshold,
+                    selected_lot_id_list
+                )
+            )
+        with col_roc_curve_column:
+            roc_fig.gen_fig(inference_result_dir,
+                model_raw_data,
+                multi_lot_model_data.model_metadata_list,
+                recipe_threshold,
+                selected_lot_id_list
+            )
+        st.divider()
+
