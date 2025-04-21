@@ -47,7 +47,7 @@ def app(
         with st.expander(label="LRF ClassType count"):
             class_type_component.gen(inference_result_dir, [model_metadata])
 
-    if model_metadata.get('model_count', 0) == 1:
+    if recipe is not None and len(recipe['recipes']) == 1:
     # Columns for drawing distribution chart and ROC curve
         col_1d_chart, col_roc_curve = st.columns(2)
         # Draw 1D comparison chart
