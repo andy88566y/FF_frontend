@@ -54,8 +54,8 @@ def app() -> None:
                 logger.info(f"New .lrf file using recipe generated at {inference_result_dir}!")
 
     if st_recipe_type == YAML_MODE:
-        col1, col2, col3 = st.columns([3, 2, 2])
-        with col1:
+        col, _ = st.columns([3, 4])
+        with col:
             yaml_help_text = """
             **Example of a valid recipe:**\n
             recipes:\n
@@ -76,7 +76,7 @@ def app() -> None:
         recipe_models = []
         recipe_model_thresholds = []
         for i in range(5):
-            col1, col2, col3 = st.columns([3, 2, 2])
+            col1, col2, _ = st.columns([3, 2, 2])
             with col1:
                 recipe_model = st.selectbox(
                     f"Model {i+1}",
