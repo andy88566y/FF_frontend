@@ -16,6 +16,7 @@ def app(
 ) -> None:
     logger.debug("Loading Single Lot Result Viewer...")
     model_metadata = multi_lot_model_data.model_metadata_list[0]
+    recipe_threshold = recipe['recipes'][0]['threshold']
     # TODO: refactor all functions using model_raw_data to explicitly named argument
     model_raw_data = (
         multi_lot_model_data.defect_id_lists[0],
@@ -28,22 +29,7 @@ def app(
 
     # Show Total/Defect/Non-defect/unlabeled count
     st.text("Inference results")
-    count_rate_data = api_helper.calculate_recipe_filtered_results(inference_result_dir, recipe=recipe)
-    data_list = [[
-        model_metadata['lot_id'],
-        count_rate_data['as_is_defect_count'],
-        count_rate_data['to_be_defect_count'],
-        count_rate_data['filter_rate'],
-        count_rate_data['as_is_true_defect_count'],
-        count_rate_data['to_be_true_defect_count'],
-        count_rate_data['capture_rate'],
-        count_rate_data['as_is_non_defect_count'],
-        count_rate_data['to_be_non_defect_count'],
-        count_rate_data['false_filter_rate'],
-        count_rate_data['unlabeled'],
-        count_rate_data['filtered_unlabeled_defect_count']
-    ]]
-    multi_lot_stats.gen_stats_df_by_data_list(data_list, key="single_lot_df")
+    multi_lot_stats.draw_stats_df(multi_lot_model_data, recipe, inference_result_dir, key=f"recipe_stats_df")
 
     # TODO: Get classtype grouping from backend
     with st.container():
@@ -55,7 +41,7 @@ def app(
         col_1d_chart, col_roc_curve = st.columns(2)
         # Draw 1D comparison chart
         with col_1d_chart:
-            st.plotly_chart(prob_distribution_fig.generate_1D_plot(model_raw_data, recipe['recipes'][0]['threshold']))
+            st.plotly_chart(prob_distribution_fig.generate_1D_plot(model_raw_data, recipe_threshold))
         with col_roc_curve:
             # TODO: This should be done somewhere else
             if 1 not in set(model_raw_data[2]):
@@ -69,7 +55,7 @@ def app(
                             (
                                 "Model 1",
                                 model_roc_data,
-                                recipe['recipes'][0]['threshold'],
+                                recipe_threshold,
                                 model_metadata.get("model_threshold_0", ""),
                                 inference_result_dir,
                             )

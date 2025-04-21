@@ -42,7 +42,7 @@ def app(
         st.subheader(f"Recipe Results")
 
     with model_statistics.container():
-        selected_lot_id_list = multi_lot_stats.draw_stats_df(multi_lot_model_data, 0.5, key=f"recipe_stats_df")
+        selected_lot_id_list = multi_lot_stats.draw_stats_df(multi_lot_model_data, recipe, inference_result_dir, key=f"recipe_stats_df")
 
     # TODO: Get classtype grouping from backend
     with classtype_count:

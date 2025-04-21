@@ -39,42 +39,45 @@ def get_model_threshold(model_name: str) -> float:
         logger.info(f"Model threshold for {model_name}: {model_threshold}")
         return model_threshold
 
-def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
-    defect_id_list = get_defect_id_lists(output_dir)
-    answer_list = get_answer(output_dir=output_dir, defect_id=defect_id_list)[0]
-    prediction_list = get_predictions(output_dir=output_dir, recipe=recipe, defect_list=defect_id_list)[0]
+def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
+    defect_id_lists = get_defect_id_lists(output_dir)
+    answer_lists = get_answer(output_dir=output_dir, defect_id_lists=defect_id_lists)
+    prediction_lists = get_predictions(output_dir=output_dir, recipe=recipe, defect_lists=defect_id_lists)
 
-    positive = answer_list.count(1)
-    negative = answer_list.count(0)
-    unlabeled = answer_list.count(-1)
-    true_positive = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == 1)
-    false_positive = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == 0)
-    true_negative = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 0 and ans == 0)
-    false_negative = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 0 and ans == 1)
-    filtered_unlabeled_defect_count = sum(
-        1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == -1
-    )
+    filtered_results = []
+    for answer_list, prediction_list in zip(answer_lists, prediction_lists):
+        positive = answer_list.count(1)
+        negative = answer_list.count(0)
+        unlabeled = answer_list.count(-1)
+        true_positive = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == 1)
+        false_positive = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == 0)
+        true_negative = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 0 and ans == 0)
+        false_negative = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 0 and ans == 1)
+        filtered_unlabeled_defect_count = sum(
+            1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == -1
+        )
 
-    as_is_defect_count = positive + negative + unlabeled
-    to_be_defect_count = true_positive + false_positive + filtered_unlabeled_defect_count
+        as_is_defect_count = positive + negative + unlabeled
+        to_be_defect_count = true_positive + false_positive + filtered_unlabeled_defect_count
 
-    capture_rate = true_positive / positive if positive > 0 else -1
-    false_filter_rate = true_negative / negative if negative > 0 else -1
-    filter_rate = 1 - (to_be_defect_count / as_is_defect_count) if as_is_defect_count > 0 else -1
+        capture_rate = true_positive / positive if positive > 0 else -1
+        false_filter_rate = true_negative / negative if negative > 0 else -1
+        filter_rate = 1 - (to_be_defect_count / as_is_defect_count) if as_is_defect_count > 0 else -1
 
-    return {
-        "as_is_defect_count": as_is_defect_count,
-        "to_be_defect_count": to_be_defect_count,
-        "filter_rate": filter_rate,
-        "as_is_true_defect_count": positive,
-        "to_be_true_defect_count": true_positive,
-        "capture_rate": capture_rate,
-        "as_is_non_defect_count": negative,
-        "to_be_non_defect_count": false_positive,
-        "false_filter_rate": false_filter_rate,
-        "unlabeled": unlabeled,
-        "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
-    }
+        filtered_results.append({
+            "as_is_defect_count": as_is_defect_count,
+            "to_be_defect_count": to_be_defect_count,
+            "filter_rate": filter_rate,
+            "as_is_true_defect_count": positive,
+            "to_be_true_defect_count": true_positive,
+            "capture_rate": capture_rate,
+            "as_is_non_defect_count": negative,
+            "to_be_non_defect_count": false_positive,
+            "false_filter_rate": false_filter_rate,
+            "unlabeled": unlabeled,
+            "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
+        })
+    return filtered_results
 
 @st.cache_data(ttl="10s")
 def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
@@ -96,7 +99,7 @@ def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 @st.cache_data(ttl="10s")
-def get_answer(output_dir: str, defect_id: list[list[str]]) -> list[list[int]]:
+def get_answer(output_dir: str, defect_id_lists: list[list[str]]) -> list[list[int]]:
     """
     Read a list of the ground truths from a database.
 
@@ -108,7 +111,7 @@ def get_answer(output_dir: str, defect_id: list[list[str]]) -> list[list[int]]:
         A list of the ground truths of a lot of images.
     """
     r = requests.get(
-        API_ROOT + "result/get_answer", json={"output_dir": output_dir, "defect_id_list": defect_id}, timeout=TIMEOUT
+        API_ROOT + "result/get_answer", json={"output_dir": output_dir, "defect_id_list": defect_id_lists}, timeout=TIMEOUT
     )
 
     if r.json()["status"] == "completed":
@@ -164,7 +167,7 @@ def get_defect_id_lists(output_dir: str) -> list[list[str]]:
 def get_predictions(
     output_dir: str,
     recipe: dict[str, Any],
-    defect_list: Optional[list[list[str]]] = None,
+    defect_lists: Optional[list[list[str]]] = None,
 ) -> list[list[int]]:
     """
     Read a list of the ground truths from a database.
@@ -180,7 +183,7 @@ def get_predictions(
         API_ROOT + "result/get_predictions",
         json={
             "output_dir": output_dir,
-            "defect_id_list": defect_list,
+            "defect_id_list": defect_lists,
             "recipe": recipe,
         },
         timeout=TIMEOUT,

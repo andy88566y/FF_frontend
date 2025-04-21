@@ -2,7 +2,9 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
+from loguru import logger
 
+from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
 
 
@@ -86,42 +88,33 @@ def calculate_filtered_results(
     }
 
 def draw_stats_df(
-    multilot_model_data: MultiLotModelData,
-    selected_threshold,
+    multi_lot_model_data: MultiLotModelData,
+    recipe: dict[str, Any],
+    inference_result_dir: str,
     key: str,
 ) -> list[str]:
-    model_metadata_list, defect_id_lists, probability_lists, answer_lists = (
-        multilot_model_data.model_metadata_list,
-        multilot_model_data.defect_id_lists,
-        multilot_model_data.probability_lists,
-        multilot_model_data.answer_lists
-    )
 
-    data = []
-    for id_list, prob_list, ans_list, meta in zip(
-        defect_id_lists,
-        probability_lists,
-        answer_lists,
-        model_metadata_list
-    ):
-        count_rate_data = calculate_filtered_results((id_list, prob_list, ans_list), selected_threshold)
-        data.append(
+    rows = []
+    # count_rate_data = calculate_filtered_results((id_list, prob_list, ans_list), selected_threshold)
+    count_rate_data = api_helper.calculate_recipe_filtered_results(inference_result_dir, recipe=recipe)
+    for data, meta in zip(count_rate_data, multi_lot_model_data.model_metadata_list):
+        rows.append(
             [
                 meta["lot_id"],
-                count_rate_data["as_is_defect_count"],
-                count_rate_data["to_be_defect_count"],
-                f"{count_rate_data['filter_rate']:.4f}",
-                count_rate_data["as_is_true_defect_count"],
-                count_rate_data["to_be_true_defect_count"],
-                f"{count_rate_data['capture_rate']:.4f}",
-                count_rate_data["as_is_non_defect_count"],
-                count_rate_data["to_be_non_defect_count"],
-                f"{count_rate_data['false_filter_rate']:.4f}",
-                count_rate_data["unlabeled"],
-                count_rate_data["filtered_unlabeled_defect_count"],
+                data["as_is_defect_count"],
+                data["to_be_defect_count"],
+                f"{data['filter_rate']:.4f}",
+                data["as_is_true_defect_count"],
+                data["to_be_true_defect_count"],
+                f"{data['capture_rate']:.4f}",
+                data["as_is_non_defect_count"],
+                data["to_be_non_defect_count"],
+                f"{data['false_filter_rate']:.4f}",
+                data["unlabeled"],
+                data["filtered_unlabeled_defect_count"],
             ]
         )
-    return gen_stats_df_by_data_list(data, key)
+    return gen_stats_df_by_data_list(rows, key)
 
 def gen_stats_df_by_data_list(
     data: list[list[str]],
