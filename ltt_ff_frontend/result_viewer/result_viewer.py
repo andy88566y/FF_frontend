@@ -7,7 +7,7 @@ from loguru import logger
 from ltt_ff_frontend.constant import BLANK_MODEL
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.result_viewer import multi_lot_result_viewer, single_lot_result_viewer
-from ltt_ff_frontend.shared_components import helper
+from ltt_ff_frontend.shared_components import helper, new_lrf_button
 
 YAML_MODE = "Yaml"
 DB_MODE = "Database"
@@ -40,18 +40,7 @@ def app() -> None:
         st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=DB_MODE)
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
-            return
-    with r1_col3:
-        if st.button("Generate new lrf with Recipe"):
-            request = api_helper.request_recipe_lrf(output_dir=inference_result_dir, recipe=recipe, lot_id="")
-            if request.json().get("status") == "error":
-                code = request.json().get("code")
-                message = request.json().get("message")
-                st.error(f".lrf file not generated!\nError code: {code}\nError message: {message}")
-                logger.error(f".lrf file not generated!\nError code: {code}\nError message: {message}")
-            else:
-                st.success(f"New .lrf file using recipe generated at {inference_result_dir}!")
-                logger.info(f"New .lrf file using recipe generated at {inference_result_dir}!")
+            return    
 
     if st_recipe_type == YAML_MODE:
         col, _ = st.columns([3, 4])
@@ -105,14 +94,13 @@ def app() -> None:
                         "threshold": threshold,
                     }
                 )
-        if recipe is not None:
-            st.subheader("Recipe preview:")
-            st.code(yaml.dump(recipe), language="yaml")
     st.divider()
     if recipe is not None:
-        with st.expander(f"{st_recipe_type} Recipe preview:"):
+        with st.expander(f"{st_recipe_type} Recipe preview:", expanded=True):
             st.code(yaml.dump(recipe), language="yaml")
         st.divider()
+
+        new_lrf_button.gen(r1_col3, inference_result_dir, recipe)
 
     db_files = glob.glob(f"{inference_result_dir}/*.db")
     if st_recipe_type == YAML_MODE and recipe is None:

@@ -1,0 +1,19 @@
+from typing import Any
+import streamlit as st
+from loguru import logger
+from ltt_ff_frontend.helpers import api_helper
+
+def gen(container: st.container, inference_result_dir: str, recipe: dict[str, Any]) -> None:
+    with container:
+        if st.button("Generate new lrf with Recipe"):
+            logger.debug(inference_result_dir)
+            logger.debug(recipe)
+            request = api_helper.request_recipe_lrf(output_dir=inference_result_dir, recipe=recipe, lot_id="")
+            if request.json().get("status") == "error":
+                code = request.json().get("code")
+                message = request.json().get("message")
+                st.error(f".lrf file not generated!\nError code: {code}\nError message: {message}")
+                logger.error(f".lrf file not generated!\nError code: {code}\nError message: {message}")
+            else:
+                st.success(f"New .lrf file using recipe generated at {inference_result_dir}!")
+                logger.info(f"New .lrf file using recipe generated at {inference_result_dir}!")
