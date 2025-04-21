@@ -3,22 +3,25 @@ from typing import Any
 import streamlit as st
 import yaml
 from ltt_ff_frontend.helpers import api_helper
+from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
 from ltt_ff_frontend.shared_components import multi_lot_stats, prob_distribution_fig, class_type_component, roc_fig
 from loguru import logger
 
 
 def app(
-    output_dir_default: str, 
-    inference_result_dir: str, 
-    recipe: dict[str, list[dict[str, str]]]
+    output_dir_default: str,
+    inference_result_dir: str,
+    recipe: dict[str, list[dict[str, str]]],
+    multi_lot_model_data: MultiLotModelData
 ) -> None:
     logger.debug("Loading Single Lot Result Viewer...")
-
-    model_metadata, model_raw_data = api_helper.get_model_data(inference_result_dir)
-    if model_metadata is None:
-        with error_msg_container:
-            st.error(f"Error getting result data from {inference_result_dir}")
-            return
+    model_metadata = multi_lot_model_data.model_metadata_list[0]
+    # TODO: refactor all functions using model_raw_data to explicitly named argument
+    model_raw_data = (
+        multi_lot_model_data.defect_id_lists[0],
+        multi_lot_model_data.probability_lists[0],
+        multi_lot_model_data.answer_lists[0]
+    )
 
     # Show result database details
     st.subheader(f"Lot ID: {model_metadata['lot_id']}")

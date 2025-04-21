@@ -10,15 +10,11 @@ from ltt_ff_frontend.shared_components import multi_lot_stats, prob_distribution
 def app(
     default_output_dir: str,
     inference_result_dir: str,
-    recipe: dict[str, list[dict[str, str]]]
+    recipe: dict[str, list[dict[str, str]]],
+    multi_lot_model_data: MultiLotModelData
 ) -> None:
     logger.debug("Loading Multi Lot Result Viewer...")
 
-    multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
-    if multi_lot_model_data is None:
-        with error_msg_container:
-            st.error(f"Error getting result data from {inference_result_dir}")
-            return
     model_metadata_list = multi_lot_model_data.model_metadata_list
 
     # Columns for printing Model info for 1 or 2 models (Model #1/2, model name, threshold, lot ID + gen lrf button)

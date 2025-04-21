@@ -119,6 +119,16 @@ def app() -> None:
         return
 
     if len(db_files) > 1:
-        multi_lot_result_viewer.app(output_dir_default, inference_result_dir, recipe=recipe)
+        multi_lot_result_viewer.app(
+            output_dir_default,
+            inference_result_dir,
+            recipe=recipe,
+            multi_lot_model_data=multi_lot_model_data
+        )
     else:
-        single_lot_result_viewer.app(output_dir_default, inference_result_dir, recipe=recipe)
+        single_lot_result_viewer.app(
+            output_dir_default, 
+            inference_result_dir, 
+            recipe=recipe, 
+            multi_lot_model_data=multi_lot_model_data
+        )
