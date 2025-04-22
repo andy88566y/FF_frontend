@@ -108,7 +108,8 @@ def app() -> None:
             st.code(yaml.dump(recipe), language="yaml")
         st.divider()
 
-        new_lrf_button.gen(r1_col3, inference_result_dir, recipe)
+        if st_recipe_type in [YAML_MODE, CREATOR_MODE]:
+            new_lrf_button.gen(r1_col3, inference_result_dir, recipe)
 
     db_files = glob.glob(f"{inference_result_dir}/*.db")
     if st_recipe_type == YAML_MODE and recipe is None:
