@@ -86,7 +86,7 @@ def app() -> None:
                     format="%.5f",
                     help="Probabilities below threshold will be considered as non-defects.",
                 )
-                rounded_threshold = round(input_threshold, 5)
+                rounded_threshold = int(input_threshold * 1e5) / 1e5
                 recipe_model_thresholds.append(rounded_threshold)
             # with col3:
             #     recipe_model_suf = st.toggle("Model 1 SUF")
