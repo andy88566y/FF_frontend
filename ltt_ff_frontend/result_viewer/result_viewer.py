@@ -66,10 +66,14 @@ def app() -> None:
             if recipe_file is not None:
                 recipe = yaml.load(recipe_file, Loader=yaml.Loader)
     elif st_recipe_type == DB_MODE:
-        first_model_metadata = multi_lot_model_data.model_metadata_list[0]
-        db_recipe = json.loads(first_model_metadata["recipe"])
-        filtered_db_recipe = helper.filter_recipe(db_recipe)
-        recipe = {"recipes": filtered_db_recipe}
+        recipe_list = [metadata['recipe'] for metadata in multi_lot_model_data.model_metadata_list]
+        if all(recipe == recipe_list[0] for recipe in recipe_list):
+            first_model_metadata = multi_lot_model_data.model_metadata_list[0]
+            db_recipe = json.loads(first_model_metadata["recipe"])
+            filtered_recipe = helper.filter_recipe(db_recipe)
+        else:
+            st.error('Not all lots use same recipe.')
+        recipe = {"recipes": filtered_recipe}
     elif st_recipe_type == CREATOR_MODE:
         available_models = api_helper.get_base_models(include_blank=True)
         recipe_models = []
@@ -92,7 +96,7 @@ def app() -> None:
                 rounded_threshold = int(input_threshold * 1e5) / 1e5
                 recipe_model_thresholds.append(rounded_threshold)
             # with col3:
-            #     recipe_model_suf = st.toggle("Model 1 SUF")
+            #     recipe_model_shf = st.toggle("Model {i + 1} SHF")
         recipe = {"recipes": []}
         for recipe_model, threshold in zip(recipe_models, recipe_model_thresholds):
             if recipe_model != BLANK_MODEL:
@@ -111,34 +115,28 @@ def app() -> None:
         if st_recipe_type in [YAML_MODE, CREATOR_MODE]:
             new_lrf_button.gen(r1_col3, inference_result_dir, recipe)
 
-    db_files = glob.glob(f"{inference_result_dir}/*.db")
     if st_recipe_type == YAML_MODE and recipe is None:
-        st.warning("Yaml mode, wating for uploading yaml file.")
+        st.warning("Empty Recipe in YAML mode, please upload valid YAML!")
         return
 
-    # Defining columns to display filter results (capture rate, filter rate, etc.)
-    with st.container():
-        r3_header = st.empty()
-        model_statistics = st.empty()
-    with st.container():
-        classtype_count = st.empty()
 
     st.divider()
 
     # Show Total/Defect/Non-defect/unlabeled count
-    with r3_header:
+    with st.container():
         st.subheader("Recipe Results")
 
-    with model_statistics.container():
+    with st.container():
         selected_lot_id_list = multi_lot_stats.draw_stats_df(
             multi_lot_model_data, recipe, inference_result_dir, key="recipe_stats_df"
         )
 
     # TODO: Get classtype grouping from backend
-    with classtype_count:
+    with st.container():
         with st.expander(label="LRF ClassType count"):
             class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
     if recipe is not None and len(recipe["recipes"]) == 1:
+        recipe_model_name = recipe["recipes"][0]["model_name"]
         recipe_threshold = recipe["recipes"][0]["threshold"]
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart_column, col_roc_curve_column = st.columns(2)
@@ -155,7 +153,8 @@ def app() -> None:
                 )
             )
         with col_roc_curve_column:
-            roc_fig.gen_fig(
+            roc_fig.gen(
+                recipe_model_name,
                 inference_result_dir,
                 model_raw_data,
                 multi_lot_model_data.model_metadata_list,

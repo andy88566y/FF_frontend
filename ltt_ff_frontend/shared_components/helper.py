@@ -39,8 +39,9 @@ def format_model_name(name: str | None) -> str:
 
 
 def filter_recipe(recipe: list[dict[str, Any]]) -> [dict[str, Any]]:
+    # TODO
     column_white_list = ["model_name", "threshold"]
 
-    filtered_recipe = [{key: item[key] for key in column_white_list if key in item} for item in recipe]
+    filtered_recipe = [{k: v for k, v in r.items() if k in column_white_list} for r in recipe]
 
     return filtered_recipe

@@ -30,61 +30,6 @@ def get_color_map(legends_list: list[str]) -> dict[str, Any]:
     return color_map
 
 
-def generate_1D_plot(raw_data: tuple[list[int], list[float], list[int]], threshold: float) -> go.Figure:
-    defect_ids, probs, ans = raw_data
-
-    df = pd.DataFrame(data={"Defect_ID": defect_ids, "Probability": probs, "LRF_Label": ans})
-    df["Classification"] = [
-        "Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]
-    ]
-
-    # Add histogram
-    fig = px.histogram(
-        data_frame=df,
-        x="Probability",
-        range_x=[0.0, 1.0],
-        nbins=100,
-        color="Classification",
-        color_discrete_map={
-            "Non-defect": DEFECT_COLOR_MAPPING["ND"],
-            "Defect": DEFECT_COLOR_MAPPING["D"],
-            "Unlabeled": DEFECT_COLOR_MAPPING["UNK"],
-        },
-        marginal="rug",
-        hover_name="Classification",
-        hover_data={
-            "Probability": True,
-            "Defect_ID": True,
-            "LRF_Label": False,
-            "Classification": False,
-        },
-        labels={
-            "LRF_Label": "Defect/non-defect",
-        },
-    )
-
-    # Add threshold line
-    fig.add_shape(
-        type="line",
-        x0=threshold,
-        x1=threshold,
-        y0=0,
-        y1=1,
-        xref="x",
-        yref="paper",
-        line={"color": "Red", "width": 2, "dash": "dash"},
-    )
-
-    fig.update_layout(
-        barmode="stack",
-        xaxis_title="Probabilities",
-        yaxis_title="Frequency",
-        title="Defect Probability Distribution",
-    )
-
-    return fig
-
-
 def generate_multilot_1D_plot(
     raw_data: tuple[list[int], list[float], list[int]],
     model_metadata_list: list[dict[str, Any]],

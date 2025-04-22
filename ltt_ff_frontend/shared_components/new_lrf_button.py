@@ -9,8 +9,6 @@ from ltt_ff_frontend.helpers import api_helper
 def gen(container: st.container, inference_result_dir: str, recipe: dict[str, Any]) -> None:
     with container:
         if st.button("Generate new lrf with Recipe"):
-            logger.debug(inference_result_dir)
-            logger.debug(recipe)
             request = api_helper.request_recipe_lrf(output_dir=inference_result_dir, recipe=recipe, lot_id="")
             if request.json().get("status") == "error":
                 code = request.json().get("code")
