@@ -68,12 +68,12 @@ def app() -> None:
     elif st_recipe_type == DB_MODE:
         recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
         if all(recipe == recipe_list[0] for recipe in recipe_list):
-            first_model_metadata = multi_lot_model_data.model_metadata_list[0]
-            db_recipe = json.loads(first_model_metadata["recipe"])
-            filtered_recipe = helper.filter_recipe(db_recipe)
+            db_recipe = json.loads(recipe_list[0])
+            logger.debug(db_recipe)
+            recipe = helper.filter_recipe_columns(db_recipe)
         else:
             st.error("Not all lots use same recipe.")
-        recipe = {"recipes": filtered_recipe}
+            return
     elif st_recipe_type == CREATOR_MODE:
         available_models = api_helper.get_base_models(include_blank=True)
         recipe_models = []
