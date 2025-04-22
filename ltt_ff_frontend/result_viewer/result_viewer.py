@@ -1,4 +1,5 @@
 import glob
+import json
 
 import streamlit as st
 import yaml
@@ -66,7 +67,9 @@ def app() -> None:
                 recipe = yaml.load(recipe_file, Loader=yaml.Loader)
     elif st_recipe_type == DB_MODE:
         first_model_metadata = multi_lot_model_data.model_metadata_list[0]
-        recipe = {"recipes": yaml.load(first_model_metadata["recipe"], Loader=yaml.Loader)}
+        db_recipe = json.loads(first_model_metadata["recipe"])
+        filtered_db_recipe = helper.filter_recipe(db_recipe)
+        recipe = {"recipes": filtered_db_recipe}
     elif st_recipe_type == CREATOR_MODE:
         available_models = api_helper.get_base_models(include_blank=True)
         recipe_models = []

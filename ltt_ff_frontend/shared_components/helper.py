@@ -36,3 +36,11 @@ def format_model_name(name: str | None) -> str:
     # For output model name (e.g. 13feb_minye#x9u#tl#lg20250213T151435Z#55032dae#5fb1017f)
     else:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
+
+
+def filter_recipe(recipe: list[dict[str, Any]]) -> [dict[str, Any]]:
+    column_white_list = ["model_name", "threshold"]
+
+    filtered_recipe = [{key: item[key] for key in column_white_list if key in item} for item in recipe]
+
+    return filtered_recipe
