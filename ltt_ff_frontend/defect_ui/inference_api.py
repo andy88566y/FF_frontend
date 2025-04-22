@@ -6,7 +6,9 @@ import yaml
 from loguru import logger
 
 from ltt_ff_frontend.constant import INFERENCE_DEFAULT_RESULT_DIR
-from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
+from ltt_ff_frontend.shared_components import helper
+from ltt_ff_frontend.helpers import api_helper
+from ltt_ff_frontend.shared_components import stop_job_button
 
 
 def app() -> None:
@@ -43,7 +45,7 @@ def app() -> None:
             "Upload Multi-lot Inference Config (.yaml)", type=".yaml", help=yaml_help_text
         )
 
-    helper.gap(1)
+    st.write("")
     r2_col1, _r2_col2, r2_col3, _r2_col4, r2_col5 = st.columns([10, 1, 4, 2, 4])
     with r2_col1:
         inf_output_dir = st.text_input(
@@ -105,7 +107,7 @@ def app() -> None:
                 )
                 return
 
-        request = helper.request_multilot_inference(
+        request = api_helper.request_multilot_inference(
             output_dir=inf_output_dir,
             multilot_config=inf_config,
             recipe=recipe,
@@ -137,7 +139,7 @@ def app() -> None:
         if st.button("Check all multilot inference jobs"):
             page_size = 10
             current_page = 1
-            st.session_state.status_df_multi_inf = helper.request_paginated_multilot_inference_status(
+            st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
                 page_size, current_page
             )
 
@@ -147,7 +149,7 @@ def app() -> None:
     with col2:
         page_size = 10
         current_page = st.number_input("Page number", min_value=1, value=1, step=1, key="multilot_page")
-        st.session_state.status_df_multi_inf = helper.request_paginated_multilot_inference_status(
+        st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
             page_size, current_page
         )
 
@@ -177,13 +179,13 @@ def app() -> None:
             ]
 
             # Get detailed statuses for each inference job and combine into one df
-            st.session_state.detailed_df_multi_inf = helper.request_multilot_inference_statuses(
+            st.session_state.detailed_df_multi_inf = api_helper.request_multilot_inference_statuses(
                 selected_multilot_inference_id
             )
             st.dataframe(st.session_state.detailed_df_multi_inf, use_container_width=True)
-            helper.add_stop_job_button(st.session_state.detailed_df_multi_inf)
+            stop_job_button.gen(st.session_state.detailed_df_multi_inf)
 
-    helper.gap(1)
+    st.write("")
     #####################################################################################################
     # Per lot job status                                                                                #
     #####################################################################################################
@@ -198,7 +200,7 @@ def app() -> None:
         if st.button("Check all inference jobs"):
             page_size = 10
             current_page = 1
-            st.session_state.status_df_inf = helper.request_paginated_inference_status(page_size, current_page)
+            st.session_state.status_df_inf = api_helper.request_paginated_inference_status(page_size, current_page)
 
     progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
 
@@ -206,7 +208,7 @@ def app() -> None:
     with col2:
         page_size = 10
         current_page = st.number_input("Page number", min_value=1, value=1, step=1, key="per_lot_page")
-        st.session_state.status_df_inf = helper.request_paginated_inference_status(page_size, current_page)
+        st.session_state.status_df_inf = api_helper.request_paginated_inference_status(page_size, current_page)
 
     st.header("All inference jobs") if not st.session_state.status_df_inf.empty else st.write("")
 
@@ -233,7 +235,7 @@ def app() -> None:
             ]
 
             # Get detailed statuses for each inference job and combine into one df
-            st.session_state.detailed_df_inf = helper.request_inference_statuses(selected_inference_id)
+            st.session_state.detailed_df_inf = api_helper.request_inference_statuses(selected_inference_id)
             st.dataframe(st.session_state.detailed_df_inf, use_container_width=True)
             # Stop job button
-            helper.add_stop_job_button(st.session_state.detailed_df_inf)
+            stop_job_button.gen(st.session_state.detailed_df_inf)

@@ -11,7 +11,9 @@ from ltt_ff_frontend.constant import (
     OPTIMIZER_PARAMS,
     OPTIMIZER_TYPE,
 )
-from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
+from ltt_ff_frontend.shared_components import helper
+from ltt_ff_frontend.helpers import api_helper
+from ltt_ff_frontend.shared_components import stop_job_button
 
 
 def app() -> None:
@@ -44,7 +46,7 @@ def app() -> None:
     if training_option == "Fine-tune":
         with r1_col1:
             ft_base_model = st.selectbox(
-                "Base model", options=helper.get_base_models(), index=0, format_func=helper.format_model_name
+                "Base model", options=api_helper.get_base_models(), index=0, format_func=helper.format_model_name
             )
         with r1_col2:
             ft_configfile = st.file_uploader(
@@ -157,7 +159,7 @@ def app() -> None:
                 return
 
         if training_option == "Fine-tune":
-            request = helper.request_finetune(
+            request = api_helper.request_finetune(
                 base_model=ft_base_model,
                 model_naming=(ft_site, ft_tool, ft_techlayer, ft_layergroup),
                 multilot_config=ft_config,
@@ -171,7 +173,7 @@ def app() -> None:
                 lr_scheduler_params=lr_scheduler_input_params,
             )
         else:
-            request = helper.request_basetrain(
+            request = api_helper.request_basetrain(
                 model_naming=(ft_site, ft_tool, ft_techlayer, ft_layergroup),
                 multilot_config=ft_config,
                 channel_size=(ft_channel_size_1, ft_channel_size_2, ft_channel_size_3),
@@ -207,7 +209,7 @@ def app() -> None:
         if st.button("Check all finetuning jobs"):
             page_size = 10
             current_page = 1
-            st.session_state.status_df_fin = helper.request_paginated_finetuning_status(page_size, current_page)
+            st.session_state.status_df_fin = api_helper.request_paginated_finetuning_status(page_size, current_page)
 
     progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
 
@@ -215,7 +217,7 @@ def app() -> None:
     with col2:
         page_size = 10
         current_page = st.number_input("Page number", min_value=1, value=1, step=1)
-        st.session_state.status_df_fin = helper.request_paginated_finetuning_status(page_size, current_page)
+        st.session_state.status_df_fin = api_helper.request_paginated_finetuning_status(page_size, current_page)
 
     st.header("All fine-tuning jobs") if not st.session_state.status_df_fin.empty else st.write("")
 
@@ -241,8 +243,8 @@ def app() -> None:
             ]
 
             # Get detailed statuses for each inference job and combine into one df
-            raw_df_fin = helper.request_finetuning_statuses(selected_finetuning_id)
+            raw_df_fin = api_helper.request_finetuning_statuses(selected_finetuning_id)
             st.session_state.detailed_df_fin = raw_df_fin
             st.dataframe(st.session_state.detailed_df_fin, use_container_width=True)
             # Stop job button
-            helper.add_stop_job_button(raw_df_fin)
+            stop_job_button.gen(raw_df_fin)

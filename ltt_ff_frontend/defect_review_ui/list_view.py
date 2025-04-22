@@ -8,7 +8,7 @@ import streamlit as st
 from sklearn.cluster import DBSCAN
 
 from ltt_ff_frontend.defect_review_ui import detail_view
-from ltt_ff_frontend.defect_ui import defect_ui_helper as helper
+from ltt_ff_frontend.helpers import api_helper
 
 
 def hex_to_rgb(hex_color):
@@ -60,10 +60,10 @@ def reload_data(df: pd.DataFrame):
 
 
 def app(result_dir: str, image_dir: str) -> None:
-    defects = helper.get_lrf_data_lists(result_dir, cols=["No", "UniqueID", "X", "Y", "ClassType"], include_prob=True)[
+    defects = api_helper.get_lrf_data_lists(result_dir, cols=["No", "UniqueID", "X", "Y", "ClassType"], include_prob=True)[
         0
     ]
-    db_metadata = helper.get_db_metadata_lists(result_dir)[0]
+    db_metadata = api_helper.get_db_metadata_lists(result_dir)[0]
 
     # Extract relevant columns and convert "X" and "Y" to floats
     defect_data = [
