@@ -20,7 +20,7 @@ if __name__ == "__main__":
     )
     inference_api = st.Page(
         inference_api.app,
-        url_path="multilot_inference_recipe_api",
+        url_path="inference_api",
         title="Multilot Inference Recipe",
         icon=":material/action_key:",
     )
