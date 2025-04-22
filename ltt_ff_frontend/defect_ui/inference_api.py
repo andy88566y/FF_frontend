@@ -6,9 +6,8 @@ import yaml
 from loguru import logger
 
 from ltt_ff_frontend.constant import INFERENCE_DEFAULT_RESULT_DIR
-from ltt_ff_frontend.shared_components import helper
 from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.shared_components import stop_job_button
+from ltt_ff_frontend.shared_components import helper, stop_job_button
 
 
 def app() -> None:

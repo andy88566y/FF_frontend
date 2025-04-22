@@ -66,13 +66,13 @@ def app() -> None:
             if recipe_file is not None:
                 recipe = yaml.load(recipe_file, Loader=yaml.Loader)
     elif st_recipe_type == DB_MODE:
-        recipe_list = [metadata['recipe'] for metadata in multi_lot_model_data.model_metadata_list]
+        recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
         if all(recipe == recipe_list[0] for recipe in recipe_list):
             first_model_metadata = multi_lot_model_data.model_metadata_list[0]
             db_recipe = json.loads(first_model_metadata["recipe"])
             filtered_recipe = helper.filter_recipe(db_recipe)
         else:
-            st.error('Not all lots use same recipe.')
+            st.error("Not all lots use same recipe.")
         recipe = {"recipes": filtered_recipe}
     elif st_recipe_type == CREATOR_MODE:
         available_models = api_helper.get_base_models(include_blank=True)
@@ -118,7 +118,6 @@ def app() -> None:
     if st_recipe_type == YAML_MODE and recipe is None:
         st.warning("Empty Recipe in YAML mode, please upload valid YAML!")
         return
-
 
     st.divider()
 

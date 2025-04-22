@@ -10,8 +10,9 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR, TIMEOUT
-from ltt_ff_frontend.shared_components.helper import format_model_name
 from ltt_ff_frontend.helpers import api_helper
+from ltt_ff_frontend.shared_components.helper import format_model_name
+
 
 def gen(df: pd.DataFrame) -> None:
     render_cols = st.columns(len(df.columns) + 1, vertical_alignment="top")

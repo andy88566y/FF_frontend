@@ -60,9 +60,9 @@ def reload_data(df: pd.DataFrame):
 
 
 def app(result_dir: str, image_dir: str) -> None:
-    defects = api_helper.get_lrf_data_lists(result_dir, cols=["No", "UniqueID", "X", "Y", "ClassType"], include_prob=True)[
-        0
-    ]
+    defects = api_helper.get_lrf_data_lists(
+        result_dir, cols=["No", "UniqueID", "X", "Y", "ClassType"], include_prob=True
+    )[0]
     db_metadata = api_helper.get_db_metadata_lists(result_dir)[0]
 
     # Extract relevant columns and convert "X" and "Y" to floats

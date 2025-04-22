@@ -3,10 +3,11 @@ from typing import Any
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper
-from loguru import logger
+
 
 def gen(
     model_name: str,

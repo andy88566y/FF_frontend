@@ -1,11 +1,16 @@
+import base64
+import os
+from pprint import pformat
 from typing import Any, Optional, Union
 
 import numpy as np
+import pandas as pd
 import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT
+from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR, TIMEOUT
+from ltt_ff_frontend.shared_components.helper import format_model_name
 
 
 #####################################################################################################
@@ -483,9 +488,11 @@ def request_threshold_lrf(output_dir: str, confidence_threshold: float, lot_id: 
 
     return r
 
+
 #####################################################################################################
 # Inference / Multilot Inference                                                                    #
 #####################################################################################################
+
 
 def request_multilot_inference(
     output_dir: str,
@@ -537,6 +544,7 @@ def request_multilot_inference(
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
 
     return r
+
 
 @st.cache_data(ttl="1s")
 def request_paginated_inference_status(page_size: int, current_page: int) -> str:
@@ -606,6 +614,7 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
             sorted_paged_statuses_df[column] = paged_statuses_df[column]
 
     return sorted_paged_statuses_df
+
 
 @st.cache_data(ttl="1s")
 def request_paginated_multilot_inference_status(page_size: int, current_page: int) -> str:
@@ -692,6 +701,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
 
     return sorted_paged_statuses_df
 
+
 @st.cache_data(ttl="1s")
 def request_inference_status(inference_id: str) -> requests.Response:
     """
@@ -721,6 +731,7 @@ def request_inference_statuses(inference_id_list: list[str]) -> pd.DataFrame:
         detailed_inference_statuses[inference_id] = request_inference_status(inference_id)
 
     return format_inference_status(pd.DataFrame.from_dict(detailed_inference_statuses).T).T
+
 
 @st.cache_data(ttl="1s")
 def request_multilot_inference_status(multilot_inference_id: str) -> requests.Response:
@@ -753,6 +764,7 @@ def request_multilot_inference_statuses(multilot_inference_id_list: list[str]) -
         )
 
     return format_multilot_inference_status(pd.DataFrame.from_dict(detailed_multilot_inference_statuses).T).T
+
 
 def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
     """
@@ -833,6 +845,7 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
 
     # st.dataframe will complain when converting non-string type objects
     return sorted_inference_statuses_df.astype(str)
+
 
 def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) -> pd.DataFrame:
     """
@@ -1041,6 +1054,7 @@ def request_basetrain(
 
     return r
 
+
 @st.cache_data(ttl="1s")
 def request_paginated_finetuning_status(page_size: int, current_page: int) -> pd.DataFrame:
     """
@@ -1123,6 +1137,7 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> pd
 
     return sorted_paged_statuses_df
 
+
 @st.cache_data(ttl="1s")
 def request_finetuning_status(finetuning_id: str) -> requests.Response:
     """
@@ -1152,6 +1167,7 @@ def request_finetuning_statuses(finetuning_id_list: list[str]) -> pd.DataFrame:
         detailed_finetuning_statuses[training_id] = request_finetuning_status(training_id)
 
     return format_finetuning_status(pd.DataFrame.from_dict(detailed_finetuning_statuses).T).T
+
 
 def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
     """
