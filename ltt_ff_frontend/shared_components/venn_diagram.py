@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 ##################################################################
 
 
-def gen_venn_diagram() -> go.Figure:
+def gen() -> go.Figure:
     fig = go.Figure()
 
     return fig

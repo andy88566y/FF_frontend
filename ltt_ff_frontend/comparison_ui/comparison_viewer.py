@@ -1,6 +1,6 @@
 import streamlit as st
-
+from ltt_ff_frontend.shared_components import venn_diagram
 
 def app() -> None:
     st.title("Comparison Viewer")
-    st.pyplot(gen_venn_diagram())
+    venn_diagram.gen()

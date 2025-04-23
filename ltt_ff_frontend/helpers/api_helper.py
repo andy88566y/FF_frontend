@@ -328,6 +328,34 @@ def request_recipe_lrf(output_dir: str, recipe: dict[str, Any], lot_id: str) -> 
 
     return r
 
+def request_top_k_lrf(output_dir: str, top_k: int, lot_id: str) -> requests.Response:
+    """
+    Call FalseFilter API to generate an .lrf with top K defects
+
+    Args:
+        output_dir: Output root directory. The generated lrf will be stored in output_dir/LRF/
+        top_k: The top k number of defects will be labeled as defects.
+
+    Returns the reponse of the API request.
+    """
+    r = requests.post(
+        API_ROOT + "generate_top_k_lrf",
+        json={
+            "output_dir": output_dir,
+            "top_k": top_k,
+            "lot_id": lot_id,
+        },
+        timeout=TIMEOUT,
+    )
+
+    status = r.json()["status"]
+
+    if status == "started":
+        logger.info("Top k .lrf generation requested successfully!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+
+    return r
 
 # TODO: split this into two funtion: api request + ui update
 def gen_lrf(
