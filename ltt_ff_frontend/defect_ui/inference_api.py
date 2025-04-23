@@ -14,9 +14,9 @@ def app() -> None:
     #####################################################################################################
     # Running inference                                                                                 #
     #####################################################################################################
-    logger.debug("Loading Multilot Inference Dashboard...")
-    st.title("False Filter Multilot Inference Recipe")
-    st.caption("Inference multiple lot data with recipe")
+    logger.debug("Loading Inference Dashboard...")
+    st.title("False Filter Inference")
+    st.caption("Inference lot data with recipe")
 
     r1_col1, _r1_col2, r1_col3 = st.columns([10, 1, 10])
     with r1_col1:
