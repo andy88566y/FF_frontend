@@ -36,16 +36,7 @@ def app() -> None:
     with r1_col1:
         inference_result_dir = st.text_input("Inference Result Directory", value=output_dir_default)
     with r1_col2:
-        if inference_result_dir in invalid_input:
-            st.error("Inference Result Directory is invalid.")
-            return
-
-        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
-        if multi_lot_model_data is None:
-            st.error(f"Error getting result data from {inference_result_dir}")
-            return
-
-        st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=DB_MODE)
+        st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=YAML_MODE)
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
             return
@@ -64,7 +55,16 @@ def app() -> None:
             recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
             if recipe_file is not None:
                 recipe = yaml.load(recipe_file, Loader=yaml.Loader)
+                multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
     elif st_recipe_type == DB_MODE:
+        if inference_result_dir in invalid_input:
+            st.warning("Fill in Inference Result Directory")
+            return
+        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
+        with r1_col2:
+            if multi_lot_model_data is None:
+                st.error(f"Error getting result data from {inference_result_dir}")
+                return
         recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
         if all(recipe == recipe_list[0] for recipe in recipe_list):
             db_recipe = json.loads(recipe_list[0])
@@ -117,7 +117,10 @@ def app() -> None:
         st.warning("Empty Recipe in YAML mode, please upload valid YAML!")
         return
 
-    st.divider()
+    if inference_result_dir in invalid_input:
+        st.warning("Inference Result Directory invalid.")
+        return
+    multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
 
     # Show Total/Defect/Non-defect/unlabeled count
     with st.container():
