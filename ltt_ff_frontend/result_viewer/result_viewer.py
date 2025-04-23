@@ -69,7 +69,6 @@ def app() -> None:
         recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
         if all(recipe == recipe_list[0] for recipe in recipe_list):
             db_recipe = json.loads(recipe_list[0])
-            logger.debug(db_recipe)
             recipe = helper.filter_recipe_columns(db_recipe)
         else:
             st.error("Not all lots use same recipe.")
