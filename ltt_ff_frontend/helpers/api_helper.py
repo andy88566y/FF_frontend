@@ -1,7 +1,5 @@
-import base64
-import os
 from pprint import pformat
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -9,7 +7,7 @@ import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR, TIMEOUT
+from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT
 from ltt_ff_frontend.shared_components.helper import format_model_name
 
 

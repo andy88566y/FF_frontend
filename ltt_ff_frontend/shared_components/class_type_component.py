@@ -1,12 +1,8 @@
 from typing import Any
 
-import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
-from ltt_ff_frontend.constant import BLANK_MODEL
 from ltt_ff_frontend.helpers import api_helper
 
 

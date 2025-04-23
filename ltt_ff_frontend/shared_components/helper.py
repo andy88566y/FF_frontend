@@ -1,7 +1,9 @@
 from typing import Any
 
-from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR, TIMEOUT
 from loguru import logger
+
+from ltt_ff_frontend.constant import BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR
+
 
 # put only codes like: format strings, aggregate data
 # for generating figure, extract to one seperate component file
