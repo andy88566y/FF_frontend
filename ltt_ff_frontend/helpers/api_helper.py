@@ -326,6 +326,7 @@ def request_recipe_lrf(output_dir: str, recipe: dict[str, Any], lot_id: str) -> 
 
     return r
 
+
 def request_top_k_lrf(output_dir: str, top_k: int, lot_id: str) -> requests.Response:
     """
     Call FalseFilter API to generate an .lrf with top K defects
@@ -354,6 +355,7 @@ def request_top_k_lrf(output_dir: str, top_k: int, lot_id: str) -> requests.Resp
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
 
     return r
+
 
 # TODO: split this into two funtion: api request + ui update
 def gen_lrf(
