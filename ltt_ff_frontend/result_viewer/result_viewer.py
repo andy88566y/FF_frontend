@@ -24,7 +24,7 @@ RECIPE_INPUT_MODES = [YAML_MODE, DB_MODE, CREATOR_MODE]
 
 def app() -> None:
     logger.debug("Loading Result Viewer...")
-    st.title("False Filter Result Viewer (Recipe)")
+    st.title("False Filter Result Viewer")
     st.caption("Visualize False Filter Result")
 
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
