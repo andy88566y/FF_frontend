@@ -36,9 +36,23 @@ def app() -> None:
     with r1_col1:
         inference_result_dir = st.text_input("Inference Result Directory", value=output_dir_default)
     with r1_col2:
-        st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=YAML_MODE)
+        st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=DB_MODE)
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
+            return
+
+    if inference_result_dir not in invalid_input:
+        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
+        with r1_col2:
+            if multi_lot_model_data is None:
+                st.error(f"Error getting result data from {inference_result_dir}")
+                return
+        recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
+        if all(recipe == recipe_list[0] for recipe in recipe_list):
+            db_recipe = json.loads(recipe_list[0])
+            filtered_db_recipe = helper.filter_recipe_columns(db_recipe)
+        else:
+            st.error("Not all lots use same recipe.")
             return
 
     if st_recipe_type == YAML_MODE:
@@ -60,18 +74,7 @@ def app() -> None:
         if inference_result_dir in invalid_input:
             st.warning("Fill in Inference Result Directory")
             return
-        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
-        with r1_col2:
-            if multi_lot_model_data is None:
-                st.error(f"Error getting result data from {inference_result_dir}")
-                return
-        recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
-        if all(recipe == recipe_list[0] for recipe in recipe_list):
-            db_recipe = json.loads(recipe_list[0])
-            recipe = helper.filter_recipe_columns(db_recipe)
-        else:
-            st.error("Not all lots use same recipe.")
-            return
+        recipe = filtered_db_recipe
     elif st_recipe_type == CREATOR_MODE:
         available_models = api_helper.get_base_models(include_blank=True)
         recipe_models = []
@@ -110,8 +113,8 @@ def app() -> None:
             st.code(yaml.dump(recipe), language="yaml")
         st.divider()
 
-        if st_recipe_type in [YAML_MODE, CREATOR_MODE]:
-            new_lrf_button.gen(r1_col3, inference_result_dir, recipe)
+        if st_recipe_type in [YAML_MODE, CREATOR_MODE] and recipe["recipes"] is not []:
+            new_lrf_button.gen(r1_col3, inference_result_dir, recipe, db_recipe)
 
     if st_recipe_type == YAML_MODE and recipe is None:
         st.warning("Empty Recipe in YAML mode, please upload valid YAML!")
@@ -122,9 +125,11 @@ def app() -> None:
         return
     multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
 
+    if recipe is None or recipe["recipes"] == []:
+        return
     # Show Total/Defect/Non-defect/unlabeled count
     with st.container():
-        st.subheader("Recipe Results")
+        st.subheader("Inference Results")
 
     with st.container():
         selected_lot_id_list = multi_lot_stats.draw_stats_df(
