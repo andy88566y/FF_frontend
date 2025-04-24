@@ -24,7 +24,7 @@ RECIPE_INPUT_MODES = [YAML_MODE, DB_MODE, CREATOR_MODE]
 
 def app() -> None:
     logger.debug("Loading Result Viewer...")
-    st.title("False Filter Result Viewer (Recipe)")
+    st.title("False Filter Result Viewer")
     st.caption("Visualize False Filter Result")
 
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
@@ -123,6 +123,8 @@ def app() -> None:
     if inference_result_dir in invalid_input:
         st.warning("Inference Result Directory invalid.")
         return
+    helper.disallow_invalid_output_dir(inference_result_dir)
+
     multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
 
     if recipe is None or recipe["recipes"] == []:

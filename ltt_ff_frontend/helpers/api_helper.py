@@ -424,9 +424,9 @@ class MultiLotModelData:
         self.answer_lists = answer_lists
 
     def __repr__(self) -> str:
-        return f"""MultiLotModelData(model_metadata_list={self.model_metadata_list}, 
-                defect_id_lists={self.defect_id_lists}, 
-                probability_lists={self.probability_lists}, 
+        return f"""MultiLotModelData(model_metadata_list={self.model_metadata_list},
+                defect_id_lists={self.defect_id_lists},
+                probability_lists={self.probability_lists},
                 answer_lists={self.answer_lists})"""
 
 
@@ -679,8 +679,8 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
 
         # Just show lot_id, don't show image_dir and lrf_path
         # This line has to happen before renaming the index column, otherwise we won't be able to access index 0
-        paged_statuses_df["lot_info"] = pformat(
-            [data_path.get("lot_id", None) for data_path in paged_statuses_df["lot_info"].iloc[0].get("data_paths", [])]
+        paged_statuses_df["lot_info"] = paged_statuses_df["lot_info"].apply(
+            lambda data_path: pformat([per_lot.get("lot_id", None) for per_lot in data_path.get("data_paths", [])])
         )
 
         # Sort rows by start time and rename current index column to "multilot_inference_id"
