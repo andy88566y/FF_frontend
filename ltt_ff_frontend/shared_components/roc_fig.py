@@ -38,8 +38,8 @@ def plot_multilot_roc(
 
     for curve_data in roc_data:
         model_name, data_list, selected_threshold, model_metadata_list, output_dir = curve_data
-        formatted_model_name = helper.format_model_name(model_name)
-        model_name = f"Model {formatted_model_name.split(' ')[-1]}"
+        # TODO: use Model hash as model name
+        model_name = "Model 1"
 
         selected_threshold_coord_list = api_helper.get_roc_threshold_marker_coordinates(
             output_dir=output_dir, selected_threshold=selected_threshold
