@@ -69,7 +69,6 @@ def app() -> None:
             recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
             if recipe_file is not None:
                 recipe = yaml.load(recipe_file, Loader=yaml.Loader)
-                multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
     elif st_recipe_type == DB_MODE:
         if inference_result_dir in invalid_input:
             st.warning("Fill in Inference Result Directory")
@@ -124,8 +123,6 @@ def app() -> None:
         st.warning("Inference Result Directory invalid.")
         return
     helper.disallow_invalid_output_dir(inference_result_dir)
-
-    multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
 
     if recipe is None or recipe["recipes"] == []:
         return
