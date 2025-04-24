@@ -54,6 +54,8 @@ def app() -> None:
         else:
             st.error("Not all lots use same recipe.")
             return
+    else:
+        filtered_db_recipe = None
 
     if st_recipe_type == YAML_MODE:
         col, _ = st.columns([3, 4])
@@ -104,7 +106,7 @@ def app() -> None:
                     }
                 )
     st.divider()
-    if recipe is not None and recipe["recipes"] == []:
+    if recipe is not None and recipe["recipes"] != []:
         with st.expander(f"{st_recipe_type} Recipe preview:", expanded=True):
             st.code(yaml.dump(recipe), language="yaml")
         st.divider()

@@ -64,6 +64,7 @@ def is_valid_output_dir(output_dir: str) -> bool:
 
     # Block empty string
     if output_dir == "":
+        logger.error("empty string detected.")
         return False
 
     # Block directories not in /mnt/dbpc or /mnt/output (for PROD)
