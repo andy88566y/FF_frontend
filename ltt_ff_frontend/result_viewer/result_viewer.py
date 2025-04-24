@@ -41,7 +41,7 @@ def app() -> None:
             st.error("Recipe UI Option can not be None!")
             return
 
-    if inference_result_dir not in invalid_input:
+    if helper.is_valid_output_dir(inference_result_dir):
         multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
         with r1_col2:
             if multi_lot_model_data is None:
@@ -70,9 +70,6 @@ def app() -> None:
             if recipe_file is not None:
                 recipe = yaml.load(recipe_file, Loader=yaml.Loader)
     elif st_recipe_type == DB_MODE:
-        if inference_result_dir in invalid_input:
-            st.warning("Fill in Inference Result Directory")
-            return
         recipe = filtered_db_recipe
     elif st_recipe_type == CREATOR_MODE:
         available_models = api_helper.get_base_models(include_blank=True)
@@ -107,26 +104,17 @@ def app() -> None:
                     }
                 )
     st.divider()
-    if recipe is not None:
+    if recipe is not None and recipe["recipes"] == []:
         with st.expander(f"{st_recipe_type} Recipe preview:", expanded=True):
             st.code(yaml.dump(recipe), language="yaml")
         st.divider()
 
-        if st_recipe_type in [YAML_MODE, CREATOR_MODE] and recipe["recipes"] is not []:
+        if st_recipe_type in [YAML_MODE, CREATOR_MODE]:
             new_lrf_button.gen(r1_col3, inference_result_dir, recipe, db_recipe)
-
-    if st_recipe_type == YAML_MODE and recipe is None:
-        st.warning("Empty Recipe in YAML mode, please upload valid YAML!")
+    else:
+        # recipe not ready, early return
         return
 
-    if inference_result_dir in invalid_input:
-        st.warning("Inference Result Directory invalid.")
-        return
-    helper.disallow_invalid_output_dir(inference_result_dir)
-
-    if recipe is None or recipe["recipes"] == []:
-        # recipe not ready, do not show Inference Results
-        return
     # Show Total/Defect/Non-defect/unlabeled count
     with st.container():
         st.subheader("Inference Results")
@@ -141,29 +129,29 @@ def app() -> None:
         with st.expander(label="LRF ClassType count"):
             class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
     
-    # Columns for drawing distribution chart and ROC curve
-    col_1d_chart_column, col_roc_curve_column = st.columns(2)
-    recipe_model_name = recipe["recipes"][0]["model_name"]
-    recipe_threshold = recipe["recipes"][0]["threshold"]
-    model_raw_data = (
-        multi_lot_model_data.defect_id_lists,
-        multi_lot_model_data.probability_lists,
-        multi_lot_model_data.answer_lists,
-    )
-    # Draw 1D comparison chart
-    with col_1d_chart_column:
-        st.plotly_chart(
-            prob_distribution_fig.generate_multilot_1D_plot(
-                model_raw_data, multi_lot_model_data.model_metadata_list, recipe_threshold, selected_lot_id_list
+    if len(recipe["recipes"]) == 1:
+        # Columns for drawing distribution chart and ROC curve
+        col_1d_chart_column, col_roc_curve_column = st.columns(2)
+        recipe_model_name = recipe["recipes"][0]["model_name"]
+        recipe_threshold = recipe["recipes"][0]["threshold"]
+        model_raw_data = (
+            multi_lot_model_data.defect_id_lists,
+            multi_lot_model_data.probability_lists,
+            multi_lot_model_data.answer_lists,
+        )
+        # Draw 1D comparison chart
+        with col_1d_chart_column:
+            st.plotly_chart(
+                prob_distribution_fig.generate_multilot_1D_plot(
+                    model_raw_data, multi_lot_model_data.model_metadata_list, recipe_threshold, selected_lot_id_list
+                )
             )
-        )
-    with col_roc_curve_column:
-        roc_fig.gen(
-            recipe_model_name,
-            inference_result_dir,
-            model_raw_data,
-            multi_lot_model_data.model_metadata_list,
-            recipe_threshold,
-            selected_lot_id_list,
-        )
-    st.divider()
+        with col_roc_curve_column:
+            roc_fig.gen(
+                recipe_model_name,
+                inference_result_dir,
+                model_raw_data,
+                multi_lot_model_data.model_metadata_list,
+                recipe_threshold,
+                selected_lot_id_list,
+            )

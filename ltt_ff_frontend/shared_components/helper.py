@@ -47,11 +47,12 @@ def filter_recipe_columns(recipe: dict[str, Any]) -> dict[str, Any]:
     return filtered_recipe
 
 
-def disallow_invalid_output_dir(output_dir: str) -> None:
+def is_valid_output_dir(output_dir: str) -> bool:
     """
     Disallow:
     - default output dir ("/mnt/dbpc/xxx")
     - directories not in /mnt/dbpc or /mnt/output
+    - empty string ("")
     """
     # Block default output directory
     if output_dir == INFERENCE_DEFAULT_RESULT_DIR:
@@ -59,16 +60,17 @@ def disallow_invalid_output_dir(output_dir: str) -> None:
             f"Default Result Directory detected ({INFERENCE_DEFAULT_RESULT_DIR}). "
             "Please enter an appropriate Result Directory."
         )
-        raise ValueError(
-            f"Default Result Directory detected ({INFERENCE_DEFAULT_RESULT_DIR}). "
-            "Please enter an appropriate Result Directory."
-        )
+        return False
+
+    # Block empty string
+    if output_dir == "":
+        return False
 
     # Block directories not in /mnt/dbpc or /mnt/output (for PROD)
     if RESTRICT_OUTPUT_DIR:
         allowed_directories = ("/mnt/dbpc", "/mnt/output")
         if not output_dir.startswith(allowed_directories):
             logger.error(f"Result Directory does not belong to one of the allowed directories: {allowed_directories}")
-            raise ValueError(
-                f"Result Directory does not belong to one of the allowed directories: {allowed_directories}"
-            )
+            return False
+    return True
+

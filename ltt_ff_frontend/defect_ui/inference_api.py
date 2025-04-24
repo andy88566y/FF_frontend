@@ -82,7 +82,8 @@ def app() -> None:
 
     if st.button("Start Multilot Inference Job", type="primary"):
         # Block invalid result directory (i.e. default output dir, or directories outside /mnt/dbpc or /mnt/output)
-        helper.disallow_invalid_output_dir(inf_output_dir)
+        if not helper.is_valid_output_dir(inf_output_dir):
+            st.error("please enter valid output dir.")
 
         # Ensure input result directory is safe
         inf_output_dir = os.path.normpath(inf_output_dir)
