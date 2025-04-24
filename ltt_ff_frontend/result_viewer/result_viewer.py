@@ -24,7 +24,7 @@ RECIPE_INPUT_MODES = [YAML_MODE, DB_MODE, CREATOR_MODE]
 
 def app() -> None:
     logger.debug("Loading Result Viewer...")
-    st.title("False Filter Result Viewer (Recipe)")
+    st.title("False Filter Result Viewer")
     st.caption("Visualize False Filter Result")
 
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
@@ -36,19 +36,27 @@ def app() -> None:
     with r1_col1:
         inference_result_dir = st.text_input("Inference Result Directory", value=output_dir_default)
     with r1_col2:
-        if inference_result_dir in invalid_input:
-            st.error("Inference Result Directory is invalid.")
-            return
-
-        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
-        if multi_lot_model_data is None:
-            st.error(f"Error getting result data from {inference_result_dir}")
-            return
-
         st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=DB_MODE)
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
             return
+
+    if helper.is_valid_output_dir(inference_result_dir):
+        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
+        with r1_col2:
+            if multi_lot_model_data is None:
+                st.error(f"Error getting result data from {inference_result_dir}")
+                return
+        recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
+        if all(recipe == recipe_list[0] for recipe in recipe_list):
+            db_recipe = json.loads(recipe_list[0])
+            filtered_db_recipe = helper.filter_recipe_columns(db_recipe)
+        else:
+            st.error("Not all lots use same recipe.")
+            return
+    else:
+        filtered_db_recipe = {"recipes": []}
+
 
     if st_recipe_type == YAML_MODE:
         col, _ = st.columns([3, 4])
@@ -65,13 +73,7 @@ def app() -> None:
             if recipe_file is not None:
                 recipe = yaml.load(recipe_file, Loader=yaml.Loader)
     elif st_recipe_type == DB_MODE:
-        recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
-        if all(recipe == recipe_list[0] for recipe in recipe_list):
-            db_recipe = json.loads(recipe_list[0])
-            recipe = helper.filter_recipe_columns(db_recipe)
-        else:
-            st.error("Not all lots use same recipe.")
-            return
+        recipe = filtered_db_recipe
     elif st_recipe_type == CREATOR_MODE:
         available_models = api_helper.get_base_models(include_blank=True)
         recipe_models = []
@@ -105,23 +107,23 @@ def app() -> None:
                     }
                 )
     st.divider()
-    if recipe is not None:
+    if recipe is not None and recipe["recipes"] != []:
         with st.expander(f"{st_recipe_type} Recipe preview:", expanded=True):
             st.code(yaml.dump(recipe), language="yaml")
         st.divider()
 
+        if filtered_db_recipe['recipes'] == []:
+            # no data, early return
+            return
         if st_recipe_type in [YAML_MODE, CREATOR_MODE]:
-            new_lrf_button.gen(r1_col3, inference_result_dir, recipe)
-
-    if st_recipe_type == YAML_MODE and recipe is None:
-        st.warning("Empty Recipe in YAML mode, please upload valid YAML!")
+            new_lrf_button.gen(r1_col3, inference_result_dir, recipe, filtered_db_recipe)
+    else:
+        # recipe not ready, early return
         return
-
-    st.divider()
 
     # Show Total/Defect/Non-defect/unlabeled count
     with st.container():
-        st.subheader("Recipe Results")
+        st.subheader("Inference Results")
 
     with st.container():
         selected_lot_id_list = multi_lot_stats.draw_stats_df(
@@ -132,11 +134,12 @@ def app() -> None:
     with st.container():
         with st.expander(label="LRF ClassType count"):
             class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
-    if recipe is not None and len(recipe["recipes"]) == 1:
-        recipe_model_name = recipe["recipes"][0]["model_name"]
-        recipe_threshold = recipe["recipes"][0]["threshold"]
+    
+    if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart_column, col_roc_curve_column = st.columns(2)
+        recipe_model_name = recipe["recipes"][0]["model_name"]
+        recipe_threshold = recipe["recipes"][0]["threshold"]
         model_raw_data = (
             multi_lot_model_data.defect_id_lists,
             multi_lot_model_data.probability_lists,
@@ -158,4 +161,3 @@ def app() -> None:
                 recipe_threshold,
                 selected_lot_id_list,
             )
-        st.divider()
