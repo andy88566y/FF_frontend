@@ -84,6 +84,7 @@ def app() -> None:
         # Block invalid result directory (i.e. default output dir, or directories outside /mnt/dbpc or /mnt/output)
         if not helper.is_valid_output_dir(inf_output_dir):
             st.error("please enter valid output dir.")
+            return
 
         # Ensure input result directory is safe
         inf_output_dir = os.path.normpath(inf_output_dir)
