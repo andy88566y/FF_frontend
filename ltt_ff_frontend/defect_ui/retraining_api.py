@@ -17,7 +17,7 @@ from ltt_ff_frontend.shared_components import helper, stop_job_button
 
 def app() -> None:
     logger.debug("Loading Fine-Tuning Dashboard...")
-    st.title("False Filter Fine-Tuning")
+    st.title("False Filter Re-training")
     st.caption("Train new model with selected lot data")
 
     training_option = st.segmented_control(
