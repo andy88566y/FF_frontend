@@ -120,6 +120,8 @@ def app() -> None:
     if inference_result_dir in invalid_input:
         st.warning("Inference Result Directory invalid.")
         return
+    helper.disallow_invalid_output_dir(inference_result_dir)
+
     multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
 
     # Show Total/Defect/Non-defect/unlabeled count
