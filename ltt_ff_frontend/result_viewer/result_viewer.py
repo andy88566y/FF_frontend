@@ -125,6 +125,7 @@ def app() -> None:
     helper.disallow_invalid_output_dir(inference_result_dir)
 
     if recipe is None or recipe["recipes"] == []:
+        # recipe not ready, do not show Inference Results
         return
     # Show Total/Defect/Non-defect/unlabeled count
     with st.container():
@@ -139,30 +140,30 @@ def app() -> None:
     with st.container():
         with st.expander(label="LRF ClassType count"):
             class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
-    if recipe is not None and len(recipe["recipes"]) == 1:
-        recipe_model_name = recipe["recipes"][0]["model_name"]
-        recipe_threshold = recipe["recipes"][0]["threshold"]
-        # Columns for drawing distribution chart and ROC curve
-        col_1d_chart_column, col_roc_curve_column = st.columns(2)
-        model_raw_data = (
-            multi_lot_model_data.defect_id_lists,
-            multi_lot_model_data.probability_lists,
-            multi_lot_model_data.answer_lists,
+    
+    # Columns for drawing distribution chart and ROC curve
+    col_1d_chart_column, col_roc_curve_column = st.columns(2)
+    recipe_model_name = recipe["recipes"][0]["model_name"]
+    recipe_threshold = recipe["recipes"][0]["threshold"]
+    model_raw_data = (
+        multi_lot_model_data.defect_id_lists,
+        multi_lot_model_data.probability_lists,
+        multi_lot_model_data.answer_lists,
+    )
+    # Draw 1D comparison chart
+    with col_1d_chart_column:
+        st.plotly_chart(
+            prob_distribution_fig.generate_multilot_1D_plot(
+                model_raw_data, multi_lot_model_data.model_metadata_list, recipe_threshold, selected_lot_id_list
+            )
         )
-        # Draw 1D comparison chart
-        with col_1d_chart_column:
-            st.plotly_chart(
-                prob_distribution_fig.generate_multilot_1D_plot(
-                    model_raw_data, multi_lot_model_data.model_metadata_list, recipe_threshold, selected_lot_id_list
-                )
-            )
-        with col_roc_curve_column:
-            roc_fig.gen(
-                recipe_model_name,
-                inference_result_dir,
-                model_raw_data,
-                multi_lot_model_data.model_metadata_list,
-                recipe_threshold,
-                selected_lot_id_list,
-            )
-        st.divider()
+    with col_roc_curve_column:
+        roc_fig.gen(
+            recipe_model_name,
+            inference_result_dir,
+            model_raw_data,
+            multi_lot_model_data.model_metadata_list,
+            recipe_threshold,
+            selected_lot_id_list,
+        )
+    st.divider()
