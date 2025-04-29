@@ -3,10 +3,10 @@ from typing import Any
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper
-from loguru import logger
 
 
 def gen(
@@ -81,6 +81,8 @@ def plot_multilot_roc(
                         f"Capture rate: {x}<br>False Filter Rate: {y}<br>Threshold: {z}"
                         for x, y, z in zip(tpr, tnr, threshold)
                     ],
+                    legendgroup=f"{model_name}: {lot_id}",
+                    legendgrouptitle_text=f"{lot_id}",
                 )
             )
 
@@ -95,7 +97,13 @@ def plot_multilot_roc(
                 go.Scatter(
                     x=[tnr[highest_fr_idx]],
                     y=[tpr[highest_fr_idx]],
-                    mode="markers",
+                    legendgroup=f"{model_name}: {lot_id}",
+                    text=f"{model_name} Threshold = {threshold[highest_fr_idx]:.6f} <br>"
+                    + f"Capture Rate: {tpr[highest_fr_idx]:.4f} <br>"
+                    + f"False Filter Rate: {tnr[highest_fr_idx]:.4f}",
+                    mode="markers+text",
+                    textposition="bottom center",
+                    cliponaxis=False,  # ensures annotation does not get clipped when exceeding boundary
                     marker={"color": "blue", "size": 10},
                     name="Highest False Filter Rate at 100% Capture Rate",
                     hoverinfo="text",
@@ -106,17 +114,6 @@ def plot_multilot_roc(
                 )
             )
 
-            # Add annotation below the highest FR marker
-            fig.add_annotation(
-                x=tnr[highest_fr_idx],
-                y=tpr[highest_fr_idx],
-                text=f"""{model_name} Threshold = {threshold[highest_fr_idx]:.6f} <br>
-        Capture Rate: {tpr[highest_fr_idx]:.4f} <br>
-        False Filter Rate: {tnr[highest_fr_idx]:.4f}""",
-                showarrow=False,
-                yshift=-30,
-            )
-
             ##################################################################
             # Selected threshold                                             #
             ##################################################################
@@ -125,7 +122,13 @@ def plot_multilot_roc(
                 go.Scatter(
                     x=[selected_threshold_coord[0]],
                     y=[selected_threshold_coord[1]],
-                    mode="markers",
+                    legendgroup=f"{model_name}: {lot_id}",
+                    text=f"{model_name} Threshold = {selected_threshold:.6f} <br>"
+                    + f"Capture Rate: {selected_threshold_coord[1]:.4f} <br>"
+                    + f"False Filter Rate: {selected_threshold_coord[0]:.4f}",
+                    mode="markers+text",
+                    textposition="top center",
+                    cliponaxis=False,  # ensures annotation does not get clipped when exceeding boundary
                     marker={"color": "red", "size": 10},
                     name=f"Selected Threshold ({selected_threshold:.6f})",
                     hoverinfo="text",
@@ -134,17 +137,6 @@ def plot_multilot_roc(
         False Filter Rate: {selected_threshold_coord[0]}<br>
         Threshold: {selected_threshold:.6f}""",
                 )
-            )
-
-            # Add annotation above current selected model threshold
-            fig.add_annotation(
-                x=selected_threshold_coord[0],
-                y=selected_threshold_coord[1],
-                text=f"""{model_name} Threshold = {selected_threshold:.6f} <br>
-        Capture Rate: {selected_threshold_coord[1]:.4f} <br>
-        False Filter Rate: {selected_threshold_coord[0]:.4f}""",
-                showarrow=False,
-                yshift=30,
             )
 
             ##################################################################
@@ -156,7 +148,13 @@ def plot_multilot_roc(
                     go.Scatter(
                         x=[inference_threshold_coord[0]],
                         y=[inference_threshold_coord[1]],
-                        mode="markers",
+                        legendgroup=f"{model_name}: {lot_id}",
+                        text=f"{model_name} Inference threshold = {inference_threshold:.6f} <br>"
+                        + f"Capture Rate: {inference_threshold_coord[1]:.4f} <br>"
+                        + f"False Filter Rate: {inference_threshold_coord[0]:.4f}",
+                        mode="markers+text",
+                        textposition="top center",
+                        cliponaxis=False,  # ensures annotation does not get clipped when exceeding boundary
                         marker={"color": "black", "size": 10},
                         name=f"Inference ({inference_threshold:.6f})",
                         hoverinfo="text",
@@ -165,16 +163,6 @@ def plot_multilot_roc(
             False Filter Rate: {inference_threshold_coord[0]}<br>
             Threshold: {inference_threshold:.6f}""",
                     )
-                )
-
-                fig.add_annotation(
-                    x=inference_threshold_coord[0],
-                    y=inference_threshold_coord[1],
-                    text=f"""{model_name} Inference threshold = {inference_threshold:.6f} <br>
-            Capture Rate: {inference_threshold_coord[1]:.4f} <br>
-            False Filter Rate: {inference_threshold_coord[0]:.4f}""",
-                    showarrow=False,
-                    yshift=-30,
                 )
 
     # Add a diagonal grey dotted-line
