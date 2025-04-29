@@ -72,12 +72,19 @@ def app() -> None:
         with r3_col1:
             st.subheader("Recipe preview")
             recipe = yaml.load(recipe_file, Loader=yaml.Loader)
+            recipe_validity = api_helper.is_valid_yaml_config(recipe, "recipe")
+            if not recipe_validity["result"]:
+                st.error(recipe_validity["message"])
+                return
             st.json(recipe)
     if inf_configfile is not None:
         with r3_col2:
             st.subheader("Multilot config preview")
             inf_config = yaml.load(inf_configfile, Loader=yaml.Loader)
-            # TODO: Validate yaml file format from backend and pass error message
+            lot_info_validity = api_helper.is_valid_yaml_config(inf_config, "lots")
+            if not lot_info_validity["result"]:
+                st.error(lot_info_validity["message"])
+                return
             st.json(inf_config)
 
     if st.button("Start Multilot Inference Job", type="primary"):
