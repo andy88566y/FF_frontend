@@ -1,5 +1,5 @@
 from pprint import pformat
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -1277,3 +1277,20 @@ def request_stop_job(job_id: str) -> str:
     r = requests.post(f"{API_ROOT}stop_job?job_id={job_id}", timeout=TIMEOUT)
 
     return f"{r.status_code}: {r.json().get('message', 'message not found...')}"
+
+
+#####################################################################################################
+# Yaml validation                                                                                   #
+#####################################################################################################
+@st.cache_data(ttl="1s")
+def is_valid_yaml_config(yaml_config: Any, mode: Literal["recipe", "lots"]) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "is_valid_yaml_format",
+        json={
+            "yaml_config": yaml_config,
+            "mode": mode,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
