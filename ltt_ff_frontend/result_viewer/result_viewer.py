@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 import streamlit as st
 import yaml
@@ -57,7 +58,6 @@ def app() -> None:
     else:
         filtered_db_recipe = {"recipes": []}
 
-
     if st_recipe_type == YAML_MODE:
         col, _ = st.columns([3, 4])
         with col:
@@ -93,8 +93,11 @@ def app() -> None:
                     format="%.5f",
                     help="Probabilities below threshold will be considered as non-defects.",
                 )
-                rounded_threshold = int(input_threshold * 1e5) / 1e5
-                recipe_model_thresholds.append(rounded_threshold)
+                # Use Decimal for precise floating point arithmetic
+                # Passing the threshold as a string ensures that it does not first get interpreted as a float, which
+                # can introduce a precision error.
+                rounded_threshold = int(Decimal(f"{input_threshold}") * Decimal("1e5")) / Decimal("1e5")
+                recipe_model_thresholds.append(float(rounded_threshold))
             # with col3:
             #     recipe_model_shf = st.toggle("Model {i + 1} SHF")
         recipe = {"recipes": []}
@@ -112,7 +115,7 @@ def app() -> None:
             st.code(yaml.dump(recipe), language="yaml")
         st.divider()
 
-        if filtered_db_recipe['recipes'] == []:
+        if filtered_db_recipe["recipes"] == []:
             # no data, early return
             return
         if st_recipe_type in [YAML_MODE, CREATOR_MODE]:
@@ -134,7 +137,7 @@ def app() -> None:
     with st.container():
         with st.expander(label="LRF ClassType count"):
             class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
-    
+
     if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart_column, col_roc_curve_column = st.columns(2)
