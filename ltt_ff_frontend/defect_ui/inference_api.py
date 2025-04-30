@@ -104,16 +104,27 @@ def app() -> None:
                 st.error("Missing input detected. Please upload .yaml config file and enter the Result Directory.")
                 return
 
-        # Validate confidence threshold
-        for batch in recipe["recipes"]:
-            if batch["threshold"] < 0.0 or batch["threshold"] > 1.0:
-                logger.error(
-                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {batch['threshold']}"
-                )
-                st.error(
-                    f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {batch['threshold']}"
-                )
-                return
+        # Validate recipe format and confidence threshold
+        if isinstance(recipe, dict) and "recipes" in recipe.keys():
+            for batch in recipe["recipes"]:
+                if batch["threshold"] < 0.0 or batch["threshold"] > 1.0:
+                    logger.error(
+                        f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {batch['threshold']}"
+                    )
+                    st.error(
+                        f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {batch['threshold']}"
+                    )
+                    return
+        else:
+            logger.error(
+                f"The uploaded recipe file has invalid format: {recipe}"
+                "\n\nFor an example of a valid format, refer to the help tool above the recipe uploader widget."
+            )
+            st.error(
+                f"The uploaded recipe file has invalid format: {recipe}"
+                "\n\nFor an example of a valid format, refer to the help tool above the recipe uploader widget."
+            )
+            return
 
         request = api_helper.request_multilot_inference(
             output_dir=inf_output_dir,
