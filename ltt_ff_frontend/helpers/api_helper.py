@@ -668,7 +668,9 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         # Just show lot_id, don't show image_dir and lrf_path
         # This line has to happen before renaming the index column, otherwise we won't be able to access index 0
         paged_statuses_df["lot_info"] = paged_statuses_df["lot_info"].apply(
-            lambda data_path: pformat([per_lot.get("lot_id", None) for per_lot in data_path.get("data_paths", [])])
+            lambda data_paths: pformat([per_lot.get("lot_id", "") for per_lot in data_paths["data_paths"]])
+            if isinstance(data_paths, dict)
+            else None
         )
 
         # Sort rows by start time and rename current index column to "multilot_inference_id"
