@@ -925,8 +925,6 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
             "lot_info",
             "children_job_id",
             # 'Review Link',
-            "model_name",
-            "threshold",
             "output_dir",
             "gen_optimized_recipe",
             "message",
