@@ -1296,3 +1296,19 @@ def is_valid_yaml_config(yaml_config: Any, mode: Literal["recipe", "lots"]) -> d
     )
 
     return r.json()
+
+
+#####################################################################################################
+# Model conversion                                                                                  #
+#####################################################################################################
+@st.cache_data(ttl="1s")
+def convert_model(model_details: dict[str, Any]) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "convert_model",
+        json={
+            "model_details": model_details,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
