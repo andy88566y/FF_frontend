@@ -92,7 +92,7 @@ def app() -> None:
         cr_1_specificity = st.number_input(
             label="CR1/specificity",
             value=0.5,
-            step=1e-5,
+            step=1e-4,
             format="%.4f",
             help="False Filter Rate when Capture Rate is 100%.",
         )
@@ -129,7 +129,27 @@ def app() -> None:
         day = st.slider(label="Day", min_value=1, max_value=31, value=date.today().day, key="day")
 
     if st.button(label="Convert model", type="primary"):
-        # check no empty fields
+        if not channel_size_1 or not channel_size_2 or not channel_size_3:
+            logger.error("Missing channel size input. \nModel conversion failed to start.")
+            st.error("Missing channel size input. \n\nModel conversion failed to start.")
+            return
+
+        if not kernel_size_1 or not kernel_size_2 or not kernel_size_3:
+            logger.error("Missing kernel size input. \nModel conversion failed to start.")
+            st.error("Missing kernel size input. \n\nModel conversion failed to start.")
+            return
+
+        # Check invalid model threshold or cr_1_specificity
+        if not 0.0 <= model_threshold <= 1.0 or not 0.0 <= cr_1_specificity <= 1.0:
+            logger.error(
+                f"Model threshold [{model_threshold}] and CR1/Specificity [{cr_1_specificity}] must be between 0 and 1!"
+                "\nModel conversion failed to start."
+            )
+            st.error(
+                f"Model threshold [{model_threshold}] and CR1/Specificity [{cr_1_specificity}] must be between 0 and 1!"
+                "\n\nModel conversion failed to start."
+            )
+            return
 
         model_details = {
             "model_to_convert": model_to_convert,
