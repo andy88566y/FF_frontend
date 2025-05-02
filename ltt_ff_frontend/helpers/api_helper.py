@@ -77,6 +77,23 @@ def get_model_threshold(model_name: str) -> float:
         return model_threshold
 
 
+@st.cache_data(ttl="300s")
+def get_model_details(model_name: str) -> dict[str, Any]:
+    """
+    Return model details for selected model (threshold, metrics, params)
+    """
+    params = {"model_name": model_name}
+    r = requests.get(f"{API_ROOT}get_model_details", params=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        return {}
+    else:
+        model_details = r.json()["model_details"]
+        logger.info(f"Model details for {model_name}: {model_details}")
+        return model_details
+
+
 def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
     """
     get calculated results from ff core
