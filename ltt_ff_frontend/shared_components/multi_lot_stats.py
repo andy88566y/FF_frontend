@@ -42,8 +42,7 @@ def draw_column_background_color(s):
         "Non Defect Count": colors["green"],
         "Unlabeled Count": colors["blue"],
     }
-    foo = [col_to_colors.get(first_index, colors["default"]) for first_index in s.index.get_level_values(0)]
-    return foo
+    return [col_to_colors.get(first_index, colors["default"]) for first_index in s.index.get_level_values(0)]
 
 
 def draw_stats_df(
@@ -53,7 +52,7 @@ def draw_stats_df(
     key: str,
 ) -> list[str]:
     rows = []
-    count_rate_data = api_helper.calculate_recipe_filtered_results(inference_result_dir, recipe=recipe)
+    count_rate_data = api_helper.get_recipe_filtered_results_from_api(inference_result_dir, recipe=recipe)
     for data, meta in zip(count_rate_data, multi_lot_model_data.model_metadata_list):
         rows.append(
             [

@@ -46,7 +46,41 @@ def get_model_threshold(model_name: str) -> float:
         return model_threshold
 
 
+def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
+    """
+    get calculated results from ff core
+
+    return example:
+    [
+        {
+            "as_is_defect_count": 100,
+            "to_be_defect_count": 10,
+            "filter_rate": 0.9,
+            "as_is_true_defect_count": 10,
+            "to_be_true_defect_count": 10,
+            "capture_rate": 1.0,
+            "as_is_non_defect_count": 90,
+            "to_be_non_defect_count": 90,
+            "false_filter_rate": 1.0,
+            "unlabeled": 2,
+            "filtered_unlabeled_defect_count": 1,
+        },
+        {...}
+    ]
+    """
+    params = {"inference_result_dir": output_dir, "recipe": recipe}
+    r = requests.get(API_ROOT + "result/get_filtered_stats", json=params, timeout=TIMEOUT)
+
+    if r.status_code == requests.codes.ok:
+        return r.json()["filtered_stats"]
+    else:
+        r.raise_for_status()
+
+
 def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
+    """
+    calculate and filter defect data, using front-end client resource
+    """
     defect_id_lists = get_defect_id_lists(output_dir)
     answer_lists = get_answer(output_dir=output_dir, defect_id_lists=defect_id_lists)
     prediction_lists = get_predictions(output_dir=output_dir, recipe=recipe, defect_lists=defect_id_lists)
