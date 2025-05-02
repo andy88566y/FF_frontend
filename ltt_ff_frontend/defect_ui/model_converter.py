@@ -1,15 +1,12 @@
-import os
 from datetime import date
 
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import LayerGroup, MaskType, ModelType, PixelSize, Site, TechLayer, Tool
+from ltt_ff_frontend.constant import LayerGroup, ModelType, PixelSize, TechLayer, Tool
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper
 
-
-# output dir should be DS_MODEL_ROOT/dsexp or smth (do in backend)
 
 # TODO: model inspector page (select a model to check its params and metrics)
 
@@ -22,14 +19,15 @@ def app() -> None:
     st.title("Model Converter")
     st.caption("Convert models from .ckpt to .pth")
 
-    # TODO: Get model names from backend
-    # ds_models = api_helper.get_ds_models()
-    ds_models = ["DS_MODEL_1", "DS_MODEL_2"]
-    # model_to_convert = st.selectbox(label="Model to convert", options=ds_models, format_func=helper.format_model_name)
-    model_to_convert = st.text_input(
-        label="Model to convert",
-        value="20250424/model_N4_CUT_45_20250424T000000Z_2bb6a0fc.ckpt",
-    )
+    model_week_col, model_list_col = st.columns([3, 7])
+    with model_week_col:
+        ds_model_dirs = api_helper.get_ds_model_dirs()
+        model_week = st.selectbox(label="Filter by week", options=ds_model_dirs)
+    with model_list_col:
+        ds_models = api_helper.get_ds_models(model_week)
+        model_to_convert = st.selectbox(
+            label="Model to convert", options=ds_models, format_func=helper.format_model_name
+        )
 
     (
         channel_size_title_col,
