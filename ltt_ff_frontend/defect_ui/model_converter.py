@@ -102,6 +102,30 @@ def app() -> None:
                 help="False Filter Rate when Capture Rate is 100%.",
             )
 
+        with st.expander("Threshold_c"):
+            thc_col, thc_cr_col, thc_ffr_col = st.columns(3)
+        with thc_col:
+            model_threshold_c = st.number_input(
+                label="Model threshold_c",
+                value=0.0,
+                step=1e-5,
+                format="%.5f",
+            )
+        with thc_cr_col:
+            thc_cr = st.number_input(
+                label="THC/CR",
+                value=0.0,
+                step=1e-4,
+                format="%.4f",
+            )
+        with thc_ffr_col:
+            thc_ffr = st.number_input(
+                label="THC/FFR",
+                value=0.0,
+                step=1e-4,
+                format="%.4f",
+            )
+
         tool_col, tl_col, lg_col, ps_col, mt_col = st.columns(5)
 
         with tool_col:
@@ -161,7 +185,10 @@ def app() -> None:
                 "channel_size": [int(channel_size_1), int(channel_size_2), int(channel_size_3)],
                 "kernel_size": [int(kernel_size_1), int(kernel_size_2), int(kernel_size_3)],
                 "model_threshold": model_threshold,
+                "model_threshold_c": model_threshold_c,
                 "cr_1_specificity": cr_1_specificity,
+                "thc_cr": thc_cr,
+                "thc_ffr": thc_ffr,
                 "tool": tool,
                 "tech_layer": tech_layer,
                 "layer_group": layer_group,

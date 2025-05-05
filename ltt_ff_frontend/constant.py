@@ -81,6 +81,7 @@ class Site(Enum):
 class Tool(Enum):
     X9U = "X9U"
     X912 = "X912"
+    X9UHI = "X9UHI"
     X8U = "X8U"
 
 
@@ -88,6 +89,8 @@ class TechLayer(Enum):
     N2 = "N2"
     N3 = "N3"
     N4 = "N4"
+    N5 = "N5"
+    N28 = "N28"
 
 
 class LayerGroup(Enum):
