@@ -664,7 +664,7 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             paged_statuses_df["runtime"] = paged_statuses_df["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -744,7 +744,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             paged_statuses_df["runtime"] = paged_statuses_df["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -869,7 +869,7 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             inference_status["runtime"] = inference_status["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -954,7 +954,7 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             multilot_inference_status["runtime"] = multilot_inference_status["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -1174,7 +1174,7 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> pd
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             paged_statuses_df["runtime"] = paged_statuses_df["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -1277,7 +1277,7 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             finetuning_status["runtime"] = finetuning_status["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
