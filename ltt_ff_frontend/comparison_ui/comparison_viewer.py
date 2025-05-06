@@ -14,9 +14,9 @@ def app() -> None:
     output_dir_default = "/mnt/dbpc/xxx"
 
     with col1:
-        result_dir_1 = st.text_input("First Inference Result Directory", value=output_dir_default)
+        result_dir_1 = st.text_input("Model 1 (Base) Result Directory", value=output_dir_default)
     with col2:
-        result_dir_2 = st.text_input("Second Inference Result Directory", value=output_dir_default)
+        result_dir_2 = st.text_input("Model 2 (Candidate) Result Directory", value=output_dir_default)
 
     # Columns for drawing distribution chart and ROC curve
     col_1d_chart_column, col_roc_curve_column = st.columns(2)
