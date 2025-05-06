@@ -244,10 +244,12 @@ def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = Fa
             for lrf_data_with_ans, probability_list in zip(lrf_data_with_ans_list, probability_lists):
                 if len(lrf_data_with_ans) != len(probability_list):
                     logger.error(
-                        f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probability_list)}"
+                        f"""Difference in length between lrf data and
+                         probability {len(lrf_data_with_ans)} {len(probability_list)}"""
                     )
                     raise ValueError(
-                        f"Difference in length between lrf data and probability {len(lrf_data_with_ans)} {len(probability_list)}"
+                        f"""Difference in length between lrf data and
+                         probability {len(lrf_data_with_ans)} {len(probability_list)}"""
                     )
                 lrf_data_with_prob = []
                 for data, prob in zip(lrf_data_with_ans, probability_list):
