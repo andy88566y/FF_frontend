@@ -15,7 +15,11 @@ def gen(result_dir_1: str, result_dir_2: str) -> None:
         recipe_model_count_1 = multi_lot_model_data_1.model_metadata_list[0]["model_count"]
         recipe_model_count_2 = multi_lot_model_data_2.model_metadata_list[0]["model_count"]
 
-        if recipe_model_count_1 == 1 and recipe_model_count_2 == 1:
+        if recipe_model_count_1 != 1:
+            st.error("Base Model recipe has more than 1 model.")
+        elif recipe_model_count_2 != 1:
+            st.error("Candidate Model recipe has more than 1 model.")
+        elif recipe_model_count_1 == 1 and recipe_model_count_2 == 1:
             m1_threshold = multi_lot_model_data_1.model_metadata_list[0]["model_threshold_0"]
             m2_threshold = multi_lot_model_data_2.model_metadata_list[0]["model_threshold_0"]
             aggregated_model_data_1 = helper.aggregate_lists(
