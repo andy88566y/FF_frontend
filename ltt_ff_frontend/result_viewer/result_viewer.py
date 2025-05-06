@@ -30,7 +30,6 @@ def app() -> None:
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
 
     output_dir_default = "/mnt/dbpc/xxx"
-    invalid_input = [output_dir_default, ""]
     recipe = None
 
     with r1_col1:

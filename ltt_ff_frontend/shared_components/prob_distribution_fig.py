@@ -34,7 +34,7 @@ def generate_multilot_1D_plot(
     raw_data: tuple[list[int], list[float], list[int]],
     model_metadata_list: list[dict[str, Any]],
     selected_threshold: float,
-    selected_lot_id_list: list[str] = [],
+    selected_lot_id_list: list[str] = None,
 ) -> go.Figure:
     """
     Generates a 1D plot for defect probability distribution across multiple lots.
@@ -61,6 +61,8 @@ def generate_multilot_1D_plot(
         Plotly figure object with the defect probability distribution histogram.
     """
 
+    if selected_lot_id_list is None:
+        selected_lot_id_list = []
     id_list, prob_list, ans_list, lot_id_list = helper.aggregate_lists(raw_data, model_metadata_list)
     df = pd.DataFrame(
         data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}

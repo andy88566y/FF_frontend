@@ -1,6 +1,6 @@
 import random
 
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import pydeck as pdk
@@ -22,7 +22,7 @@ def generate_colors(num_clusters):
     # Use the 'viridis' colormap which can handle a large number of distinct colors
     cmap = plt.get_cmap("hsv", num_clusters)
     # Generate the colors
-    colors = [matplotlib.colors.to_hex(cmap(i)) for i in range(num_clusters)]
+    colors = [mpl.colors.to_hex(cmap(i)) for i in range(num_clusters)]
     # Shuffle the colors
     random.shuffle(colors)
     return colors
@@ -159,7 +159,7 @@ def app(result_dir: str, image_dir: str) -> None:
 
     # Add threshold selection
     with threshold_col:
-        threshold = st.number_input(
+        st.number_input(
             "Select Probability Threshold",
             min_value=0.0,
             max_value=1.0,
