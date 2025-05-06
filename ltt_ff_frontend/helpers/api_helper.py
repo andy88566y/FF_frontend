@@ -440,6 +440,46 @@ def gen_lrf(
         raise NotImplementedError(f"gen_lrf_type {gen_lrf_type} is not implemented.")
 
 
+def split_lrf(lrf_path: str, partitions: int, output_dir: str) -> requests.Response:
+    r = requests.post(
+        API_ROOT + "lrf_split",
+        json={
+            "lrf_path": lrf_path,
+            "partitions": partitions,
+            "output_dir": output_dir,
+        },
+        timeout=TIMEOUT,
+    )
+
+    status = r.json()["status"]
+
+    if status == "completed":
+        logger.info("LRF split completed successfully!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+
+    return r
+
+
+def merge_lrf(output_dir: str) -> requests.Response:
+    r = requests.post(
+        API_ROOT + "lrf_merge",
+        json={
+            "output_dir": output_dir,
+        },
+        timeout=TIMEOUT,
+    )
+
+    status = r.json()["status"]
+
+    if status == "completed":
+        logger.info("LRF merge completed successfully!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+
+    return r
+
+
 def get_model_data(
     output_dir: str,
 ) -> tuple[dict[str, Any], tuple[list[int], list[float], list[int]]] | tuple[None, None]:
