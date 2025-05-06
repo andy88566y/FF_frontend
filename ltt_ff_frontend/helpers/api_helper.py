@@ -126,17 +126,20 @@ def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]
 
 
 @st.cache_data(ttl="10s")
-def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
+def get_db_metadata_lists(output_dir: str, lot_id: str = "") -> list[dict[str, Any]]:
     """
     Get Result DB metadata.
 
     Args:
         output_dir: Root output directory where inference results were stored.
+        lot_id: A specific lot ID to be filtered.
 
         Returns:
             A dictionary of result database metadata
     """
-    r = requests.get(API_ROOT + "result/get_db_metadata_lists", params={"output_dir": output_dir}, timeout=TIMEOUT)
+    r = requests.get(
+        API_ROOT + "result/get_db_metadata_lists", params={"output_dir": output_dir, "lot_id": lot_id}, timeout=TIMEOUT
+    )
 
     if r.json()["status"] == "completed":
         return r.json()["db_metadata"]
@@ -250,11 +253,13 @@ def get_predictions(
 
 # TODO: Split this into smaller functions
 @st.cache_data(ttl="30s")
-def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = False) -> list[list[dict[str, Any]]]:
+def get_lrf_data_lists(
+    output_dir: str, cols: list[str], include_prob: bool = False, lot_id: str = ""
+) -> list[list[dict[str, Any]]]:
     """
     Return lrf data with selected columns
     """
-    params = {"output_dir": output_dir, "cols": ",".join(cols)}
+    params = {"output_dir": output_dir, "cols": ",".join(cols), "lot_id": lot_id}
     r = requests.get(f"{API_ROOT}result/get_lrf_data_lists", params=params, timeout=TIMEOUT)
     if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
@@ -264,7 +269,7 @@ def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = Fa
         for lrf_data in lrf_data_list:
             logger.info(f"LRF data of {len(lrf_data)} defects loaded from `{output_dir}`")
 
-    r = requests.get(API_ROOT + "result/get_answer", json={"output_dir": output_dir}, timeout=TIMEOUT)
+    r = requests.get(API_ROOT + "result/get_answer", json={"output_dir": output_dir, "lot_id": lot_id}, timeout=TIMEOUT)
     if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
         raise ValueError(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
@@ -281,7 +286,9 @@ def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = Fa
             lrf_data_with_ans_list.append(lrf_data_with_ans)
 
     if include_prob:
-        r = requests.get(API_ROOT + "result/get_probability", json={"output_dir": output_dir}, timeout=TIMEOUT)
+        r = requests.get(
+            API_ROOT + "result/get_probability", json={"output_dir": output_dir, "lot_id": lot_id}, timeout=TIMEOUT
+        )
 
         if r.json()["status"] == "error":
             logger.error(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")

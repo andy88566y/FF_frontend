@@ -1,3 +1,4 @@
+import os
 import random
 
 import matplotlib
@@ -5,6 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+from loguru import logger
 from sklearn.cluster import DBSCAN
 
 from ltt_ff_frontend.defect_review_ui import detail_view
@@ -60,10 +62,21 @@ def reload_data(df: pd.DataFrame):
 
 
 def app(result_dir: str, image_dir: str) -> None:
+    lots = [file.split(".")[0] for file in os.listdir(result_dir) if ".db" in file]
+
+    if len(lots) > 1:
+        selected_lot_id = st.selectbox(label="Select a Lot ID", options=lots)
+    else:
+        selected_lot_id = lots[0]
+    logger.info(f"Lot selected: {selected_lot_id}")
+
     defects = api_helper.get_lrf_data_lists(
-        result_dir, cols=["No", "UniqueID", "X", "Y", "ClassType"], include_prob=True
+        output_dir=result_dir,
+        cols=["No", "UniqueID", "X", "Y", "ClassType"],
+        include_prob=True,
+        lot_id=selected_lot_id,
     )[0]
-    db_metadata = api_helper.get_db_metadata_lists(result_dir)[0]
+    db_metadata = api_helper.get_db_metadata_lists(output_dir=result_dir, lot_id=selected_lot_id)[0]
 
     # Extract relevant columns and convert "X" and "Y" to floats
     defect_data = [
@@ -107,6 +120,9 @@ def app(result_dir: str, image_dir: str) -> None:
     # Initialize session state for selected folder
     if "result_dir" not in st.session_state:
         st.session_state.result_dir = ""
+    # Initialize session state for selected lot
+    if "lot_id" not in st.session_state:
+        st.session_state.lot_id = ""
     # Initialize session state for probability threshold
     if "prob_threshold" not in st.session_state:
         st.session_state.prob_threshold = db_metadata.get("model_threshold", db_metadata.get("model_threshold_0", -1))
@@ -147,12 +163,14 @@ def app(result_dir: str, image_dir: str) -> None:
 
     # Reset session state values when changing folder
     previous_result_dir = st.session_state.get("result_dir", None)
-    if previous_result_dir != result_dir:
+    previous_lot_id = st.session_state.get("lot_id", None)
+    if previous_result_dir != result_dir or previous_lot_id != selected_lot_id:
         st.session_state.filter_column = df.columns[0]
         st.session_state.filter_value = ""
         st.session_state.filtered_df = df
         st.session_state.selection_source = ""
         st.session_state.result_dir = result_dir
+        st.session_state.lot_id = selected_lot_id
 
     # Create three columns (prob threshold, filter options, message to show filtered values)
     threshold_col, filter_options_col, filter_value_col, filter_message_col = st.columns([1, 1, 2, 1])
@@ -208,7 +226,7 @@ def app(result_dir: str, image_dir: str) -> None:
     with filter_message_col:
         # TODO: To be fixed. Current method will cause message box to not appear if no values are filtered,
         #       even if filter is active. But this is unlikely to happen.
-        if len(defect_data) != len(st.session_state.filtered_df):
+        if len(defect_data) != len(st.session_state.filtered_df) and selected_lot_id == previous_lot_id:
             st.warning(f"Active filter: {st.session_state.filter_column} = {st.session_state.filter_value}")
 
     # Create two columns (list view, map view)
