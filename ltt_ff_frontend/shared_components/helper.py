@@ -74,4 +74,3 @@ def is_valid_output_dir(output_dir: str) -> bool:
             logger.error(f"Result Directory does not belong to one of the allowed directories: {allowed_directories}")
             return False
     return True
-

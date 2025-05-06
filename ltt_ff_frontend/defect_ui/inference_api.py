@@ -101,7 +101,7 @@ def app() -> None:
         for batch in recipe["recipes"]:
             if batch["threshold"] < 0.0 or batch["threshold"] > 1.0:
                 msg = f"""Confidence threshold must be between 0.0 and 1.0!
-                 Selected confidence threshold: {batch['threshold']}"""
+                 Selected confidence threshold: {batch["threshold"]}"""
                 logger.error(msg)
                 st.error(msg)
                 return

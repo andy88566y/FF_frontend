@@ -56,7 +56,6 @@ def app() -> None:
     else:
         filtered_db_recipe = {"recipes": []}
 
-
     if st_recipe_type == YAML_MODE:
         col, _ = st.columns([3, 4])
         with col:
@@ -111,7 +110,7 @@ def app() -> None:
             st.code(yaml.dump(recipe), language="yaml")
         st.divider()
 
-        if filtered_db_recipe['recipes'] == []:
+        if filtered_db_recipe["recipes"] == []:
             # no data, early return
             return
         if st_recipe_type in [YAML_MODE, CREATOR_MODE]:

@@ -11,11 +11,10 @@ def recipe_model_name_matches(new_recipe: dict[str, Any], db_recipe: dict[str, A
     db_recipe_models = [r["model_name"] for r in db_recipe["recipes"]]
     return new_recipe_models == db_recipe_models
 
+
 def gen(
-    container: st.container,
-    inference_result_dir: str,
-    new_recipe: dict[str, Any],
-    db_recipe: dict[str, Any]) -> None:
+    container: st.container, inference_result_dir: str, new_recipe: dict[str, Any], db_recipe: dict[str, Any]
+) -> None:
     with container:
         if recipe_model_name_matches(new_recipe, db_recipe):
             if st.button("Generate new lrf with Recipe"):

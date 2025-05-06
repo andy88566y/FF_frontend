@@ -16,8 +16,8 @@ def gen(result_dir_1: str, result_dir_2: str) -> None:
         recipe_model_count_2 = multi_lot_model_data_2.model_metadata_list[0]["model_count"]
 
         if recipe_model_count_1 == 1 and recipe_model_count_2 == 1:
-            m1_threshold = multi_lot_model_data_1.model_metadata_list[0]['model_threshold_0']
-            m2_threshold = multi_lot_model_data_2.model_metadata_list[0]['model_threshold_0']
+            m1_threshold = multi_lot_model_data_1.model_metadata_list[0]["model_threshold_0"]
+            m2_threshold = multi_lot_model_data_2.model_metadata_list[0]["model_threshold_0"]
             aggregated_model_data_1 = helper.aggregate_lists(
                 (
                     multi_lot_model_data_1.defect_id_lists,
@@ -32,7 +32,7 @@ def gen(result_dir_1: str, result_dir_2: str) -> None:
                     multi_lot_model_data_2.probability_lists,
                     multi_lot_model_data_2.answer_lists,
                 ),
-                multi_lot_model_data_2.model_metadata_list
+                multi_lot_model_data_2.model_metadata_list,
             )
             col1, col2 = st.columns(2)
             with col1:
@@ -52,7 +52,7 @@ def gen(result_dir_1: str, result_dir_2: str) -> None:
                     help="Probabilities below threshold will be considered as non-defects.",
                 )
 
-            _, plot_container, _ = st.columns([1,8,1])
+            _, plot_container, _ = st.columns([1, 8, 1])
             with plot_container:
                 st.plotly_chart(
                     generate_fig(
@@ -62,6 +62,7 @@ def gen(result_dir_1: str, result_dir_2: str) -> None:
                         input_m2_threshold,
                     )
                 )
+
 
 def generate_fig(
     aggregated_model_data_1: tuple[list[int], list[float], list[int], list[str]],
