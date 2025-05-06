@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 import yaml
 from loguru import logger
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from ltt_ff_frontend.constant import LOSS_CONFIGS, LR_SCHEDULER_CONFIGS, OPTIMIZER_CONFIGS, TrainingOption
 from ltt_ff_frontend.datamodel.ff_core.request import FFCoreTrainingRequest, ModelParams, HyperParams
@@ -14,10 +15,7 @@ from ltt_ff_frontend.shared_components import helper, stop_job_button
 
 
 if typing.TYPE_CHECKING:
-    from streamlit.runtime.uploaded_file_manager import UploadedFile
-    from streamlit.delta_generator import DeltaGenerator
-
-    from ltt_ff_frontend.constant import NameParamsConfig
+    from ltt_ff_frontend.constant import NameNumInputParamsConfig
 
 
 def app() -> None:
@@ -141,7 +139,7 @@ def app() -> None:
             stop_job_button.gen(raw_df_fin)
 
 
-def _create_training_option_columns(training_option: str) -> tuple[str | None, "UploadedFile" | None]:
+def _create_training_option_columns(training_option: str) -> tuple[str | None, UploadedFile | None]:
     r1_col1, r1_col2 = st.columns([3, 2])
     yaml_help_text = """
     **Example of a valid .yaml config file:**\n
@@ -168,7 +166,7 @@ def _create_training_option_columns(training_option: str) -> tuple[str | None, "
             multilot_config_file = st.file_uploader(
                 "Upload Multi-lot Base-training Config (.yaml)", type=".yaml", help=yaml_help_text
             )
-    
+
     return base_model_name, multilot_config_file
 
 
@@ -220,12 +218,12 @@ def _create_model_params_inputs() -> tuple[list[int], list[int]]:
 
 # TODO Need a better function name
 def _create_type_and_params(
-    label: str, configs: dict[str, "NameParamsConfig"], key_prefix: str
+    label: str, configs: dict[str, "NameNumInputParamsConfig"], key_prefix: str
 ) -> tuple[str, dict[str, Any]]:
     _type = st.selectbox(label=label, options=configs.keys(), index=0)
     select_config = configs[_type]
     params = {}
-    for param in select_config.params:
+    for param in select_config.num_input_params:
         key = f"{key_prefix}_{param.name}"
         st.number_input(
             label=param.name,
@@ -233,11 +231,13 @@ def _create_type_and_params(
             min_value=param.min_value,
             max_value=param.max_value,
             format=param.accuracy,
+            step=param.step,
             key=key
         )
         params[param.name] = st.session_state[key]
 
     return _type, params
+
 
 def _create_optimizer_options() -> tuple[str, dict[str, Any]]:
     return _create_type_and_params("Optimizer Type", OPTIMIZER_CONFIGS, "optimizer")  # type: ignore[arg-type]
@@ -267,7 +267,7 @@ def _missing_required_inputs(required_inputs: list[Any]) -> bool:
     return False
 
 
-def _start_training_job_button(
+def _start_training_job_button(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     training_option: TrainingOption,
     base_model_name: str | None,
     model_type: str,

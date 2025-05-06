@@ -40,23 +40,24 @@ BLANK_MODEL = "[UNUSED]"
 INFERENCE_DEFAULT_RESULT_DIR = "/mnt/dbpc/xxx"
 
 
-class ParamConfig(BaseModel):
+class NumInputParamConfig(BaseModel):
 
     name: Annotated[str, Field(description="Name of the parameter.")]
     default_value: Annotated[float | None, Field(description="Default value of the parameter.")]
     accuracy: Annotated[str, Field(description="Format of the display value.")]
     min_value: Annotated[float, Field(description="Minimum value of the parameter.")]
     max_value: Annotated[float, Field(description="Maximum value of the parameter.")]
+    step: Annotated[float, Field(description="The adjustment interval of the value.")]
 
 
-class NameParamsConfig(BaseModel):
+class NameNumInputParamsConfig(BaseModel):
 
     name: str
-    params: list[ParamConfig]
+    num_input_params: list[NumInputParamConfig]
 
 
 # Optimizer
-class OptimizerConfig(NameParamsConfig):
+class OptimizerConfig(NameNumInputParamsConfig):
     """Optimizer config."""
 
 
@@ -71,25 +72,25 @@ class AdamW(OptimizerConfig):
 OPTIMIZER_CONFIGS = {
     "Adam": Adam(
         name="Adam",
-        params=[ParamConfig(name="weight_decay", default_value=0.0, accuracy="%0.3f", min_value=0.0, max_value=1.0)]
+        num_input_params=[
+            NumInputParamConfig(
+                name="weight_decay", default_value=0.0, accuracy="%0.3f", min_value=0.0, max_value=1.0, step=1e-3
+            )
+        ]
     ),
     "AdamW": AdamW(
         name="AdamW",
-        params=[ParamConfig(name="weight_decay", default_value=0.01, accuracy="%0.3f", min_value=0.0, max_value=1.0)]
+        num_input_params=[
+            NumInputParamConfig(
+                name="weight_decay", default_value=0.01, accuracy="%0.3f", min_value=0.0, max_value=1.0, step=1e-3
+            )
+        ]
     )
 }
-# OPTIMIZER_TYPE = ["Adam", "AdamW"]
-# OPTIMIZER_PARAMS = {
-#     "Adam": {
-#         "weight_decay": (0.0, "%0.3f", 0.0, 1.0),  # (default_value, accuracy, min_value, max_value)
-#     },
-#     "AdamW": {
-#         "weight_decay": (0.01, "%0.3f", 0.0, 1.0),
-#     },
-# }
+
 
 # Loss
-class LossConfig(NameParamsConfig):
+class LossConfig(NameNumInputParamsConfig):
     """Loss config."""
 
 
@@ -100,32 +101,32 @@ class BCE(LossConfig):
 class Focal(LossConfig):
     """Focal loss."""
 
+
 LOSS_CONFIGS = {
     "bce": BCE(
         name="bce",
-        params=[ParamConfig(name="pos_weight", default_value=None, accuracy="%d", min_value=0, max_value=100)]
+        num_input_params=[
+            NumInputParamConfig(
+                name="pos_weight", default_value=None, accuracy="%0.0f", min_value=0, max_value=100, step=1.0
+            )
+        ]
     ),
     "focal": Focal(
         name="focal",
-        params=[
-            ParamConfig(name="alpha", default_value=0.25, accuracy="%0.2f", min_value=0.0, max_value=1.0),
-            ParamConfig(name="gamma", default_value=2.0, accuracy="%0.2f", min_value=0.0, max_value=10.0)
+        num_input_params=[
+            NumInputParamConfig(
+                name="alpha", default_value=0.25, accuracy="%0.2f", min_value=0.0, max_value=1.0, step=1e-2
+            ),
+            NumInputParamConfig(
+                name="gamma", default_value=2.0, accuracy="%0.2f", min_value=0.0, max_value=10.0, step=1e-2
+            )
         ]
     )
 }
-# LOSS_TYPE = ["bce", "focal"]
-# LOSS_PARAMS = {
-#     "bce": {
-#         "pos_weight": (None, "%d", 0, 100),
-#     },
-#     "focal": {
-#         "alpha": (0.25, "%0.2f", 0.0, 1.0),
-#         "gamma": (2.0, "%0.2f", 0.0, 10.0),
-#     },
-# }
+
 
 # Learning rate scheduler
-class LRSchedulerConfig(NameParamsConfig):
+class LRSchedulerConfig(NameNumInputParamsConfig):
     """Learning rate scheduler config."""
 
 
@@ -140,30 +141,29 @@ class Plateau(LRSchedulerConfig):
 LR_SCHEDULER_CONFIGS = {
     "disable": Disable(
         name="disable",
-        params=[]
+        num_input_params=[]
     ),
     "plateau": Plateau(
         name="plateau",
-        params=[
-            ParamConfig(name="factor", default_value=0.1, accuracy="%0.2f", min_value=0.0, max_value=1.0),
-            ParamConfig(name="patience", default_value=5, accuracy="%d", min_value=0, max_value=1000),
-            ParamConfig(name="threshold", default_value=1e-4, accuracy="%0.6f", min_value=0.0, max_value=1.0),
-            ParamConfig(name="min_lr", default_value=1e-6, accuracy="%0.8f", min_value=0.0, max_value=1.0),
-            ParamConfig(name="eps", default_value=1e-6, accuracy="%0.8f", min_value=0.0, max_value=1.0)
+        num_input_params=[
+            NumInputParamConfig(
+                name="factor", default_value=0.1, accuracy="%0.2f", min_value=0.0, max_value=1.0, step=1e-2
+            ),
+            NumInputParamConfig(
+                name="patience", default_value=5, accuracy="%0.0f", min_value=0, max_value=1000, step=1.0
+            ),
+            NumInputParamConfig(
+                name="threshold", default_value=1e-4, accuracy="%0.6f", min_value=0.0, max_value=1.0, step=1e-6
+            ),
+            NumInputParamConfig(
+                name="min_lr", default_value=1e-6, accuracy="%0.8f", min_value=0.0, max_value=1.0, step=1e-8
+            ),
+            NumInputParamConfig(
+                name="eps", default_value=1e-6, accuracy="%0.8f", min_value=0.0, max_value=1.0, step=1e-8
+            )
         ]
     )
 }
-# LR_SCHEDULER_TYPE = ["disable", "plateau"]
-# LR_SCHEDULER_PARAMS = {
-#     "disable": {},
-#     "plateau": {
-#         "factor": (0.1, "%0.2f", 0.0, 1.0),
-#         "patience": (5, "%d", 0, 1000),
-#         "threshold": (1e-4, "%0.6f", 0.0, 1.0),
-#         "min_lr": (1e-6, "%0.8f", 0.0, 1.0),
-#         "eps": (1e-6, "%0.8f", 0.0, 1.0),
-#     },
-# }
 
 
 class TrainingOption(Enum):
