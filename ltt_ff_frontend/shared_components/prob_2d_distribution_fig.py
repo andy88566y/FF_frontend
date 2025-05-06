@@ -16,7 +16,6 @@ def generate(
     aggregated_model_data_2: tuple[list[int], list[float], list[int], list[str]],
     m1_threshold: float,
     m2_threshold: float,
-    # lot_idx: int,
 ) -> go.Figure:
     m1_defect_ids, m1_probs, m1_ans, m1_lot_ids = aggregated_model_data_1
     m2_defect_ids, m2_probs, m2_ans, m2_lot_ids = aggregated_model_data_2

@@ -22,7 +22,9 @@ def app() -> None:
         result_dir_1 = st.text_input("First Inference Result Directory", value=output_dir_default)
     with col2:
         result_dir_2 = st.text_input("Second Inference Result Directory", value=output_dir_default)
-    venn_diagram.gen()
+    
+    # venn_diagram.gen()
+
     
     # Columns for drawing distribution chart and ROC curve
     col_1d_chart_column, col_roc_curve_column = st.columns(2)
@@ -52,13 +54,31 @@ def app() -> None:
                 ),
                 multi_lot_model_data_2.model_metadata_list
             )
+            col1, col2 = st.columns(2)
+            with col1:
+                input_m1_threshold = st.number_input(
+                    label=f"Model 1 threshold:",
+                    value=m1_threshold,
+                    step=1e-5,
+                    format="%.5f",
+                    help="Probabilities below threshold will be considered as non-defects.",
+                )
+            with col2:
+                input_m2_threshold = st.number_input(
+                    label=f"Model 2 threshold:",
+                    value=m2_threshold,
+                    step=1e-5,
+                    format="%.5f",
+                    help="Probabilities below threshold will be considered as non-defects.",
+                )
+
             _, plot_container, _ = st.columns([1,8,1])
             with plot_container:
                 st.plotly_chart(
                     prob_2d_distribution_fig.generate(
                         aggregated_model_data_1,
                         aggregated_model_data_2,
-                        m1_threshold,
-                        m2_threshold,
+                        input_m1_threshold,
+                        input_m2_threshold,
                     )
                 )
