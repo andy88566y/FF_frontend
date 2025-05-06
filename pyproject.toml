@@ -16,6 +16,7 @@ streamlit = "^1.44.1"
 pandas = "^2.2.3"
 numpy = "^2.2.4"
 scikit-learn = "^1.6.1"
+pydantic = "^2.11.3"
 
 [tool.poetry.group.viz.dependencies]
 pillow = "^11.2.1"

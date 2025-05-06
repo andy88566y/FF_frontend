@@ -1,3 +1,4 @@
+import typing
 from pprint import pformat
 from typing import Any, Literal, Optional
 
@@ -9,6 +10,10 @@ from loguru import logger
 
 from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT
 from ltt_ff_frontend.shared_components.helper import format_model_name
+
+
+if typing.TYPE_CHECKING:
+    from ltt_ff_frontend.datamodel.ff_core.request import FFCoreTrainingRequest
 
 
 #####################################################################################################
@@ -403,6 +408,7 @@ def request_top_k_lrf(output_dir: str, top_k: int, lot_id: str) -> requests.Resp
 
 
 # TODO: split this into two funtion: api request + ui update
+# TODO: Seems unused?
 def gen_lrf(
     model_id: str, output_dir: str, gen_lrf_type: str, threshold=None, top_k=None, key_number: int = 0, lot_id: str = ""
 ) -> None:
@@ -1040,57 +1046,19 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
 #####################################################################################################
 # Finetune / Basetrain                                                                              #
 #####################################################################################################
-def request_finetune(
-    base_model: str,
-    model_naming: tuple[str, str, str, str],
-    multilot_config: dict,
-    epochs: int,
-    lr: float,
-    optimizer_type: str,
-    optimizer_params: dict[str, Any],
-    loss_type: str,
-    loss_params: dict[str, Any],
-    lr_scheduler_type: str,
-    lr_scheduler_params: dict[str, Any],
-) -> requests.Response:
-    """
-    Calls FFA model fine-tuning.
+def request_finetune(ff_core_training_request: "FFCoreTrainingRequest") -> requests.Response:
+    """Call ff_core fine-tuning api.
 
     Args:
-        base_model: Name of model to finetune.
-        model_naming: Details to be used for re-trained model (site, tool, tech layer, layer group)
-        multilot_config: Dict containing training data info (lot id, lrf path, image dir)
-        epochs: Number of training epochs.
-        lr: Learning rate.
-        optimizer_type: Adam, AdamW, etc
-        optimizer_params: Parameters required for the selected optimizer type, if any.
-        loss_type: bce, focal, etc.
-        loss_params: Parameter required for the selected loss type, if any.
-        lr_scheduler_type: disable, plateau, etc
-        lr_scheduler_params: Parameters required for the selected lr scheduler, if any.
+        ff_core_training_request: Refer to `FFCoreTrainingRequest` for details.
 
-    Returns the reponse of the API request.
+    Returns:
+        The reponse of the API request.
+
     """
     # TODO: Check multilot_config is valid structure
 
-    r = requests.post(
-        API_ROOT + "finetune",
-        json={
-            "base_model_name": base_model,
-            "batch_size": 32,
-            "epochs": epochs,
-            "learning_rate": lr,
-            "model_naming": model_naming,
-            "training_info": multilot_config,
-            "optimizer_type": optimizer_type,
-            "optimizer_params": optimizer_params,
-            "loss_type": loss_type,
-            "loss_params": loss_params,
-            "lr_scheduler_type": lr_scheduler_type,
-            "lr_scheduler_params": lr_scheduler_params,
-        },
-        timeout=TIMEOUT,
-    )
+    r = requests.post(API_ROOT + "finetune", json=ff_core_training_request.model_dump(), timeout=TIMEOUT)
 
     status = r.json()["status"]
 
@@ -1102,61 +1070,19 @@ def request_finetune(
     return r
 
 
-def request_basetrain(
-    model_naming: tuple[str, str, str, str],
-    multilot_config: dict,
-    channel_size: tuple[int, int, int],
-    kernel_size: tuple[int, int, int],
-    epochs: int,
-    lr: float,
-    optimizer_type: str,
-    optimizer_params: dict[str, Any],
-    loss_type: str,
-    loss_params: dict[str, Any],
-    lr_scheduler_type: str,
-    lr_scheduler_params: dict[str, Any],
-) -> requests.Response:
-    """
-    Calls FFA model base-training.
+def request_basetrain(ff_core_training_request: "FFCoreTrainingRequest") -> requests.Response:
+    """Call ff_core base-training api.
 
     Args:
-        model_naming: Details to be used for re-trained model (site, tool, tech layer, layer group)
-        multilot_config: Dict containing training data info (lot id, lrf path, image dir)
-        channel_size, kernel_size: tuple of model structure config
-        epochs: Number of training epochs.
-        lr: Learning rate.
-        optimizer_type: Adam, AdamW, etc
-        optimizer_params: Parameters required for the selected optimizer type, if any.
-        loss_type: bce, focal, etc.
-        loss_params: Parameter required for the selected loss type, if any.
-        lr_scheduler_type: disable, plateau, etc
-        lr_scheduler_params: Parameters required for the selected lr scheduler, if any.
+        ff_core_training_request: Refer to `FFCoreTrainingRequest` for details.
 
-    Returns the reponse of the API request.
+    Returns:
+        The reponse of the API request.
+
     """
     # TODO: Check multilot_config is valid structure
 
-    r = requests.post(
-        API_ROOT + "basetrain",
-        json={
-            "batch_size": 32,
-            "epochs": epochs,
-            "learning_rate": lr,
-            "model_naming": model_naming,
-            "training_info": multilot_config,
-            "model_params": {
-                "channel_size": list(channel_size),
-                "kernel_size": list(kernel_size),
-            },
-            "optimizer_type": optimizer_type,
-            "optimizer_params": optimizer_params,
-            "loss_type": loss_type,
-            "loss_params": loss_params,
-            "lr_scheduler_type": lr_scheduler_type,
-            "lr_scheduler_params": lr_scheduler_params,
-        },
-        timeout=TIMEOUT,
-    )
+    r = requests.post(API_ROOT + "basetrain", json=ff_core_training_request.model_dump(), timeout=TIMEOUT)
 
     status = r.json()["status"]
 
