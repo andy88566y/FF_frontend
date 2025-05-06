@@ -91,6 +91,22 @@ def generate_fig(
         }
     )
 
+    available_symbols = [
+        "circle",
+        "square",
+        "diamond",
+        "cross",
+        "x",
+        "triangle-up",
+        "triangle-down",
+        "triangle-left",
+        "triangle-right",
+        "pentagon",
+        "hexagon",
+        "star",
+    ]
+    symbols = available_symbols[: len(df["Legends"])]
+
     fig = px.scatter(
         df,
         x="Probability_M1",
@@ -102,6 +118,8 @@ def generate_fig(
         color="Legends",
         color_discrete_map=get_color_map(df["Legends"]),
         hover_data={"Defect_ID": True},
+        symbol="Legends",
+        symbol_sequence=symbols,
     )
 
     # Workaround to set number of bins for the marginal histograms
