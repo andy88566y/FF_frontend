@@ -1,15 +1,12 @@
-import re
-import streamlit as st
-from typing import Any
-
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
 
+from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper
 from ltt_ff_frontend.shared_components.prob_distribution_fig import get_color_map
-from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
+
 
 def gen(result_dir_1: str, result_dir_2: str) -> None:
     if helper.is_valid_output_dir(result_dir_1) and helper.is_valid_output_dir(result_dir_2):
@@ -40,7 +37,7 @@ def gen(result_dir_1: str, result_dir_2: str) -> None:
             col1, col2 = st.columns(2)
             with col1:
                 input_m1_threshold = st.number_input(
-                    label=f"Model 1 threshold:",
+                    label="Model 1 threshold:",
                     value=m1_threshold,
                     step=1e-5,
                     format="%.5f",
@@ -48,7 +45,7 @@ def gen(result_dir_1: str, result_dir_2: str) -> None:
                 )
             with col2:
                 input_m2_threshold = st.number_input(
-                    label=f"Model 2 threshold:",
+                    label="Model 2 threshold:",
                     value=m2_threshold,
                     step=1e-5,
                     format="%.5f",

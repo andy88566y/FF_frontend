@@ -6,7 +6,6 @@ import streamlit as st
 
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper
-from loguru import logger
 
 
 def gen(
