@@ -14,7 +14,7 @@ def gen(
     raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
     meta_list: list[dict[str, Any]],
     threshold: float,
-    selected_lot_id_list: list[str] = None,
+    selected_lot_id_list: Optional[list[str]] = None,
 ) -> None:
     if selected_lot_id_list is None:
         selected_lot_id_list = []
@@ -33,7 +33,7 @@ def gen(
 def plot_multilot_roc(
     # The outermost list is actually not needed; remove it and spread them into separate params.
     roc_data: list[tuple[str, list[tuple[np.ndarray, np.ndarray, np.ndarray]], float, list[dict[str, Any], str]]],
-    selected_lot_id_list: list[str] = None,
+    selected_lot_id_list: Optional[list[str]] = None,
 ) -> go.Figure:
     if selected_lot_id_list is None:
         selected_lot_id_list = []

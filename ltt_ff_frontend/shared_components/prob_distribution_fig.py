@@ -34,7 +34,7 @@ def generate_multilot_1D_plot(
     raw_data: tuple[list[int], list[float], list[int]],
     model_metadata_list: list[dict[str, Any]],
     selected_threshold: float,
-    selected_lot_id_list: list[str] = None,
+    selected_lot_id_list: Optional[list[str]] = None,
 ) -> go.Figure:
     """
     Generates a 1D plot for defect probability distribution across multiple lots.

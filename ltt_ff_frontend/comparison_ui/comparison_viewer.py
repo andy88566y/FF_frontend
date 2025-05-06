@@ -7,7 +7,7 @@ from ltt_ff_frontend.shared_components import prob_2d_distribution_fig
 def app() -> None:
     logger.debug("Loading comparison viewer ...")
     st.title("Comparison Viewer")
-    st.caption("Visualization of comparing 2 inference results.")
+    st.caption("2D Model Comparison")
 
     col1, col2 = st.columns([3, 3])
 

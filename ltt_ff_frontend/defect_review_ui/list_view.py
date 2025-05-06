@@ -159,7 +159,8 @@ def app(result_dir: str, image_dir: str) -> None:
 
     # Add threshold selection
     with threshold_col:
-        st.number_input(
+        # TODO: figure out why this variable is not working
+        _threshold = st.number_input(
             "Select Probability Threshold",
             min_value=0.0,
             max_value=1.0,
