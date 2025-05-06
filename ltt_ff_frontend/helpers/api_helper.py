@@ -77,52 +77,6 @@ def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]
         r.raise_for_status()
 
 
-def calculate_recipe_filtered_results(output_dir: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
-    """
-    calculate and filter defect data, using front-end client resource
-    """
-    defect_id_lists = get_defect_id_lists(output_dir)
-    answer_lists = get_answer(output_dir=output_dir, defect_id_lists=defect_id_lists)
-    prediction_lists = get_predictions(output_dir=output_dir, recipe=recipe, defect_lists=defect_id_lists)
-
-    filtered_results = []
-    for answer_list, prediction_list in zip(answer_lists, prediction_lists):
-        positive = answer_list.count(1)
-        negative = answer_list.count(0)
-        unlabeled = answer_list.count(-1)
-        true_positive = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == 1)
-        false_positive = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == 0)
-        true_negative = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 0 and ans == 0)
-        false_negative = sum(1 for pred, ans in zip(prediction_list, answer_list) if pred == 0 and ans == 1)
-        filtered_unlabeled_defect_count = sum(
-            1 for pred, ans in zip(prediction_list, answer_list) if pred == 1 and ans == -1
-        )
-
-        as_is_defect_count = positive + negative + unlabeled
-        to_be_defect_count = true_positive + false_positive + filtered_unlabeled_defect_count
-
-        capture_rate = true_positive / positive if positive > 0 else -1
-        false_filter_rate = true_negative / negative if negative > 0 else -1
-        filter_rate = 1 - (to_be_defect_count / as_is_defect_count) if as_is_defect_count > 0 else -1
-
-        filtered_results.append(
-            {
-                "as_is_defect_count": as_is_defect_count,
-                "to_be_defect_count": to_be_defect_count,
-                "filter_rate": filter_rate,
-                "as_is_true_defect_count": positive,
-                "to_be_true_defect_count": true_positive,
-                "capture_rate": capture_rate,
-                "as_is_non_defect_count": negative,
-                "to_be_non_defect_count": false_positive,
-                "false_filter_rate": false_filter_rate,
-                "unlabeled": unlabeled,
-                "filtered_unlabeled_defect_count": filtered_unlabeled_defect_count,
-            }
-        )
-    return filtered_results
-
-
 @st.cache_data(ttl="10s")
 def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
     """

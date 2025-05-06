@@ -73,7 +73,7 @@ def highlight_oos(row):
                 # green
                 highlight_text_color = TEXT_COLORS['default']
             elif 20 < total_defect_to_be_count and total_defect_to_be_count <= 150:
-                if  false_filter_rate >= 0.9: 
+                if false_filter_rate >= 0.9: 
                     # green
                     highlight_text_color = TEXT_COLORS['default']
                 elif false_filter_rate < 0.9:
