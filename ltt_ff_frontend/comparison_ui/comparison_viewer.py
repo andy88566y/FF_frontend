@@ -30,14 +30,35 @@ def app() -> None:
     if helper.is_valid_output_dir(result_dir_1) and helper.is_valid_output_dir(result_dir_2):
         multi_lot_model_data_1 = api_helper.get_multilot_model_data(result_dir_1)
         multi_lot_model_data_2 = api_helper.get_multilot_model_data(result_dir_2)
-        
-        _, plot_container, _ = st.columns([1,8,1])
-        with plot_container:
-            st.plotly_chart(
-                prob_2d_distribution_fig.generate(
-                    multi_lot_model_data_1,
-                    multi_lot_model_data_2,
-                    0.2,
-                    0.1,
-                )
+        recipe_model_count_1 = multi_lot_model_data_1.model_metadata_list[0]["model_count"]
+        recipe_model_count_2 = multi_lot_model_data_2.model_metadata_list[0]["model_count"]
+
+        if recipe_model_count_1 == 1 and recipe_model_count_2 == 1:
+            m1_threshold = multi_lot_model_data_1.model_metadata_list[0]['model_threshold_0']
+            m2_threshold = multi_lot_model_data_2.model_metadata_list[0]['model_threshold_0']
+            aggregated_model_data_1 = helper.aggregate_lists(
+                (
+                    multi_lot_model_data_1.defect_id_lists,
+                    multi_lot_model_data_1.probability_lists,
+                    multi_lot_model_data_1.answer_lists,
+                ),
+                multi_lot_model_data_1.model_metadata_list,
             )
+            aggregated_model_data_2 = helper.aggregate_lists(
+                (
+                    multi_lot_model_data_2.defect_id_lists,
+                    multi_lot_model_data_2.probability_lists,
+                    multi_lot_model_data_2.answer_lists,
+                ),
+                multi_lot_model_data_2.model_metadata_list
+            )
+            _, plot_container, _ = st.columns([1,8,1])
+            with plot_container:
+                st.plotly_chart(
+                    prob_2d_distribution_fig.generate(
+                        aggregated_model_data_1,
+                        aggregated_model_data_2,
+                        m1_threshold,
+                        m2_threshold,
+                    )
+                )

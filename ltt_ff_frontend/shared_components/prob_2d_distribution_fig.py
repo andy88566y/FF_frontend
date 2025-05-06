@@ -9,32 +9,19 @@ from ltt_ff_frontend.shared_components import helper
 from ltt_ff_frontend.shared_components.prob_distribution_fig import get_color_map
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
-from loguru import logger
 
 
 def generate(
-    multi_lot_model_data_1: MultiLotModelData,
-    multi_lot_model_data_2: MultiLotModelData,
+    aggregated_model_data_1: tuple[list[int], list[float], list[int], list[str]],
+    aggregated_model_data_2: tuple[list[int], list[float], list[int], list[str]],
     m1_threshold: float,
     m2_threshold: float,
+    # lot_idx: int,
 ) -> go.Figure:
-    lot_id_lists_1 = [meta['lot_id'] for meta in multi_lot_model_data_1.model_metadata_list]
-    logger.debug(lot_id_lists_1)
-    lot_id_lists_2 = [meta['lot_id'] for meta in multi_lot_model_data_2.model_metadata_list]
-    assert sorted(lot_id_lists_1) == sorted(lot_id_lists_2), "lot ids mismatch"
-
-    idx = 0
-    m1_defect_ids, m1_probs, m1_ans = (
-        multi_lot_model_data_1.defect_id_lists[idx],
-        multi_lot_model_data_1.probability_lists[idx],
-        multi_lot_model_data_1.answer_lists[idx],
-    )
-    m2_defect_ids, m2_probs, m2_ans = (
-        multi_lot_model_data_2.defect_id_lists[idx],
-        multi_lot_model_data_2.probability_lists[idx],
-        multi_lot_model_data_2.answer_lists[idx],
-    )
-    assert sorted(multi_lot_model_data_1.defect_id_lists[idx]) == sorted(multi_lot_model_data_2.defect_id_lists[idx]), "defect id lists mismatch"
+    m1_defect_ids, m1_probs, m1_ans, m1_lot_ids = aggregated_model_data_1
+    m2_defect_ids, m2_probs, m2_ans, m2_lot_ids = aggregated_model_data_2
+    assert sorted(m1_lot_ids) == sorted(m2_lot_ids), "Lot IDs Mismatch!"
+    assert sorted(m1_defect_ids) == sorted(m2_defect_ids), "Defect IDs Count Mismatch!"
 
     defect_ids = [f"Defect ID: {defect_id}" for defect_id in m1_defect_ids]
     classifications = [
@@ -42,14 +29,8 @@ def generate(
         for a1, a2 in zip(m1_ans, m2_ans)
     ]
     marker_text = [f"{defect_id}<br>{classification}" for defect_id, classification in zip(defect_ids, classifications)]
-    extended_lot_id_list = [lot_id_lists_1[idx]] * len(defect_ids)
-    legends = [f"{classification} {lot_id}" for classification, lot_id in zip(classifications, extended_lot_id_list)]
+    legends = [f"{classification} {lot_id}" for classification, lot_id in zip(classifications, m1_lot_ids)]
 
-    # logger.debug(len(m1_defect_ids))
-    # logger.debug(len(m1_probs))
-    # logger.debug(len(m2_probs))
-    # logger.debug(len(classifications))
-    # logger.debug(len(legends))
     df = pd.DataFrame(
         data={
             "Defect_ID": m1_defect_ids,
