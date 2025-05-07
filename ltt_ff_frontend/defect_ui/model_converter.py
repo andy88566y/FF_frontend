@@ -203,13 +203,4 @@ def app() -> None:
             st.error(f"Failed to get model details for {model_to_inspect}")
             return
 
-        st.success(
-            f"threshold: {model_details['params']['model_threshold']}\n\n"
-            f"threshold_c: {model_details['params']['model_threshold_c']}\n\n"
-            f"model_type: {model_details['params']['model_type']}\n\n"
-            f"input_size: {model_details['params']['model_init_params']['input_size']}\n\n"
-            f"max_refs: {model_details['params']['model_init_params']['max_refs']}\n\n"
-            f"channel_size: {model_details['params']['model_init_params']['channel_size']}\n\n"
-            f"kernel_size: {model_details['params']['model_init_params']['kernel_size']}\n\n"
-            f"CR1/specificity: {model_details['metrics']['CR1/specificity']}\n\n"
-        )
+        st.json(model_details)
