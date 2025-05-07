@@ -227,7 +227,7 @@ def app(result_dir: str, image_dir: str) -> None:
     with filter_message_col:
         # TODO: To be fixed. Current method will cause message box to not appear if no values are filtered,
         #       even if filter is active. But this is unlikely to happen.
-        if len(defect_data) != len(st.session_state.filtered_df) and selected_lot_id == previous_lot_id:
+        if len(defect_data) != len(st.session_state.filtered_df):
             st.warning(f"Active filter: {st.session_state.filter_column} = {st.session_state.filter_value}")
 
     # Create two columns (list view, map view)
