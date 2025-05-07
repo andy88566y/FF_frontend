@@ -63,6 +63,9 @@ def app() -> None:
             value="",
         )
 
+        if not output_dir:
+            return
+
         files_found = os.listdir(output_dir)
         files_found = sorted(files_found, key=lambda x: int(x.split("_")[0]))
 
@@ -70,7 +73,6 @@ def app() -> None:
             st.text(f"Files found in {output_dir}:")
             for file in files_found:
                 st.text(file)
-            st.warning("LRF partition files will be deleted after merging!")
         else:
             st.error(f"No files found in {output_dir}")
             return

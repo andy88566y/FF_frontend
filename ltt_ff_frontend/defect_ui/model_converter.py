@@ -135,7 +135,7 @@ def app() -> None:
             tech_layer = st.selectbox(label="Tech Layer", options=[tl.value for tl in TechLayer], key="tl_selectbox")
 
         with lg_col:
-            layer_group = st.selectbox(label="Layer Group", options=LayerGroup.get_all_layers(), key="lg_selectbox")
+            layer_group = st.selectbox(label="Layer Group", options=[lg.name for lg in LayerGroup], key="lg_selectbox")
 
         with ps_col:
             pixel_size = st.selectbox(label="Pixel Size", options=[ps.value for ps in PixelSize], key="ps_selectbox")

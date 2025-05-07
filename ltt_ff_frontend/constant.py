@@ -110,31 +110,6 @@ class LayerGroup(Enum):
     M3 = ["M3"]
     M4 = ["M4"]
 
-    @staticmethod
-    def get_base_layer_groups(main_layers: list["LayerGroup"]) -> list[str]:
-        processed_layers, base_layers = [], []
-        for layer in main_layers:
-            if layer in processed_layers:
-                pass
-
-            processed_layers.append(layer)
-
-            for sub_layer in layer.value:
-                base_layers.append(sub_layer)
-
-        return base_layers
-
-    @staticmethod
-    def get_full_layers() -> list[str]:
-        """
-        Get all layers that belong to ODPO, M0M2, and CUT
-        """
-        return LayerGroup.get_base_layer_groups(main_layers=[LayerGroup.ODPO, LayerGroup.M0M2, LayerGroup.CUT])
-
-    @staticmethod
-    def get_all_layers() -> list[str]:
-        return LayerGroup.get_base_layer_groups(list(LayerGroup))
-
 
 class PixelSize(Enum):
     NM40 = "40"
