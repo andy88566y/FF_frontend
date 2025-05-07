@@ -35,9 +35,10 @@ def app() -> None:
 
     training_option = TrainingOption(training_option_val)
     base_model_name, multilot_config_file = _create_training_option_columns(training_option)
+    multilot_config = _load_multilot_config(multilot_config_file)
     site, tool, tech_layer, layer_group = _create_output_model_name_inputs()
 
-    with st.expander("Training Parameters"):
+    with st.expander(f"{training_option} Parameters"):
         epochs, learning_rate = _create_basic_hyper_params_inputs(training_option)
 
         channel_size: list[int] = []
@@ -53,12 +54,6 @@ def app() -> None:
     batch_size = 32
     tool = "x9u"  # Currently only one option available
     model_type = "DualStreamCNN"  # Currently only one option available
-
-    multilot_config = None
-    if multilot_config_file is not None:
-        multilot_config = yaml.load(multilot_config_file, Loader=yaml.Loader)
-        # TODO: Validate yaml file format from backend and pass error message
-        st.json(multilot_config)
 
     _start_training_job_button(
         training_option,
@@ -92,7 +87,7 @@ def app() -> None:
 
     col1, col2 = st.columns(2, vertical_alignment="bottom")
     with col1:
-        if st.button("Check all finetuning jobs"):
+        if st.button(f"Check all {training_option} jobs"):
             page_size = 10
             current_page = 1
             st.session_state.status_df_fin = api_helper.request_paginated_finetuning_status(page_size, current_page)
@@ -139,7 +134,7 @@ def app() -> None:
             stop_job_button.gen(raw_df_fin)
 
 
-def _create_training_option_columns(training_option: str) -> tuple[str | None, UploadedFile | None]:
+def _create_training_option_columns(training_option: TrainingOption) -> tuple[str | None, UploadedFile | None]:
     r1_col1, r1_col2 = st.columns([3, 2])
     yaml_help_text = """
     **Example of a valid .yaml config file:**\n
@@ -168,6 +163,16 @@ def _create_training_option_columns(training_option: str) -> tuple[str | None, U
             )
 
     return base_model_name, multilot_config_file
+
+
+def _load_multilot_config(multilot_config_file: UploadedFile | None) -> Any:
+    multilot_config = None
+    if multilot_config_file is not None:
+        multilot_config = yaml.load(multilot_config_file, Loader=yaml.Loader)
+        # TODO: Validate yaml file format from backend and pass error message
+        st.json(multilot_config)
+
+    return multilot_config
 
 
 def _create_output_model_name_inputs() -> tuple[str, str, str, str]:
