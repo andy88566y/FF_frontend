@@ -149,12 +149,10 @@ def app() -> None:
         required_input = [ft_site, ft_tool, ft_techlayer, ft_layergroup, ft_configfile]
         for item in required_input:
             if not item:
-                logger.error(
-                    "Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file."
-                )
-                st.error(
-                    "Missing user input detected. Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file."
-                )
+                msg = """Missing user input detected.
+                 Please enter Site/Tool/Tech Layer/Layer Group, and upload a .yaml config file."""
+                logger.error(msg)
+                st.error(msg)
                 return
 
         if training_option == "Fine-tune":

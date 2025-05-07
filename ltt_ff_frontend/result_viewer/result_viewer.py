@@ -30,7 +30,6 @@ def app() -> None:
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
 
     output_dir_default = "/mnt/dbpc/xxx"
-    invalid_input = [output_dir_default, ""]
     recipe = None
 
     with r1_col1:
@@ -56,7 +55,6 @@ def app() -> None:
             return
     else:
         filtered_db_recipe = {"recipes": []}
-
 
     if st_recipe_type == YAML_MODE:
         col, _ = st.columns([3, 4])
@@ -112,7 +110,7 @@ def app() -> None:
             st.code(yaml.dump(recipe), language="yaml")
         st.divider()
 
-        if filtered_db_recipe['recipes'] == []:
+        if filtered_db_recipe["recipes"] == []:
             # no data, early return
             return
         if st_recipe_type in [YAML_MODE, CREATOR_MODE]:
@@ -134,7 +132,7 @@ def app() -> None:
     with st.container():
         with st.expander(label="LRF ClassType count"):
             class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
-    
+
     if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart_column, col_roc_curve_column = st.columns(2)

@@ -58,9 +58,9 @@ def bresenham_line(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
 
 def add_red_line_to_fig(fig: go.Figure, x0: float, y0: float, x1: float, y1: float, title: str) -> None:
     if fig is not None:
-        fig.add_shape(type="line", x0=x0, y0=y0, x1=x1, y1=y1, line=dict(color="red", width=3))
+        fig.add_shape(type="line", x0=x0, y0=y0, x1=x1, y1=y1, line={"color": "red", "width": 3})
         fig.update_layout(
-            title={"text": title, "y": 1, "x": 0.5, "xanchor": "center", "yanchor": "top"}, margin=dict(t=30)
+            title={"text": title, "y": 1, "x": 0.5, "xanchor": "center", "yanchor": "top"}, margin={"t": 30}
         )
 
 
@@ -75,7 +75,7 @@ def get_pixel_values(
 
     if direction == HORIZONTAL:
         y_midpoint = (y0 + y1) / 2
-        for i, img in enumerate(images):
+        for _i, img in enumerate(images):
             img_array = np.flipud(np.array(img))
             row_values = img_array[int(y_midpoint), int(x0) : int(x1)]
             pixel_values.append(row_values)
@@ -118,9 +118,9 @@ def create_figure(image: Image) -> go.Figure:
     fig.update_layout(
         width=100,
         height=150,
-        margin=dict(t=20, b=20, l=20, r=20),
-        xaxis=dict(scaleanchor="y", scaleratio=1),
-        yaxis=dict(scaleanchor="x", scaleratio=1),
+        margin={"t": 20, "b": 20, "l": 20, "r": 20},
+        xaxis={"scaleanchor": "y", "scaleratio": 1},
+        yaxis={"scaleanchor": "x", "scaleratio": 1},
         dragmode="zoom",
     )
     fig.update_xaxes(scaleanchor="y", scaleratio=1, range=[0, 100], autorange=True)

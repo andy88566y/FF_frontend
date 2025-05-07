@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 import plotly.graph_objects as go
@@ -6,7 +6,6 @@ import streamlit as st
 
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper
-from loguru import logger
 
 
 def gen(
@@ -15,8 +14,10 @@ def gen(
     raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
     meta_list: list[dict[str, Any]],
     threshold: float,
-    selected_lot_id_list: list[str] = [],
+    selected_lot_id_list: Optional[list[str]] = None,
 ) -> None:
+    if selected_lot_id_list is None:
+        selected_lot_id_list = []
     aggregated_data_lists = helper.aggregate_lists(raw_data, meta_list)
     # TODO: This should be done somewhere else
     if 1 not in set(aggregated_data_lists[2]):
@@ -32,8 +33,10 @@ def gen(
 def plot_multilot_roc(
     # The outermost list is actually not needed; remove it and spread them into separate params.
     roc_data: list[tuple[str, list[tuple[np.ndarray, np.ndarray, np.ndarray]], float, list[dict[str, Any], str]]],
-    selected_lot_id_list: list[str] = [],
+    selected_lot_id_list: Optional[list[str]] = None,
 ) -> go.Figure:
+    if selected_lot_id_list is None:
+        selected_lot_id_list = []
     fig = go.Figure()
 
     for curve_data in roc_data:

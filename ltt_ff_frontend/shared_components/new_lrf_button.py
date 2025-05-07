@@ -5,12 +5,16 @@ from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper
 
+
 def recipe_model_name_matches(new_recipe: dict[str, Any], db_recipe: dict[str, Any]):
     new_recipe_models = [r["model_name"] for r in new_recipe["recipes"]]
     db_recipe_models = [r["model_name"] for r in db_recipe["recipes"]]
     return new_recipe_models == db_recipe_models
 
-def gen(container: st.container, inference_result_dir: str, new_recipe: dict[str, Any], db_recipe: dict[str, Any]) -> None:
+
+def gen(
+    container: st.container, inference_result_dir: str, new_recipe: dict[str, Any], db_recipe: dict[str, Any]
+) -> None:
     with container:
         if recipe_model_name_matches(new_recipe, db_recipe):
             if st.button("Generate new lrf with Recipe"):
@@ -24,5 +28,5 @@ def gen(container: st.container, inference_result_dir: str, new_recipe: dict[str
                     st.success(f"New .lrf file using recipe generated at {inference_result_dir}!")
                     logger.info(f"New .lrf file using recipe generated at {inference_result_dir}!")
         else:
-            st.error(f"recipe models name does not match db's recipe.")
+            st.error("recipe models name does not match db's recipe.")
             logger.error(f"new_recipe: {new_recipe}. db_recipe: {db_recipe}")
