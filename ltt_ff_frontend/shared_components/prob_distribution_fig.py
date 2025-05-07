@@ -1,5 +1,5 @@
 import re
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 import plotly.express as px
