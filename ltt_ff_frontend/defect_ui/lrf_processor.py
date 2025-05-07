@@ -64,10 +64,16 @@ def app() -> None:
         )
 
         if not output_dir:
+            st.error("Please enter Directory containing split LRF files")
             return
 
         files_found = os.listdir(output_dir)
-        files_found = sorted(files_found, key=lambda x: int(x.split("_")[0]))
+        try:
+            files_found = sorted(files_found, key=lambda x: int(x.split("_")[0]))
+        except ValueError as e:
+            st.error(f"Invalid file name found: {str(e)}.")
+            logger.error(f"Invalid file name found: {str(e)}.")
+            return
 
         if files_found:
             st.text(f"Files found in {output_dir}:")
