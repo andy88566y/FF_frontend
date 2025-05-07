@@ -143,19 +143,7 @@ def app() -> None:
         with mt_col:
             model_type = st.selectbox(label="Model Type", options=[mt.value for mt in ModelType], key="mt_selectbox")
 
-        year_col, _, month_col, _, day_col = st.columns([2, 1, 2, 1, 4])
-
-        with year_col:
-            current_year = date.today().year
-            year = st.slider(
-                label="Year", min_value=current_year - 1, max_value=current_year + 1, value=current_year, key="year"
-            )
-
-        with month_col:
-            month = st.slider(label="Month", min_value=1, max_value=12, value=date.today().month, key="month")
-
-        with day_col:
-            day = st.slider(label="Day", min_value=1, max_value=31, value=date.today().day, key="day")
+        conversion_date = st.date_input("Date of conversion", value=date.today())
 
         if st.button(label="Convert model", type="primary"):
             if not channel_size_1 or not channel_size_2 or not channel_size_3:
@@ -194,7 +182,7 @@ def app() -> None:
                 "layer_group": layer_group,
                 "pixel_size": pixel_size,
                 "model_type": model_type,
-                "date": f"{year}{month:02d}{day:02d}",
+                "date": f"{conversion_date.year}{conversion_date.month:02d}{conversion_date.day:02d}",
             }
 
             r = api_helper.convert_model(model_details)
