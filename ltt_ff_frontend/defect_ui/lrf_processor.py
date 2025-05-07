@@ -27,7 +27,7 @@ def app() -> None:
             )
 
         with partitions_col:
-            partitions = st.number_input(label="Number of partitions", min_value=2, max_value=10, value=2, step=1)
+            partitions = st.number_input(label="Number of partitions", min_value=2, value=2, step=1)
 
         output_dir = st.text_input(
             label="Output directory for split LRF files (must be empty)",
@@ -64,7 +64,7 @@ def app() -> None:
         )
 
         files_found = os.listdir(output_dir)
-        files_found.sort()
+        files_found = sorted(files_found, key=lambda x: int(x.split("_")[0]))
 
         if files_found:
             st.text(f"Files found in {output_dir}:")
