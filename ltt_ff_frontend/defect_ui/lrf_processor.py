@@ -23,14 +23,15 @@ def app() -> None:
         with lrf_path_col:
             lrf_path = st.text_input(
                 label="LRF path",
-                value="/mnt/fs0/FalseFilterDataSet/F12/X9U/N2/Layer_M0_M2/2024/05/03/G-TMPD98-7M0A-GooD-V2_20240503_170022_LTTADC.lrf",
+                value="",
             )
 
         with partitions_col:
             partitions = st.number_input(label="Number of partitions", min_value=2, max_value=10, value=2, step=1)
 
         output_dir = st.text_input(
-            label="Output directory for split LRF files (must be empty)", value="/mnt/fs0/minye/inference/temp/empty"
+            label="Output directory for split LRF files (must be empty)",
+            value="",
         )
 
         if st.button(label="Split LRF", type="primary"):
@@ -58,7 +59,8 @@ def app() -> None:
 
     elif mode == "Merge":
         output_dir = st.text_input(
-            label="Directory containing split LRF files", value="/mnt/fs0/minye/inference/temp/empty"
+            label="Directory containing split LRF files",
+            value="",
         )
 
         files_found = os.listdir(output_dir)
@@ -68,6 +70,7 @@ def app() -> None:
             st.text(f"Files found in {output_dir}:")
             for file in files_found:
                 st.text(file)
+            st.warning("LRF partition files will be deleted after merging!")
         else:
             st.error(f"No files found in {output_dir}")
             return
