@@ -98,12 +98,12 @@ def app() -> None:
 
         # Validate valid yaml config
         recipe_validity = api_helper.is_valid_yaml_config(recipe, "recipe")
-        if not recipe_validity["result"]:
+        if recipe_validity["status"] == "completed":
             st.error(recipe_validity["message"])
             logger.error(recipe_validity["message"])
             return
         lot_info_validity = api_helper.is_valid_yaml_config(inf_config, "lots")
-        if not lot_info_validity["result"]:
+        if lot_info_validity["status"] == "completed":
             st.error(lot_info_validity["message"])
             logger.error(lot_info_validity["message"])
             return

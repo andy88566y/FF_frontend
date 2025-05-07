@@ -8,9 +8,6 @@ from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper
 
 
-# TODO: model inspector page (select a model to check its params and metrics)
-
-
 def app() -> None:
     #####################################################################################################
     # Model Conversion UI                                                                               #

@@ -71,8 +71,7 @@ def app() -> None:
 
         if files_found:
             st.text(f"Files found in {output_dir}:")
-            for file in files_found:
-                st.text(file)
+            st.json(files_found)
         else:
             st.error(f"No files found in {output_dir}")
             return
