@@ -72,19 +72,11 @@ def app() -> None:
         with r3_col1:
             st.subheader("Recipe preview")
             recipe = yaml.load(recipe_file, Loader=yaml.Loader)
-            recipe_validity = api_helper.is_valid_yaml_config(recipe, "recipe")
-            if not recipe_validity["result"]:
-                st.error(recipe_validity["message"])
-                return
             st.json(recipe)
     if inf_configfile is not None:
         with r3_col2:
             st.subheader("Multilot config preview")
             inf_config = yaml.load(inf_configfile, Loader=yaml.Loader)
-            lot_info_validity = api_helper.is_valid_yaml_config(inf_config, "lots")
-            if not lot_info_validity["result"]:
-                st.error(lot_info_validity["message"])
-                return
             st.json(inf_config)
 
     if st.button("Start Multilot Inference Job", type="primary"):
@@ -104,27 +96,27 @@ def app() -> None:
                 st.error("Missing input detected. Please upload .yaml config file and enter the Result Directory.")
                 return
 
-        # Validate recipe format and confidence threshold
-        if isinstance(recipe, dict) and "recipes" in recipe.keys():
-            for batch in recipe["recipes"]:
-                if batch["threshold"] < 0.0 or batch["threshold"] > 1.0:
-                    logger.error(
-                        f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {batch['threshold']}"
-                    )
-                    st.error(
-                        f"Confidence threshold must be between 0.0 and 1.0! Selected confidence threshold: {batch['threshold']}"
-                    )
-                    return
-        else:
-            logger.error(
-                f"The uploaded recipe file has invalid format: {recipe}"
-                "\n\nFor an example of a valid format, refer to the help tool above the recipe uploader widget."
-            )
-            st.error(
-                f"The uploaded recipe file has invalid format: {recipe}"
-                "\n\nFor an example of a valid format, refer to the help tool above the recipe uploader widget."
-            )
+        # Validate valid yaml config
+        recipe_validity = api_helper.is_valid_yaml_config(recipe, "recipe")
+        if not recipe_validity["result"]:
+            st.error(recipe_validity["message"])
+            logger.error(recipe_validity["message"])
             return
+        lot_info_validity = api_helper.is_valid_yaml_config(inf_config, "lots")
+        if not lot_info_validity["result"]:
+            st.error(lot_info_validity["message"])
+            logger.error(lot_info_validity["message"])
+            return
+
+        # Validate confidence threshold
+        # if isinstance(recipe, dict) and "recipes" in recipe.keys():
+        for batch in recipe["recipes"]:
+            if batch["threshold"] < 0.0 or batch["threshold"] > 1.0:
+                msg = f"""Confidence threshold must be between 0.0 and 1.0!
+                Selected confidence threshold: {batch["threshold"]}"""
+                logger.error(msg)
+                st.error(msg)
+                return
 
         request = api_helper.request_multilot_inference(
             output_dir=inf_output_dir,
