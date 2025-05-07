@@ -1,5 +1,5 @@
 from pprint import pformat
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -29,6 +29,37 @@ def get_base_models(include_blank: bool = False) -> list[str]:
         return base_model_list if not include_blank else [BLANK_MODEL] + base_model_list
 
 
+@st.cache_data(ttl="10s")
+def get_ds_model_dirs() -> list[str]:
+    """
+    Returns a list of all directories found in DS_models. This will be used to filter the DS models list.
+    """
+    r = requests.get(f"{API_ROOT}get_ds_model_dirs", timeout=TIMEOUT)
+
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        return []
+    else:
+        ds_model_dirs = r.json()["ds_model_dirs"]
+        return [""] + ds_model_dirs
+
+
+@st.cache_data(ttl="10s")
+def get_ds_models(filter_week: str = "") -> list[str]:
+    """
+    Returns a list of DS models, filtered by week of release.
+    """
+    params = {"filter_week": filter_week}
+    r = requests.get(f"{API_ROOT}get_ds_model_list", params=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        return []
+    else:
+        ds_model_list = r.json()["ds_model_list"]
+        return ds_model_list
+
+
 @st.cache_data(ttl="300s")
 def get_model_threshold(model_name: str) -> float:
     """
@@ -44,6 +75,23 @@ def get_model_threshold(model_name: str) -> float:
         model_threshold = r.json()["model_threshold"]
         logger.info(f"Model threshold for {model_name}: {model_threshold}")
         return model_threshold
+
+
+@st.cache_data(ttl="300s")
+def get_model_details(model_name: str) -> dict[str, Any]:
+    """
+    Return model details for selected model (threshold, metrics, params)
+    """
+    params = {"model_name": model_name}
+    r = requests.get(f"{API_ROOT}get_model_details", params=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        return {}
+    else:
+        model_details = r.json()["model_details"]
+        logger.info(f"Model details for {model_name}: {model_details}")
+        return model_details
 
 
 def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
@@ -78,17 +126,20 @@ def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]
 
 
 @st.cache_data(ttl="10s")
-def get_db_metadata_lists(output_dir: str) -> list[dict[str, Any]]:
+def get_db_metadata_lists(output_dir: str, lot_id: str = "") -> list[dict[str, Any]]:
     """
     Get Result DB metadata.
 
     Args:
         output_dir: Root output directory where inference results were stored.
+        lot_id: A specific lot ID to be filtered.
 
         Returns:
             A dictionary of result database metadata
     """
-    r = requests.get(API_ROOT + "result/get_db_metadata_lists", params={"output_dir": output_dir}, timeout=TIMEOUT)
+    r = requests.get(
+        API_ROOT + "result/get_db_metadata_lists", params={"output_dir": output_dir, "lot_id": lot_id}, timeout=TIMEOUT
+    )
 
     if r.json()["status"] == "completed":
         return r.json()["db_metadata"]
@@ -202,11 +253,13 @@ def get_predictions(
 
 # TODO: Split this into smaller functions
 @st.cache_data(ttl="30s")
-def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = False) -> list[list[dict[str, Any]]]:
+def get_lrf_data_lists(
+    output_dir: str, cols: list[str], include_prob: bool = False, lot_id: str = ""
+) -> list[list[dict[str, Any]]]:
     """
     Return lrf data with selected columns
     """
-    params = {"output_dir": output_dir, "cols": ",".join(cols)}
+    params = {"output_dir": output_dir, "cols": ",".join(cols), "lot_id": lot_id}
     r = requests.get(f"{API_ROOT}result/get_lrf_data_lists", params=params, timeout=TIMEOUT)
     if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
@@ -216,7 +269,7 @@ def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = Fa
         for lrf_data in lrf_data_list:
             logger.info(f"LRF data of {len(lrf_data)} defects loaded from `{output_dir}`")
 
-    r = requests.get(API_ROOT + "result/get_answer", json={"output_dir": output_dir}, timeout=TIMEOUT)
+    r = requests.get(API_ROOT + "result/get_answer", json={"output_dir": output_dir, "lot_id": lot_id}, timeout=TIMEOUT)
     if r.json()["status"] == "error":
         logger.error(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
         raise ValueError(f"Error occurred when calling LRF API (ans): {r.json()['message']}")
@@ -233,7 +286,9 @@ def get_lrf_data_lists(output_dir: str, cols: list[str], include_prob: bool = Fa
             lrf_data_with_ans_list.append(lrf_data_with_ans)
 
     if include_prob:
-        r = requests.get(API_ROOT + "result/get_probability", json={"output_dir": output_dir}, timeout=TIMEOUT)
+        r = requests.get(
+            API_ROOT + "result/get_probability", json={"output_dir": output_dir, "lot_id": lot_id}, timeout=TIMEOUT
+        )
 
         if r.json()["status"] == "error":
             logger.error(f"Error occurred when calling get LRF API (prob): {r.json()['message']}")
@@ -383,6 +438,46 @@ def gen_lrf(
             st.error(f"Threshold setting: {threshold} is invalid. Should be between 0.0 and 1.0 !")
     else:
         raise NotImplementedError(f"gen_lrf_type {gen_lrf_type} is not implemented.")
+
+
+def split_lrf(lrf_path: str, partitions: int, output_dir: str) -> requests.Response:
+    r = requests.post(
+        API_ROOT + "lrf_split",
+        json={
+            "lrf_path": lrf_path,
+            "partitions": partitions,
+            "output_dir": output_dir,
+        },
+        timeout=TIMEOUT,
+    )
+
+    status = r.json()["status"]
+
+    if status == "completed":
+        logger.info("LRF split completed successfully!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+
+    return r
+
+
+def merge_lrf(output_dir: str) -> requests.Response:
+    r = requests.post(
+        API_ROOT + "lrf_merge",
+        json={
+            "output_dir": output_dir,
+        },
+        timeout=TIMEOUT,
+    )
+
+    status = r.json()["status"]
+
+    if status == "completed":
+        logger.info("LRF merge completed successfully!")
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+
+    return r
 
 
 def get_model_data(
@@ -616,7 +711,7 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> str
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             paged_statuses_df["runtime"] = paged_statuses_df["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -670,7 +765,9 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         # Just show lot_id, don't show image_dir and lrf_path
         # This line has to happen before renaming the index column, otherwise we won't be able to access index 0
         paged_statuses_df["lot_info"] = paged_statuses_df["lot_info"].apply(
-            lambda data_path: pformat([per_lot.get("lot_id", None) for per_lot in data_path.get("data_paths", [])])
+            lambda data_paths: pformat([per_lot.get("lot_id", "") for per_lot in data_paths["data_paths"]])
+            if isinstance(data_paths, dict)
+            else None
         )
 
         # Sort rows by start time and rename current index column to "multilot_inference_id"
@@ -694,7 +791,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             paged_statuses_df["runtime"] = paged_statuses_df["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -819,7 +916,7 @@ def format_inference_status(inference_status: pd.DataFrame) -> pd.DataFrame:
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             inference_status["runtime"] = inference_status["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -904,7 +1001,7 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             multilot_inference_status["runtime"] = multilot_inference_status["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -925,8 +1022,6 @@ def format_multilot_inference_status(multilot_inference_status: pd.DataFrame) ->
             "lot_info",
             "children_job_id",
             # 'Review Link',
-            "model_name",
-            "threshold",
             "output_dir",
             "gen_optimized_recipe",
             "message",
@@ -1126,7 +1221,7 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> pd
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             paged_statuses_df["runtime"] = paged_statuses_df["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -1229,7 +1324,7 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
             finetuning_status["runtime"] = finetuning_status["runtime"].apply(
-                lambda x: f"{x.components.hours:02}:{x.components.minutes:02}:{x.components.seconds:02}"
+                lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
@@ -1279,3 +1374,35 @@ def request_stop_job(job_id: str) -> str:
     r = requests.post(f"{API_ROOT}stop_job?job_id={job_id}", timeout=TIMEOUT)
 
     return f"{r.status_code}: {r.json().get('message', 'message not found...')}"
+
+
+#####################################################################################################
+# Yaml validation                                                                                   #
+#####################################################################################################
+@st.cache_data(ttl="1s")
+def is_valid_yaml_config(yaml_config: Any, mode: Literal["recipe", "lots"]) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "is_valid_yaml_format",
+        json={
+            "yaml_config": yaml_config,
+            "mode": mode,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
+
+
+#####################################################################################################
+# Model conversion                                                                                  #
+#####################################################################################################
+def convert_model(model_details: dict[str, Any]) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "convert_model",
+        json={
+            "model_details": model_details,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()

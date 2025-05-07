@@ -77,7 +77,6 @@ def app() -> None:
         with r3_col2:
             st.subheader("Multilot config preview")
             inf_config = yaml.load(inf_configfile, Loader=yaml.Loader)
-            # TODO: Validate yaml file format from backend and pass error message
             st.json(inf_config)
 
     if st.button("Start Multilot Inference Job", type="primary"):
@@ -97,11 +96,24 @@ def app() -> None:
                 st.error("Missing input detected. Please upload .yaml config file and enter the Result Directory.")
                 return
 
+        # Validate valid yaml config
+        recipe_validity = api_helper.is_valid_yaml_config(recipe, "recipe")
+        if recipe_validity["status"] == "completed":
+            st.error(recipe_validity["message"])
+            logger.error(recipe_validity["message"])
+            return
+        lot_info_validity = api_helper.is_valid_yaml_config(inf_config, "lots")
+        if lot_info_validity["status"] == "completed":
+            st.error(lot_info_validity["message"])
+            logger.error(lot_info_validity["message"])
+            return
+
         # Validate confidence threshold
+        # if isinstance(recipe, dict) and "recipes" in recipe.keys():
         for batch in recipe["recipes"]:
             if batch["threshold"] < 0.0 or batch["threshold"] > 1.0:
                 msg = f"""Confidence threshold must be between 0.0 and 1.0!
-                 Selected confidence threshold: {batch["threshold"]}"""
+                Selected confidence threshold: {batch["threshold"]}"""
                 logger.error(msg)
                 st.error(msg)
                 return

@@ -67,3 +67,65 @@ LR_SCHEDULER_PARAMS = {
         "eps": (1e-6, "%0.8f", 0.0, 1.0),
     },
 }
+
+
+class Site(Enum):
+    F20 = "F20"
+    F12 = "F12"
+    F18A = "F18A"
+    F18B = "F18B"
+    F18EBO = "F18EBO"
+    F15EBO = "F15EBO"
+
+
+class Tool(Enum):
+    X9U = "X9U"
+    X912 = "X912"
+    X9UHI = "X9UHI"
+    X8U = "X8U"
+
+
+class TechLayer(Enum):
+    N2 = "N2"
+    N3 = "N3"
+    N4 = "N4"
+    N5 = "N5"
+    N28 = "N28"
+
+
+class LayerGroup(Enum):
+    OD = ["OD"]
+    PO = ["PO"]
+    ODPO = ["ODPO", "OD", "PO"]
+    M0 = ["M0"]
+    M2 = ["M2"]
+    ME = ["ME"]
+    M0M2 = ["M0M2", "M0", "M2", "ME"]
+    CMD = ["CMD"]
+    CMG = ["CMG"]
+    CME = ["CME"]
+    CUT = ["CUT", "CMD", "CMG", "CME"]
+    VIA = ["VIA"]
+    M1 = ["M1"]
+    M3 = ["M3"]
+    M4 = ["M4"]
+
+
+class PixelSize(Enum):
+    NM40 = "40"
+    NM45 = "45"
+    NM50 = "50"
+    NIL = None
+
+
+class ModelType(Enum):
+    BASE = "BASE"
+    S1 = "S1"
+    S2 = "S2"
+    S3 = "S3"
+
+
+class MaskType(Enum):
+    FLUSH = "flush"
+    PRODUCTION = "production"
+    TEST = "test"

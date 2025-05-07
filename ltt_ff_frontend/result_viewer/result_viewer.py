@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 import streamlit as st
 import yaml
@@ -91,8 +92,11 @@ def app() -> None:
                     format="%.5f",
                     help="Probabilities below threshold will be considered as non-defects.",
                 )
-                rounded_threshold = int(input_threshold * 1e5) / 1e5
-                recipe_model_thresholds.append(rounded_threshold)
+                # Use Decimal for precise floating point arithmetic
+                # Passing the threshold as a string ensures that it does not first get interpreted as a float, which
+                # can introduce a precision error.
+                rounded_threshold = int(Decimal(f"{input_threshold}") * Decimal("1e5")) / Decimal("1e5")
+                recipe_model_thresholds.append(float(rounded_threshold))
             # with col3:
             #     recipe_model_shf = st.toggle("Model {i + 1} SHF")
         recipe = {"recipes": []}
