@@ -166,9 +166,7 @@ LR_SCHEDULER_CONFIGS = {
 }
 
 
-class TrainingOption(Enum):
-    FINE_TUNE = "Fine-tune"
-    BASE_TRAIN = "Base-train"
+class PrintValueEnum(Enum):
 
     def __str__(self) -> str:
         return self.value
@@ -234,3 +232,14 @@ class MaskType(Enum):
     FLUSH = "flush"
     PRODUCTION = "production"
     TEST = "test"
+
+
+class TrainingOption(PrintValueEnum):
+    FINE_TUNE = "Fine-tune"
+    BASE_TRAIN = "Base-train"
+
+
+class APIGroup(PrintValueEnum):
+
+    TRAINING = "training/"
+    INFERENCE = "inference/"

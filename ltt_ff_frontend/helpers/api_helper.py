@@ -8,7 +8,7 @@ import requests
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT
+from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT, APIGroup
 from ltt_ff_frontend.shared_components.helper import format_model_name
 
 
@@ -666,7 +666,7 @@ def request_multilot_inference(
 
 
 @st.cache_data(ttl="1s")
-def request_paginated_inference_status(page_size: int, current_page: int) -> str:
+def request_paginated_inference_status(page_size: int, current_page: int) -> pd.DataFrame:
     """
     Gets pagainated inference status by calling FalseFilter API
 
@@ -1058,7 +1058,9 @@ def request_finetune(ff_core_training_request: "FFCoreTrainingRequest") -> reque
     """
     # TODO: Check multilot_config is valid structure
 
-    r = requests.post(API_ROOT + "finetune", json=ff_core_training_request.model_dump(), timeout=TIMEOUT)
+    r = requests.post(
+        f"{API_ROOT}{APIGroup.TRAINING}finetune", json=ff_core_training_request.model_dump(), timeout=TIMEOUT
+    )
 
     status = r.json()["status"]
 
@@ -1082,7 +1084,9 @@ def request_basetrain(ff_core_training_request: "FFCoreTrainingRequest") -> requ
     """
     # TODO: Check multilot_config is valid structure
 
-    r = requests.post(API_ROOT + "basetrain", json=ff_core_training_request.model_dump(), timeout=TIMEOUT)
+    r = requests.post(
+        f"{API_ROOT}{APIGroup.TRAINING}basetrain", json=ff_core_training_request.model_dump(), timeout=TIMEOUT
+    )
 
     status = r.json()["status"]
 
@@ -1178,85 +1182,102 @@ def request_paginated_finetuning_status(page_size: int, current_page: int) -> pd
 
 
 @st.cache_data(ttl="1s")
-def request_finetuning_status(finetuning_id: str) -> requests.Response:
-    """
-    Gets finetuning status by calling FalseFilter API
+def request_training_job_record(training_id: str) -> requests.Response:
+    """Get training job records of the given `training_id`.
 
     Args:
-      finetuning_id: Name of the finetuning job
+        training_id: The training id of the target training job.
 
-    Returns the response of the API request
+    Returns:
+        The response of the API request.
+
     """
-    r = requests.get(f"{API_ROOT}finetune/status/{finetuning_id}", timeout=TIMEOUT)
+    r = requests.get(f"{API_ROOT}{APIGroup.TRAINING}job-record/{training_id}", timeout=TIMEOUT)
+    
     return r.json()
 
 
 @st.cache_data(ttl="1s")
-def request_finetuning_statuses(finetuning_id_list: list[str]) -> pd.DataFrame:
-    """
-    Gets finetuning status by calling FalseFilter API
+def request_training_job_records(training_ids: list[str]) -> pd.DataFrame:
+    """Get training job records of the given `training_ids`.
 
     Args:
-      finetuning_id_list: List of training id to get statuses for.
+        training_ids: List of training id to get record for.
 
-    Returns the response of the API request
+    Returns:
+        The response of the API request
+
     """
-    detailed_finetuning_statuses = {}
-    for training_id in finetuning_id_list:
-        detailed_finetuning_statuses[training_id] = request_finetuning_status(training_id)
+    training_job_records = {}
+    for training_id in training_ids:
+        training_job_records[training_id] = request_training_job_record(training_id)
 
-    return format_finetuning_status(pd.DataFrame.from_dict(detailed_finetuning_statuses).T).T
+    return format_training_job_records(pd.DataFrame.from_dict(training_job_records).T).T
 
 
-def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
-    """
-    Format and sort the detailed finetuning status dataframe.
+def format_training_job_records(training_job_records_df: pd.DataFrame) -> pd.DataFrame:
+    """Format and sort the training job records dataframe.
 
     Args:
-        finetuning_status: Dataframe containing raw finetuning job status details.
+        training_job_records_df: Dataframe containing raw training job status details.
 
-    Returns a processed dataframe with adjusted timezones and formatted details.
+    Returns:
+        A processed training job record dataframe with adjusted timezones and formatted details.
+
     """
-    if not finetuning_status.empty:
+    if not training_job_records_df.empty:
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        finetuning_status["start_time"] = pd.to_datetime(finetuning_status["start_time"], unit="s").dt.floor("s")
-        finetuning_status["start_time"] = (
-            finetuning_status["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+        training_job_records_df["start_time"] = (
+            pd.to_datetime(training_job_records_df["start_time"], unit="s").dt.floor("s")
+        )
+        training_job_records_df["start_time"] = (
+            training_job_records_df["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
         )
 
         # Convert model name to user-readable format
-        finetuning_status["base_model_name"] = finetuning_status["base_model_name"].apply(format_model_name)
-        finetuning_status["output_model_name"] = finetuning_status["output_model_name"].apply(format_model_name)
+        training_job_records_df["base_model_name"] = (
+            training_job_records_df["base_model_name"].apply(format_model_name)
+        )
+        training_job_records_df["output_model_name"] = (
+            training_job_records_df["output_model_name"].apply(format_model_name)
+        )
 
-        # Format training info (from yaml config) to be easily readable
-        finetuning_status["training_info"] = finetuning_status["training_info"].map(lambda x: pformat(x))
+        ### Readability format
+        # Multilot_config (from yaml config)
+        training_job_records_df["multilot_config"] = training_job_records_df["multilot_config"].map(pformat)
 
-        # Format epoch loss and validation loss to be more readable
-        if "debug" in finetuning_status.columns:
-            finetuning_status["debug"] = finetuning_status["debug"].map(lambda x: pformat(x))
+        # Epoch loss and validation loss
+        if "debug" in training_job_records_df.columns:
+            training_job_records_df["debug"] = training_job_records_df["debug"].map(pformat)
+
+        training_job_records_df["hyper_params"] = training_job_records_df["hyper_params"].map(pformat)
+        training_job_records_df["model_params"] = training_job_records_df["model_params"].map(pformat)
 
         # Rename index column so that detailed status table will show 'inference_id' instead of 'index'
-        finetuning_status = finetuning_status.rename(columns={"index": "inference_id"})
+        training_job_records_df = training_job_records_df.rename(columns={"index": "inference_id"})
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        if "end_time" in finetuning_status.columns:
-            finetuning_status["end_time"] = pd.to_datetime(finetuning_status["end_time"], unit="s").dt.floor("s")
-            finetuning_status["end_time"] = (
-                finetuning_status["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
+        if "end_time" in training_job_records_df.columns:
+            training_job_records_df["end_time"] = (
+                pd.to_datetime(training_job_records_df["end_time"], unit="s").dt.floor("s")
+            )
+            training_job_records_df["end_time"] = (
+                training_job_records_df["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
             )
 
             # Calculate runtime only for rows that have end_time
-            finetuning_status["runtime"] = finetuning_status.apply(
+            training_job_records_df["runtime"] = training_job_records_df.apply(
                 lambda row: row["end_time"] - row["start_time"] if pd.notnull(row["end_time"]) else None, axis=1
             )
-            finetuning_status["runtime"] = finetuning_status["runtime"].apply(
+
+            training_job_records_df["runtime"] = training_job_records_df["runtime"].apply(
                 lambda x: f"{(x.components.days * 24 + x.components.hours):02}:{x.components.minutes:02}:{x.components.seconds:02}"
                 if pd.notnull(x)
                 else None
             )
 
     # Change ordering
-    sorted_finetuning_statuses_df = finetuning_status.reindex(
+    sorted_training_job_records_df = training_job_records_df.reindex(
         columns=[
             "status",
             "progress",
@@ -1266,21 +1287,22 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
             "base_model_name",
             "model_params",
             "site",
-            "tool",
+            # "tool",
             "tech_layer",
             "layer_group",
             "output_model_name",
             "current_epoch",
-            "total_epochs",
-            "batch_size",
-            "learning_rate",
-            "optimizer_type",
-            "optimizer_params",
-            "loss_type",
-            "loss_params",
-            "lr_scheduler_type",
-            "lr_scheduler_params",
-            "training_info",
+            # "epochs",
+            # "batch_size",
+            # "learning_rate",
+            # "optimizer_type",
+            # "optimizer_params",
+            # "loss_type",
+            # "loss_params",
+            # "lr_scheduler_type",
+            # "lr_scheduler_params",
+            "hyper_params",
+            "multilot_config",
             "debug",
             "message",
             "error_message",
@@ -1288,11 +1310,11 @@ def format_finetuning_status(finetuning_status: pd.DataFrame) -> pd.DataFrame:
     )
 
     # For columns not included above, just add them to the back.
-    for column in finetuning_status.columns:
-        if column not in sorted_finetuning_statuses_df.columns:
-            sorted_finetuning_statuses_df[column] = finetuning_status[column]
+    for column in training_job_records_df.columns:
+        if column not in sorted_training_job_records_df.columns:
+            sorted_training_job_records_df[column] = training_job_records_df[column]
 
-    return sorted_finetuning_statuses_df.astype(str)
+    return sorted_training_job_records_df.astype(str)
 
 
 @st.cache_data(ttl="1s")

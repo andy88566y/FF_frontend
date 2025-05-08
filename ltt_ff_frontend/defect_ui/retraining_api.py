@@ -79,6 +79,8 @@ def app() -> None:
 
     st.divider()
 
+    # _init_session_state_df()
+
     if "status_df_fin" not in st.session_state:
         st.session_state.status_df_fin = pd.DataFrame()
 
@@ -87,7 +89,7 @@ def app() -> None:
 
     col1, col2 = st.columns(2, vertical_alignment="bottom")
     with col1:
-        if st.button(f"Check all {training_option} jobs"):
+        if st.button("Check all training jobs"):
             page_size = 10
             current_page = 1
             st.session_state.status_df_fin = api_helper.request_paginated_finetuning_status(page_size, current_page)
@@ -103,7 +105,7 @@ def app() -> None:
     if st.session_state.status_df_fin.empty:
         st.write("")
     else:
-        st.header("All fine-tuning jobs")
+        st.header("All training jobs")
 
     # Selection to find more detail
     if st.session_state.status_df_fin.empty:
@@ -127,7 +129,7 @@ def app() -> None:
             ]
 
             # Get detailed statuses for each inference job and combine into one df
-            raw_df_fin = api_helper.request_finetuning_statuses(selected_finetuning_id)
+            raw_df_fin = api_helper.request_training_job_records(selected_finetuning_id)
             st.session_state.detailed_df_fin = raw_df_fin
             st.dataframe(st.session_state.detailed_df_fin, use_container_width=True)
             # Stop job button
