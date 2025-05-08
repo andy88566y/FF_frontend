@@ -457,12 +457,10 @@ def split_lrf(lrf_path: str, partitions: int, output_dir: str) -> requests.Respo
         timeout=TIMEOUT,
     )
 
-    status = r.json()["status"]
-
-    if status == "completed":
+    if r.json()["status"] == "completed":
         logger.info("LRF split completed successfully!")
     else:
-        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        logger.error(f"Error occurred when calling lrf_split API: {r.json()['message']}")
 
     return r
 
@@ -476,12 +474,30 @@ def merge_lrf(output_dir: str) -> requests.Response:
         timeout=TIMEOUT,
     )
 
-    status = r.json()["status"]
-
-    if status == "completed":
+    if r.json()["status"] == "completed":
         logger.info("LRF merge completed successfully!")
     else:
-        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        logger.error(f"Error occurred when calling lrf_merge API: {r.json()['message']}")
+
+    return r
+
+
+def filter_lrf(lrf_path: str, output_dir: str, keep_defects_in_filter: bool, defect_filters: str) -> requests.Response:
+    r = requests.post(
+        API_ROOT + "lrf_filter",
+        json={
+            "lrf_path": lrf_path,
+            "output_dir": output_dir,
+            "keep_defects_in_filter": keep_defects_in_filter,
+            "defect_filters": defect_filters,
+        },
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "completed":
+        logger.info("LRF filter completed successfully!")
+    else:
+        logger.error(f"Error occurred when calling lrf_filter API: {r.json()['message']}")
 
     return r
 
