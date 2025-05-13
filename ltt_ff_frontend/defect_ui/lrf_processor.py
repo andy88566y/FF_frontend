@@ -1,5 +1,6 @@
 import os
 from enum import Enum
+from typing import Literal
 
 import pandas as pd
 import streamlit as st
@@ -161,16 +162,16 @@ def app() -> None:
     elif mode == "Re-label":
         lrf_path = st.text_input(
             label="LRF path",
-            value="/mnt/fs0/FalseFilterDataSet/F12/X9U/N2/Layer_M0_M2/2024/05/03/G-TMPD98-7M0A-GooD-V2_20240503_170022_LTTADC.lrf",
+            value="",
         )
         output_dir = st.text_input(
             label="Output directory for re-labeled LRF",
-            value="/mnt/fs0/minye/inference/temp/test",
+            value="",
         )
 
         relabel_mode_col, relabel_csv_col = st.columns(2)
         with relabel_mode_col:
-            relabel_mode = st.segmented_control(
+            relabel_mode: Literal["No/UniqueID", "ClassType"] | None = st.segmented_control(
                 label="Re-label by No/UniqueID or by ClassType",
                 options=["No/UniqueID", "ClassType"],
                 default="No/UniqueID",
