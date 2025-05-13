@@ -502,6 +502,26 @@ def filter_lrf(lrf_path: str, output_dir: str, keep_defects_in_filter: bool, def
     return r
 
 
+def relabel_lrf(lrf_path: str, output_dir: str, relabel_mode: str, relabel_map: dict[str, int]) -> requests.Response:
+    r = requests.post(
+        API_ROOT + "lrf_relabel",
+        json={
+            "lrf_path": lrf_path,
+            "output_dir": output_dir,
+            "relabel_mode": relabel_mode,
+            "relabel_map": relabel_map,
+        },
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "completed":
+        logger.info("LRF re-label completed successfully!")
+    else:
+        logger.error(f"Error occurred when calling lrf_relabel API: {r.json()['message']}")
+
+    return r
+
+
 def get_model_data(
     output_dir: str,
 ) -> tuple[dict[str, Any], tuple[list[int], list[float], list[int]]] | tuple[None, None]:
