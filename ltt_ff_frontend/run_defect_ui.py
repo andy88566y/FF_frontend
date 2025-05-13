@@ -3,6 +3,7 @@ from loguru import logger
 
 from ltt_ff_frontend.defect_review_ui import defect_review_gui
 from ltt_ff_frontend.defect_ui import (
+    data_yaml_creator,
     inference_api,
     lrf_processor,
     retraining_api,
@@ -32,6 +33,9 @@ if __name__ == "__main__":
     page_lrf_processor = st.Page(
         lrf_processor.app, url_path="lrf_processor", title="LRF Processor", icon=":material/description:"
     )
+    page_data_yaml_creator = st.Page(
+        data_yaml_creator.app, url_path="data_yaml_creator", title="Data Yaml Creator", icon=":material/schema:"
+    )
 
     pg = st.navigation(
         [
@@ -40,6 +44,7 @@ if __name__ == "__main__":
             page_defect_review_gui,
             page_retraining,
             page_lrf_processor,
+            page_data_yaml_creator,
         ]
     )
 
