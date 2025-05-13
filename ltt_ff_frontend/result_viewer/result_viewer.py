@@ -149,17 +149,21 @@ def app() -> None:
         )
         # Draw 1D comparison chart
         with col_1d_chart_column:
-            st.plotly_chart(
-                prob_distribution_fig.generate_multilot_1D_plot(
-                    model_raw_data, multi_lot_model_data.model_metadata_list, recipe_threshold, selected_lot_id_list
+            with st.expander(label="1D Prob Distribution Chart"):
+                st.plotly_chart(
+                    prob_distribution_fig.generate_multilot_1D_plot(
+                        model_raw_data,
+                        multi_lot_model_data.model_metadata_list,
+                        recipe_threshold, selected_lot_id_list
+                    )
                 )
-            )
         with col_roc_curve_column:
-            roc_fig.gen(
-                recipe_model_name,
-                inference_result_dir,
-                model_raw_data,
-                multi_lot_model_data.model_metadata_list,
-                recipe_threshold,
-                selected_lot_id_list,
-            )
+            with st.expander(label="Roc Curve Chart"):
+                roc_fig.gen(
+                    recipe_model_name,
+                    inference_result_dir,
+                    model_raw_data,
+                    multi_lot_model_data.model_metadata_list,
+                    recipe_threshold,
+                    selected_lot_id_list,
+                )
