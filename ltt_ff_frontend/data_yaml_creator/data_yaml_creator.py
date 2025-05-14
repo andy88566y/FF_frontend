@@ -39,7 +39,7 @@ def app() -> None:
     trimmed_df = df[required_columns]
 
     if st.button(label="Prepare data yaml", type="primary"):
-        request = api_helper.lrflist_to_yaml(
+        request = api_helper.lrf_list_to_yaml(
             df=trimmed_df,
             original_str=original_str,
             replace_str=replace_str,

@@ -1380,11 +1380,11 @@ def is_valid_yaml_config(yaml_config: Any, mode: Literal["recipe", "lots"]) -> d
 
 
 @st.cache_data(ttl="1s")
-def lrflist_to_yaml(df: pd.DataFrame, original_str: str, replace_str: str) -> dict[str, Any]:
+def lrf_list_to_yaml(df: pd.DataFrame, original_str: str, replace_str: str) -> dict[str, Any]:
     r = requests.post(
-        API_ROOT + "lrflist_to_yaml",
+        API_ROOT + "lrf_list_to_yaml",
         json={
-            "lrflist_raw_data": df.to_json(),
+            "lrf_list_raw_data": df.to_json(),
             "original_str": original_str,
             "replace_str": replace_str,
         },
