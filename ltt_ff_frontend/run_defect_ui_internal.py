@@ -20,9 +20,9 @@ if __name__ == "__main__":
         title="Result Viewer",
         icon=":material/search_check_2:",
     )
-    page_inference_api = st.Page(
+    page_inference = st.Page(
         inference.app,
-        url_path="inference_api",
+        url_path="inference",
         title="Inference",
         icon=":material/action_key:",
     )
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     page_defect_review_gui = st.Page(
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
-    page_retraining = st.Page(retraining.app, url_path="retraining", title="Retraining", icon=":material/build:")
+    page_training = st.Page(retraining.app, url_path="training", title="Training", icon=":material/build:")
     page_model_converter = st.Page(
         model_converter.app, url_path="model_converter", title="Model Converter", icon=":material/swap_horiz:"
     )
@@ -46,10 +46,10 @@ if __name__ == "__main__":
     pg = st.navigation(
         [
             page_result_viewer,
-            page_inference_api,
+            page_inference,
             page_comparison,
             page_defect_review_gui,
-            page_retraining,
+            page_training,
             page_model_converter,
             page_lrf_processor,
             page_data_yaml_creator,
