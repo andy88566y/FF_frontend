@@ -2,14 +2,13 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.comparison_ui import comparison_viewer
+from ltt_ff_frontend.data_yaml_creator import data_yaml_creator
 from ltt_ff_frontend.defect_review_ui import defect_review_gui
-from ltt_ff_frontend.defect_ui import (
-    inference_api,
-    lrf_processor,
-    model_converter,
-    retraining_api,
-)
+from ltt_ff_frontend.inference import inference
+from ltt_ff_frontend.lrf_processor import lrf_processor
+from ltt_ff_frontend.model_converter import model_converter
 from ltt_ff_frontend.result_viewer import result_viewer
+from ltt_ff_frontend.training import retraining
 
 
 if __name__ == "__main__":
@@ -22,7 +21,7 @@ if __name__ == "__main__":
         icon=":material/search_check_2:",
     )
     page_inference_api = st.Page(
-        inference_api.app,
+        inference.app,
         url_path="inference_api",
         title="Inference",
         icon=":material/action_key:",
@@ -33,12 +32,15 @@ if __name__ == "__main__":
     page_defect_review_gui = st.Page(
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
-    page_retraining = st.Page(retraining_api.app, url_path="retraining", title="Retraining", icon=":material/build:")
+    page_retraining = st.Page(retraining.app, url_path="retraining", title="Retraining", icon=":material/build:")
     page_model_converter = st.Page(
         model_converter.app, url_path="model_converter", title="Model Converter", icon=":material/swap_horiz:"
     )
     page_lrf_processor = st.Page(
         lrf_processor.app, url_path="lrf_processor", title="LRF Processor", icon=":material/description:"
+    )
+    page_data_yaml_creator = st.Page(
+        data_yaml_creator.app, url_path="data_yaml_creator", title="Data Yaml Creator", icon=":material/schema:"
     )
 
     pg = st.navigation(
@@ -50,6 +52,7 @@ if __name__ == "__main__":
             page_retraining,
             page_model_converter,
             page_lrf_processor,
+            page_data_yaml_creator,
         ]
     )
 

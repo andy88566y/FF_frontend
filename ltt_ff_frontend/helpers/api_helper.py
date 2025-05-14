@@ -457,12 +457,10 @@ def split_lrf(lrf_path: str, partitions: int, output_dir: str) -> requests.Respo
         timeout=TIMEOUT,
     )
 
-    status = r.json()["status"]
-
-    if status == "completed":
+    if r.json()["status"] == "completed":
         logger.info("LRF split completed successfully!")
     else:
-        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        logger.error(f"Error occurred when calling lrf_split API: {r.json()['message']}")
 
     return r
 
@@ -476,12 +474,52 @@ def merge_lrf(output_dir: str) -> requests.Response:
         timeout=TIMEOUT,
     )
 
-    status = r.json()["status"]
-
-    if status == "completed":
+    if r.json()["status"] == "completed":
         logger.info("LRF merge completed successfully!")
     else:
-        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        logger.error(f"Error occurred when calling lrf_merge API: {r.json()['message']}")
+
+    return r
+
+
+def filter_lrf(lrf_path: str, output_dir: str, keep_defects_in_filter: bool, defect_filters: str) -> requests.Response:
+    r = requests.post(
+        API_ROOT + "lrf_filter",
+        json={
+            "lrf_path": lrf_path,
+            "output_dir": output_dir,
+            "keep_defects_in_filter": keep_defects_in_filter,
+            "defect_filters": defect_filters,
+        },
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "completed":
+        logger.info("LRF filter completed successfully!")
+    else:
+        logger.error(f"Error occurred when calling lrf_filter API: {r.json()['message']}")
+
+    return r
+
+
+def relabel_lrf(
+    lrf_path: str, output_dir: str, relabel_mode: Literal["No/UniqueID", "ClassType"], relabel_map: dict[str, int]
+) -> requests.Response:
+    r = requests.post(
+        API_ROOT + "lrf_relabel",
+        json={
+            "lrf_path": lrf_path,
+            "output_dir": output_dir,
+            "relabel_mode": relabel_mode,
+            "relabel_map": relabel_map,
+        },
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "completed":
+        logger.info("LRF re-label completed successfully!")
+    else:
+        logger.error(f"Error occurred when calling lrf_relabel API: {r.json()['message']}")
 
     return r
 
@@ -1334,6 +1372,21 @@ def is_valid_yaml_config(yaml_config: Any, mode: Literal["recipe", "lots"]) -> d
         json={
             "yaml_config": yaml_config,
             "mode": mode,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
+
+
+@st.cache_data(ttl="1s")
+def lrf_list_to_yaml(df: pd.DataFrame, original_str: str, replace_str: str) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "lrf_list_to_yaml",
+        json={
+            "lrf_list_raw_data": df.to_json(),
+            "original_str": original_str,
+            "replace_str": replace_str,
         },
         timeout=TIMEOUT,
     )

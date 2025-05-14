@@ -1,5 +1,6 @@
 import os
 import random
+import re
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -69,6 +70,12 @@ def app(result_dir: str, image_dir: str) -> None:
     else:
         selected_lot_id = lots[0]
     logger.info(f"Lot selected: {selected_lot_id}")
+
+    # Ensure selected Lot ID matches Image Directory
+    if re.search(re.escape(selected_lot_id), image_dir) is None:
+        logger.error(f"Mismatch between Lot ID ({selected_lot_id}) and image directory ({image_dir}).")
+        st.error(f"Mismatch between Lot ID ({selected_lot_id}) and image directory ({image_dir}).")
+        return
 
     defects = api_helper.get_lrf_data_lists(
         output_dir=result_dir,
