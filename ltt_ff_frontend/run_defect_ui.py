@@ -18,7 +18,7 @@ if __name__ == "__main__":
         title="Result Viewer",
         icon=":material/search_check_2:",
     )
-    inference_api = st.Page(
+    page_inference = st.Page(
         inference_api.app,
         url_path="inference_api",
         title="Inference",
@@ -27,12 +27,12 @@ if __name__ == "__main__":
     page_defect_review_gui = st.Page(
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
-    page_retraining = st.Page(retraining_api.app, url_path="retraining", title="Retraining", icon=":material/build:")
+    page_retraining = st.Page(retraining_api.app, url_path="training", title="Training", icon=":material/build:")
 
     pg = st.navigation(
         [
             page_result_viewer,
-            inference_api,
+            page_inference,
             page_defect_review_gui,
             page_retraining,
         ]
