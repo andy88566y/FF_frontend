@@ -53,10 +53,9 @@ def app() -> None:
         st.success(f"{request.get('message')}")
         data_yaml = request["data_yaml"]
 
-        # logger.warning(data_yaml)
         st.download_button(
             label="Download data yaml file",
             data=data_yaml,
-            file_name=f"data_yaml_{datetime.now()}.yaml",
+            file_name=f"data_yaml_{datetime.now().astimezone()}.yaml",
             mime="text/yaml",
         )
