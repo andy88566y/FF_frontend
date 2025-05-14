@@ -11,12 +11,12 @@ python = "3.11.10"
 loguru = "^0.7.3"
 python-dotenv = "^1.0.1"
 pyyaml = "^6.0.2"
+pydantic = "^2.11.3"
 requests = "^2.32.3"
 streamlit = "^1.44.1"
 pandas = "^2.2.3"
 numpy = "^2.2.4"
 scikit-learn = "^1.6.1"
-pydantic = "^2.11.3"
 
 [tool.poetry.group.viz.dependencies]
 pillow = "^11.2.1"
