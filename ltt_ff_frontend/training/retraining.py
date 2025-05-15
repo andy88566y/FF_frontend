@@ -52,7 +52,6 @@ def app() -> None:
 
     # These two are not exposed to the users yet
     batch_size = 32
-    tool = "x9u"  # Currently only one option available
     model_type = "DualStreamCNN"  # Currently only one option available
 
     _start_training_job_button(
