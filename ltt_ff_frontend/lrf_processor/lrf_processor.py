@@ -146,6 +146,12 @@ def app() -> None:
             st.dataframe(data=trimmed_df, hide_index=True)
 
         if st.button("Generate filtered LRF", type="primary"):
+            if not os.path.exists(lrf_path):
+                st.error(f"LRF path does not exist: {lrf_path}")
+                return
+
+            os.makedirs(name=output_dir, exist_ok=True)
+
             request = api_helper.filter_lrf(
                 lrf_path=lrf_path,
                 output_dir=output_dir,
