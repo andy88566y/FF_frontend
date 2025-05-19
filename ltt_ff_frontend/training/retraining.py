@@ -51,8 +51,9 @@ def app() -> None:
         lr_scheduler_type, lr_scheduler_params = _create_lr_scheduler_options()
 
     # These two are not exposed to the users yet
+    
     batch_size = 32
-    model_type = "DualStreamCNN"  # Currently only one option available
+    model_type = "dual_stream_cnn"  # Currently only one option available
 
     _start_training_job_button(
         training_option,
