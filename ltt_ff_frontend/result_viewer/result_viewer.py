@@ -70,9 +70,13 @@ def app() -> None:
             """
             recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
             if recipe_file is not None:
-                recipe = yaml.load(recipe_file, Loader=yaml.Loader)
+                uploaded_recipe = yaml.load(recipe_file, Loader=yaml.Loader)
+                recipe_to_preview = uploaded_recipe
+                recipe = uploaded_recipe
     elif st_recipe_type == DB_MODE:
-        recipe = filtered_db_recipe
+        if helper.is_valid_output_dir(inference_result_dir):
+            recipe_to_preview = filtered_db_recipe
+            recipe = db_recipe
     elif st_recipe_type == CREATOR_MODE:
         available_models = api_helper.get_base_models(include_blank=True)
         recipe_models = []
@@ -99,19 +103,21 @@ def app() -> None:
                 recipe_model_thresholds.append(float(rounded_threshold))
             # with col3:
             #     recipe_model_shf = st.toggle("Model {i + 1} SHF")
-        recipe = {"recipes": []}
+        user_input_recipe = {"recipes": []}
         for recipe_model, threshold in zip(recipe_models, recipe_model_thresholds):
             if recipe_model != BLANK_MODEL:
-                recipe["recipes"].append(
+                user_input_recipe["recipes"].append(
                     {
                         "model_name": recipe_model,
                         "threshold": threshold,
                     }
                 )
+        recipe = user_input_recipe
+        recipe_to_preview = user_input_recipe
     st.divider()
     if recipe is not None and recipe["recipes"] != []:
         with st.expander(f"{st_recipe_type} Recipe preview:", expanded=True):
-            st.code(yaml.dump(recipe), language="yaml")
+            st.code(yaml.dump(recipe_to_preview), language="yaml")
         st.divider()
 
         if filtered_db_recipe["recipes"] == []:
