@@ -1231,7 +1231,7 @@ def request_training_job_record(training_id: str) -> requests.Response:
 
     """
     r = requests.get(f"{API_ROOT}{APIGroup.TRAINING}job-record/{training_id}", timeout=TIMEOUT)
-    
+
     return r.json()
 
 
@@ -1265,19 +1265,17 @@ def format_training_job_records(training_job_records_df: pd.DataFrame) -> pd.Dat
     """
     if not training_job_records_df.empty:
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        training_job_records_df["start_time"] = (
-            pd.to_datetime(training_job_records_df["start_time"], unit="s").dt.floor("s")
-        )
+        training_job_records_df["start_time"] = pd.to_datetime(
+            training_job_records_df["start_time"], unit="s"
+        ).dt.floor("s")
         training_job_records_df["start_time"] = (
             training_job_records_df["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
         )
 
         # Convert model name to user-readable format
-        training_job_records_df["base_model_name"] = (
-            training_job_records_df["base_model_name"].apply(format_model_name)
-        )
-        training_job_records_df["output_model_name"] = (
-            training_job_records_df["output_model_name"].apply(format_model_name)
+        training_job_records_df["base_model_name"] = training_job_records_df["base_model_name"].apply(format_model_name)
+        training_job_records_df["output_model_name"] = training_job_records_df["output_model_name"].apply(
+            format_model_name
         )
 
         ### Readability format
@@ -1296,9 +1294,9 @@ def format_training_job_records(training_job_records_df: pd.DataFrame) -> pd.Dat
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if "end_time" in training_job_records_df.columns:
-            training_job_records_df["end_time"] = (
-                pd.to_datetime(training_job_records_df["end_time"], unit="s").dt.floor("s")
-            )
+            training_job_records_df["end_time"] = pd.to_datetime(
+                training_job_records_df["end_time"], unit="s"
+            ).dt.floor("s")
             training_job_records_df["end_time"] = (
                 training_job_records_df["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
             )
