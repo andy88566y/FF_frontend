@@ -29,14 +29,12 @@ def app() -> None:
 
     df = pd.read_csv(lrf_list_csv)
 
-    with st.expander(label="LRFList Preview"):
-        st.dataframe(data=df)
-
     # Remove unneeded data from df
     required_columns = ["FileName", "MaskName1", "Insp.StartTime", "FilePath"]
-
-    # Keep only "No" and "UniqueID" columns
     trimmed_df = df[required_columns]
+
+    with st.expander(label="LRFList Preview"):
+        st.dataframe(data=trimmed_df)
 
     if st.button(label="Prepare data yaml", type="primary"):
         request = api_helper.lrf_list_to_yaml(
