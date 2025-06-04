@@ -147,6 +147,22 @@ def get_missed_defects(
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
+def get_particle_mode_only_defects(
+    inference_result_dir: str,
+) -> list[dict[str, Any]]:
+    """
+    Get a list of defects that are detected by particle mode only.
+    """
+    params = {"inference_result_dir": inference_result_dir}
+    r = requests.get(API_ROOT + "result/get_particle_mode_only_defects", json=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "completed":
+        return r.json()["particle_mode_only_defects"]
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
 @st.cache_data(ttl="10s")
 def get_db_metadata_lists(output_dir: str, lot_id: str = "") -> list[dict[str, Any]]:
     """

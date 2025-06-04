@@ -13,6 +13,7 @@ from ltt_ff_frontend.shared_components import (
     missed_defects_component,
     multi_lot_stats,
     new_lrf_button,
+    particle_mode_defects_component,
     prob_distribution_fig,
     roc_fig,
 )
@@ -141,6 +142,9 @@ def app() -> None:
 
     with st.expander(label="Missed defects"):
         missed_defects_component.gen(recipe, inference_result_dir)
+
+    with st.expander(label="ParticleMode defects"):
+        particle_mode_defects_component.gen(inference_result_dir)
 
     # TODO: Get classtype grouping from backend
     with st.container():
