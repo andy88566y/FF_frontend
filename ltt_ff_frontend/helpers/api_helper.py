@@ -140,7 +140,7 @@ def get_missed_defects(
     params = {"inference_result_dir": inference_result_dir, "recipe": recipe}
     r = requests.get(API_ROOT + "result/get_missed_defects", json=params, timeout=TIMEOUT)
 
-    if r.status_code == "completed":
+    if r.json()["status"] == "completed":
         return r.json()["missed_defects"]
     else:
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
