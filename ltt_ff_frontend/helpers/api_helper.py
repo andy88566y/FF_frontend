@@ -130,6 +130,23 @@ def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]
         r.raise_for_status()
 
 
+def get_missed_defects(
+    recipe: dict[str, Any],
+    inference_result_dir: str,
+) -> list[dict[str, Any]]:
+    """
+    Get a list of True Defects that are undetected by the recipe.
+    """
+    params = {"inference_result_dir": inference_result_dir, "recipe": recipe}
+    r = requests.get(API_ROOT + "result/get_missed_defects", json=params, timeout=TIMEOUT)
+
+    if r.status_code == "completed":
+        return r.json()["missed_defects"]
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
 @st.cache_data(ttl="10s")
 def get_db_metadata_lists(output_dir: str, lot_id: str = "") -> list[dict[str, Any]]:
     """
