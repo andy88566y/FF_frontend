@@ -130,6 +130,39 @@ def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]
         r.raise_for_status()
 
 
+def get_missed_defects(
+    recipe: dict[str, Any],
+    inference_result_dir: str,
+) -> list[dict[str, Any]]:
+    """
+    Get a list of True Defects that are undetected by the recipe.
+    """
+    params = {"inference_result_dir": inference_result_dir, "recipe": recipe}
+    r = requests.get(API_ROOT + "result/get_missed_defects", json=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "completed":
+        return r.json()["missed_defects"]
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
+def get_particle_mode_only_defects(
+    inference_result_dir: str,
+) -> list[dict[str, Any]]:
+    """
+    Get a list of defects that are detected by particle mode only.
+    """
+    params = {"inference_result_dir": inference_result_dir}
+    r = requests.get(API_ROOT + "result/get_particle_mode_only_defects", json=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "completed":
+        return r.json()["particle_mode_only_defects"]
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
 @st.cache_data(ttl="10s")
 def get_db_metadata_lists(output_dir: str, lot_id: str = "") -> list[dict[str, Any]]:
     """
@@ -1231,7 +1264,7 @@ def request_training_job_record(training_id: str) -> requests.Response:
 
     """
     r = requests.get(f"{API_ROOT}{APIGroup.TRAINING}job-record/{training_id}", timeout=TIMEOUT)
-    
+
     return r.json()
 
 
@@ -1265,19 +1298,17 @@ def format_training_job_records(training_job_records_df: pd.DataFrame) -> pd.Dat
     """
     if not training_job_records_df.empty:
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
-        training_job_records_df["start_time"] = (
-            pd.to_datetime(training_job_records_df["start_time"], unit="s").dt.floor("s")
-        )
+        training_job_records_df["start_time"] = pd.to_datetime(
+            training_job_records_df["start_time"], unit="s"
+        ).dt.floor("s")
         training_job_records_df["start_time"] = (
             training_job_records_df["start_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
         )
 
         # Convert model name to user-readable format
-        training_job_records_df["base_model_name"] = (
-            training_job_records_df["base_model_name"].apply(format_model_name)
-        )
-        training_job_records_df["output_model_name"] = (
-            training_job_records_df["output_model_name"].apply(format_model_name)
+        training_job_records_df["base_model_name"] = training_job_records_df["base_model_name"].apply(format_model_name)
+        training_job_records_df["output_model_name"] = training_job_records_df["output_model_name"].apply(
+            format_model_name
         )
 
         ### Readability format
@@ -1296,9 +1327,9 @@ def format_training_job_records(training_job_records_df: pd.DataFrame) -> pd.Dat
 
         # Convert start time from seconds to human-readable format and change timezone to UTC+8
         if "end_time" in training_job_records_df.columns:
-            training_job_records_df["end_time"] = (
-                pd.to_datetime(training_job_records_df["end_time"], unit="s").dt.floor("s")
-            )
+            training_job_records_df["end_time"] = pd.to_datetime(
+                training_job_records_df["end_time"], unit="s"
+            ).dt.floor("s")
             training_job_records_df["end_time"] = (
                 training_job_records_df["end_time"].dt.tz_localize("UTC").dt.tz_convert("Asia/Taipei")
             )

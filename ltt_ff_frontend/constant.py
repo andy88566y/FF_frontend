@@ -3,8 +3,8 @@ from enum import Enum
 from typing import Annotated
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
 from loguru import logger
+from pydantic import BaseModel, Field
 
 
 TIMEOUT = 10
@@ -41,7 +41,6 @@ INFERENCE_DEFAULT_RESULT_DIR = "/mnt/dbpc/xxx"
 
 
 class NumInputParamConfig(BaseModel):
-
     name: Annotated[str, Field(description="Name of the parameter.")]
     default_value: Annotated[float | None, Field(description="Default value of the parameter.")]
     accuracy: Annotated[str, Field(description="Format of the display value.")]
@@ -51,7 +50,6 @@ class NumInputParamConfig(BaseModel):
 
 
 class NameNumInputParamsConfig(BaseModel):
-
     name: str
     num_input_params: list[NumInputParamConfig]
 
@@ -76,7 +74,7 @@ OPTIMIZER_CONFIGS = {
             NumInputParamConfig(
                 name="weight_decay", default_value=0.0, accuracy="%0.3f", min_value=0.0, max_value=1.0, step=1e-3
             )
-        ]
+        ],
     ),
     "AdamW": AdamW(
         name="AdamW",
@@ -84,8 +82,8 @@ OPTIMIZER_CONFIGS = {
             NumInputParamConfig(
                 name="weight_decay", default_value=0.01, accuracy="%0.3f", min_value=0.0, max_value=1.0, step=1e-3
             )
-        ]
-    )
+        ],
+    ),
 }
 
 
@@ -109,7 +107,7 @@ LOSS_CONFIGS = {
             NumInputParamConfig(
                 name="pos_weight", default_value=None, accuracy="%0.0f", min_value=0, max_value=100, step=1.0
             )
-        ]
+        ],
     ),
     "focal": Focal(
         name="focal",
@@ -119,9 +117,9 @@ LOSS_CONFIGS = {
             ),
             NumInputParamConfig(
                 name="gamma", default_value=2.0, accuracy="%0.2f", min_value=0.0, max_value=10.0, step=1e-2
-            )
-        ]
-    )
+            ),
+        ],
+    ),
 }
 
 
@@ -139,10 +137,7 @@ class Plateau(LRSchedulerConfig):
 
 
 LR_SCHEDULER_CONFIGS = {
-    "disable": Disable(
-        name="disable",
-        num_input_params=[]
-    ),
+    "disable": Disable(name="disable", num_input_params=[]),
     "plateau": Plateau(
         name="plateau",
         num_input_params=[
@@ -160,14 +155,13 @@ LR_SCHEDULER_CONFIGS = {
             ),
             NumInputParamConfig(
                 name="eps", default_value=1e-6, accuracy="%0.8f", min_value=0.0, max_value=1.0, step=1e-8
-            )
-        ]
-    )
+            ),
+        ],
+    ),
 }
 
 
 class PrintValueEnum(Enum):
-
     def __str__(self) -> str:
         return self.value
 
@@ -240,6 +234,10 @@ class TrainingOption(PrintValueEnum):
 
 
 class APIGroup(PrintValueEnum):
-
     TRAINING = "training/"
     INFERENCE = "inference/"
+
+
+class ModelArchitecture(Enum):
+    DUALSTREAMCNN = "DUALSTREAMCNN"
+    DUALSTREAMCNN_V2 = "DUALSTREAMCNN_V2"

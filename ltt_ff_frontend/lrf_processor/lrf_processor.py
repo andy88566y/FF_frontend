@@ -12,7 +12,7 @@ from ltt_ff_frontend.helpers import api_helper
 def app() -> None:
     logger.debug("Loading LRF Processor...")
     st.title("LRF Processor")
-    st.caption("Split, merge, and filter LRF files!")
+    st.caption("Split, merge, filter, and re-label LRF files!")
 
     mode = st.segmented_control(label="Mode", options=["Split", "Merge", "Filter", "Re-label"], default="Split")
     if mode is None:
