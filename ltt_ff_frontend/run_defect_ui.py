@@ -6,7 +6,7 @@ from ltt_ff_frontend.defect_review_ui import defect_review_gui
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
 from ltt_ff_frontend.result_viewer import result_viewer
-from ltt_ff_frontend.training import training
+from ltt_ff_frontend.training import training, training_by_config
 
 
 if __name__ == "__main__":
@@ -28,6 +28,9 @@ if __name__ == "__main__":
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
     page_training = st.Page(training.app, url_path="training", title="Training", icon=":material/build:")
+    page_training_by_config = st.Page(
+        training_by_config.app, url_path="training_by_config", title="Training By Config", icon=":material/build:"
+    )
     page_lrf_processor = st.Page(
         lrf_processor.app, url_path="lrf_processor", title="LRF Processor", icon=":material/description:"
     )
@@ -41,6 +44,7 @@ if __name__ == "__main__":
             page_inference,
             page_defect_review_gui,
             page_training,
+            page_training_by_config,
             page_lrf_processor,
             page_data_yaml_creator,
         ]

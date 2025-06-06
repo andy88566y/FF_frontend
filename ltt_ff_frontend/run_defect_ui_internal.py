@@ -8,7 +8,7 @@ from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
 from ltt_ff_frontend.model_converter import model_converter
 from ltt_ff_frontend.result_viewer import result_viewer
-from ltt_ff_frontend.training import retraining
+from ltt_ff_frontend.training import training, training_by_config
 
 
 if __name__ == "__main__":
@@ -32,7 +32,8 @@ if __name__ == "__main__":
     page_defect_review_gui = st.Page(
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
-    page_training = st.Page(retraining.app, url_path="training", title="Training", icon=":material/build:")
+    page_training = st.Page(training.app, url_path="training", title="Training", icon=":material/build:")
+    page_training_by_config = st.Page(training_by_config.app, url_path="training_by_config", title="Training By Config", icon=":material/build:")
     page_model_converter = st.Page(
         model_converter.app, url_path="model_converter", title="Model Converter", icon=":material/swap_horiz:"
     )
@@ -50,6 +51,7 @@ if __name__ == "__main__":
             page_comparison,
             page_defect_review_gui,
             page_training,
+            page_training_by_config,
             page_model_converter,
             page_lrf_processor,
             page_data_yaml_creator,
