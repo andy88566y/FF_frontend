@@ -20,7 +20,8 @@ def calculate_avg_ffr_per_lot(filtered_inference_results: list[dict[str, Any]]) 
         false_defects = lot["as_is_non_defect_count"]
         false_filter_rate = true_negative / false_defects if false_defects > 0 else -1
         ffr_per_lot.append(false_filter_rate)
-    return sum(ffr for ffr in ffr_per_lot) / len(ffr_per_lot)
+
+    return sum(ffr for ffr in ffr_per_lot) / len(ffr_per_lot) if len(ffr_per_lot) > 0 else -1
 
 
 # TODO: move calculations to backend
