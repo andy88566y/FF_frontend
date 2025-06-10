@@ -27,15 +27,11 @@ def calculate_avg_ffr_per_lot(filtered_inference_results: list[dict[str, Any]]) 
 def calculate_oos_summary(
     inference_results: list[dict[str, Any]], mode: Literal["ALL", ">=150", "<150"]
 ) -> dict[str, Any]:
-    logger.warning(inference_results[0])
-    # for lot in inference_results:
-    #     logger.warning(lot)
-
     if mode == ">=150":
-        filtered_inference_results = [lot for lot in inference_results if lot["as_is_true_defect_count"] >= 150]
+        filtered_inference_results = [lot for lot in inference_results if lot["as_is_defect_count"] >= 150]
         logger.warning(len(filtered_inference_results))
     elif mode == "<150":
-        filtered_inference_results = [lot for lot in inference_results if lot["as_is_true_defect_count"] < 150]
+        filtered_inference_results = [lot for lot in inference_results if lot["as_is_defect_count"] < 150]
         logger.warning(len(filtered_inference_results))
     else:
         filtered_inference_results = inference_results
@@ -83,14 +79,9 @@ def gen(
     inference_result_dir: str,
 ) -> None:
     inference_results = api_helper.get_recipe_filtered_results_from_api(inference_result_dir, recipe=recipe)
-    # for lot_result in inference_results:
-    #     logger.warning(f"\n{lot_result}")
 
     calculate_oos_summary(inference_results, "ALL")
     # calculate_oos_summary(inference_results, ">=150")
     # calculate_oos_summary(inference_results, "<150")
-    # df = pd.DataFrame(columns=["Lot ID", "Missed defects"])
-    # for missed_defect_per_lot in missed_defects:
-    #     for k, v in missed_defect_per_lot.items():
-    #         df.loc[len(df)] = pd.Series({"Lot ID": k, "Missed defects": v})
-    # st.dataframe(df)
+
+    # TODO: draw the summary table
