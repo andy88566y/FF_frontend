@@ -29,49 +29,65 @@ def calculate_oos_summary(
 ) -> dict[str, Any]:
     if mode == ">=150":
         filtered_inference_results = [lot for lot in inference_results if lot["as_is_defect_count"] >= 150]
-        logger.warning(len(filtered_inference_results))
     elif mode == "<150":
         filtered_inference_results = [lot for lot in inference_results if lot["as_is_defect_count"] < 150]
-        logger.warning(len(filtered_inference_results))
     else:
         filtered_inference_results = inference_results
-        logger.warning(f"LOT: {len(filtered_inference_results)}")
+
+    logger.debug(f"Lot count: {len(filtered_inference_results)}")
 
     as_is = sum(lot["as_is_defect_count"] for lot in filtered_inference_results)
-    logger.warning(f"As-is: {as_is}")
+    logger.debug(f"As-is: {as_is}")
 
     to_be = sum(lot["to_be_defect_count"] for lot in filtered_inference_results)
-    logger.warning(f"To-be: {to_be}")
+    logger.debug(f"To-be: {to_be}")
 
     # Calculate CR%
     true_positives = sum(lot["to_be_true_defect_count"] for lot in filtered_inference_results)
     true_defects = sum(lot["as_is_true_defect_count"] for lot in filtered_inference_results)
     capture_rate = true_positives / true_defects if true_defects > 0 else -1
-    logger.warning(f"CR%: ({true_positives}/{true_defects}) {capture_rate * 100}%")
+    capture_rate_display = f"({true_positives}/{true_defects}) {(capture_rate * 100):.2f}%"
+    logger.debug(f"CR%: {capture_rate_display}")
 
     # Calculate FFR%
     true_negative = sum(lot["true_negative"] for lot in filtered_inference_results)
     false_defects = sum(lot["as_is_non_defect_count"] for lot in filtered_inference_results)
     false_filter_rate = true_negative / false_defects if false_defects > 0 else -1
-    logger.warning(f"FFR%: ({true_negative}/{false_defects}) {false_filter_rate * 100}%")
+    false_filter_rate_display = f"({true_negative}/{false_defects}) {(false_filter_rate * 100):.2f}%"
+    logger.debug(f"FFR%: {false_filter_rate_display}")
 
     avg_ffr_per_lot = calculate_avg_ffr_per_lot(filtered_inference_results)
-    logger.warning(f"FFR per Lots: {avg_ffr_per_lot * 100}%")
+    avg_ffr_per_lot_display = f"{(avg_ffr_per_lot * 100):.2f}%"
+    logger.debug(f"FFR per Lots: {avg_ffr_per_lot_display}")
 
     miss_catch = true_defects - true_positives
-    logger.warning(f"A. Miss Catch: {miss_catch}")
+    logger.debug(f"A. Miss Catch: {miss_catch}")
 
     high_false = sum(1 for lot in filtered_inference_results if lot["to_be_non_defect_count"] > 150)
-    logger.warning(f"B. High False: {high_false}")
+    logger.debug(f"B. High False: {high_false}")
 
     success_lots = sum(
         1
         for lot in filtered_inference_results
         if (lot["result"]["Capture Rate"] != "OOS" and lot["result"]["False Filter Rate"] != "OOS")
     )
-    logger.warning(f"Success lots: {success_lots}")
+    logger.debug(f"Success lots: {success_lots}")
 
-    return {}
+    return {
+        "Mode": mode,
+        "LOT": len(filtered_inference_results),
+        "As-is": as_is,
+        "To_be": to_be,
+        "AFD": true_positives,
+        "MDC": true_defects,
+        "FF": true_negative,
+        "CR%": capture_rate_display,
+        "FFR%": false_filter_rate_display,
+        "FFR per Lots": avg_ffr_per_lot_display,
+        "A. Miss Catch": miss_catch,
+        "B. High False": high_false,
+        "Success Lots": success_lots,
+    }
 
 
 def gen(
@@ -80,8 +96,9 @@ def gen(
 ) -> None:
     inference_results = api_helper.get_recipe_filtered_results_from_api(inference_result_dir, recipe=recipe)
 
-    calculate_oos_summary(inference_results, "ALL")
-    # calculate_oos_summary(inference_results, ">=150")
-    # calculate_oos_summary(inference_results, "<150")
+    all_summary = calculate_oos_summary(inference_results, "ALL")
+    greater_equal_150_summary = calculate_oos_summary(inference_results, ">=150")
+    smaller_150_summary = calculate_oos_summary(inference_results, "<150")
 
-    # TODO: draw the summary table
+    df = pd.DataFrame([all_summary, greater_equal_150_summary, smaller_150_summary])
+    st.dataframe(data=df, hide_index=True, use_container_width=False)
