@@ -41,7 +41,7 @@ def format_model_name(name: str | None) -> str:
 
 
 def filter_recipe_columns(recipe: dict[str, Any]) -> dict[str, Any]:
-    column_white_list = ["model_name", "threshold"]
+    column_white_list = ["model_name", "threshold", "threshold_c", "threshold_d"]
     filtered_recipe = {"recipes": [{k: v for k, v in r.items() if k in column_white_list} for r in recipe["recipes"]]}
 
     return filtered_recipe
