@@ -13,6 +13,7 @@ from ltt_ff_frontend.shared_components import (
     missed_defects_component,
     multi_lot_stats,
     new_lrf_button,
+    oos_summary_component,
     particle_mode_defects_component,
     prob_distribution_fig,
     roc_fig,
@@ -139,6 +140,9 @@ def app() -> None:
         selected_lot_id_list = multi_lot_stats.draw_stats_df(
             multi_lot_model_data, recipe, inference_result_dir, key="recipe_stats_df"
         )
+
+    with st.expander(label="OOS Summary"):
+        oos_summary_component.gen(recipe, inference_result_dir)
 
     with st.expander(label="Missed defects"):
         missed_defects_component.gen(recipe, inference_result_dir)
