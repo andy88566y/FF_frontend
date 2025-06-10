@@ -60,7 +60,9 @@ def calculate_oos_summary(
     avg_ffr_per_lot_display = f"{(avg_ffr_per_lot * 100):.2f}%"
     logger.debug(f"FFR per Lots: {avg_ffr_per_lot_display}")
 
-    miss_catch = true_defects - true_positives
+    miss_catch = sum(
+        1 for lot in filtered_inference_results if lot["as_is_true_defect_count"] - lot["to_be_true_defect_count"] > 0
+    )
     logger.debug(f"A. Miss Catch: {miss_catch}")
 
     high_false = sum(1 for lot in filtered_inference_results if lot["to_be_non_defect_count"] > 150)
