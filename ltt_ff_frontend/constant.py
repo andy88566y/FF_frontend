@@ -7,7 +7,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 
-TIMEOUT = 10
+TIMEOUT = 180
 
 
 ### Working Environment
