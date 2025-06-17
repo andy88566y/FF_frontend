@@ -843,7 +843,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         # This line has to happen before renaming the index column, otherwise we won't be able to access index 0
         paged_statuses_df["lot_info"] = paged_statuses_df["lot_info"].apply(
             lambda data_paths: pformat([per_lot.get("lot_id", "") for per_lot in data_paths["data_paths"]])
-            if isinstance(data_paths, dict) and "data_paths" in data_paths
+            if isinstance(data_paths, dict) and "data_paths" in data_paths and data_paths["data_paths"] is not None
             else None
         )
 
