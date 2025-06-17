@@ -2,7 +2,7 @@ import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.comparison_ui import comparison_viewer
-from ltt_ff_frontend.data_yaml_creator import data_yaml_creator
+from ltt_ff_frontend.data_yaml_processor import data_yaml_processor
 from ltt_ff_frontend.defect_review_ui import defect_review_gui
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
@@ -33,15 +33,17 @@ if __name__ == "__main__":
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
     page_training = st.Page(training.app, url_path="training", title="Training", icon=":material/build:")
-    page_training_by_config = st.Page(training_by_config.app, url_path="training_by_config", title="Training By Config", icon=":material/build:")
+    page_training_by_config = st.Page(
+        training_by_config.app, url_path="training_by_config", title="Training By Config", icon=":material/build:"
+    )
     page_model_converter = st.Page(
         model_converter.app, url_path="model_converter", title="Model Converter", icon=":material/swap_horiz:"
     )
     page_lrf_processor = st.Page(
         lrf_processor.app, url_path="lrf_processor", title="LRF Processor", icon=":material/description:"
     )
-    page_data_yaml_creator = st.Page(
-        data_yaml_creator.app, url_path="data_yaml_creator", title="Data Yaml Creator", icon=":material/schema:"
+    page_data_yaml_processor = st.Page(
+        data_yaml_processor.app, url_path="data_yaml_processor", title="Data Yaml Processor", icon=":material/schema:"
     )
 
     pg = st.navigation(
@@ -54,7 +56,7 @@ if __name__ == "__main__":
             page_training_by_config,
             page_model_converter,
             page_lrf_processor,
-            page_data_yaml_creator,
+            page_data_yaml_processor,
         ]
     )
 

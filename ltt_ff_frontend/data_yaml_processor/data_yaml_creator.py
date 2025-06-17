@@ -8,15 +8,13 @@ from ltt_ff_frontend.helpers import api_helper
 
 
 def app() -> None:
-    logger.debug("Loading Data Yaml Creator...")
-    st.title("Data Yaml Creator")
-    st.caption("Create a data yaml file from LRFList csv file!")
+    st.subheader(body="Create a data yaml file by importing LRFList .csv file.")
 
     lrf_list_csv = st.file_uploader("Upload LRFList (.csv)", type="csv")
 
-    st.subheader(
-        body="Replace Windows path with Linux path", help="e.g. E:/AAA/BBB will be converted to /mnt/dbpc/AAA/BBB"
-    )
+    st.divider()
+
+    st.text(body="Replace Windows path with Linux path", help="e.g. E:/AAA/BBB will be converted to /mnt/dbpc/AAA/BBB")
     original_col, replace_col = st.columns(2)
     with original_col:
         original_str = st.text_input(label="Original path", value="E:")

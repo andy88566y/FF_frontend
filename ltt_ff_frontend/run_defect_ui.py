@@ -1,7 +1,7 @@
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.data_yaml_creator import data_yaml_creator
+from ltt_ff_frontend.data_yaml_processor import data_yaml_processor
 from ltt_ff_frontend.defect_review_ui import defect_review_gui
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
@@ -34,8 +34,8 @@ if __name__ == "__main__":
     page_lrf_processor = st.Page(
         lrf_processor.app, url_path="lrf_processor", title="LRF Processor", icon=":material/description:"
     )
-    page_data_yaml_creator = st.Page(
-        data_yaml_creator.app, url_path="data_yaml_creator", title="Data Yaml Creator", icon=":material/schema:"
+   page_data_yaml_processor = st.Page(
+        data_yaml_processor.app, url_path="data_yaml_processor", title="Data Yaml Processor", icon=":material/schema:"
     )
 
     pg = st.navigation(
@@ -46,7 +46,7 @@ if __name__ == "__main__":
             page_training,
             page_training_by_config,
             page_lrf_processor,
-            page_data_yaml_creator,
+            page_data_yaml_processor,
         ]
     )
 
