@@ -1459,6 +1459,21 @@ def parse_data_yaml(data_yaml: dict[str, Any]) -> dict[str, Any]:
     return r.json()
 
 
+@st.cache_data(ttl="1s")
+def generate_golden_set_from_data_yaml(data_yaml_path: str, output_dir: str, output_suffix: str) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "generate_golden_set_from_data_yaml",
+        json={
+            "data_yaml_path": data_yaml_path,
+            "output_dir": output_dir,
+            "output_suffix": output_suffix,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
+
+
 #####################################################################################################
 # Model conversion                                                                                  #
 #####################################################################################################
