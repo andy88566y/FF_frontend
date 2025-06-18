@@ -12,7 +12,7 @@ from ltt_ff_frontend.helpers import api_helper
 def app() -> None:
     st.subheader(body="Generate a golden data set from a data yaml by relabeling and generating new LRFs.")
 
-    data_yaml_path = st.text_input(label="Data Yaml Path", value="")
+    data_yaml_file = st.file_uploader("Upload data yaml (.yaml)", type=".yaml")
 
     output_dir_col, output_suffix_col = st.columns(2)
     with output_dir_col:
@@ -21,13 +21,15 @@ def app() -> None:
         output_suffix = st.text_input(label="Output LRF suffix", value="")
 
     if st.button(label="Generate golden set LRFs"):
-        if not data_yaml_path or not output_dir:
-            st.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF suffix [optional].")
-            logger.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF suffix [optional].")
+        if not data_yaml_file or not output_dir or not output_suffix:
+            st.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF suffix.")
+            logger.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF suffix.")
             return
 
+        data_yaml = yaml.load(data_yaml_file, Loader=yaml.Loader)
+
         request = api_helper.generate_golden_set_from_data_yaml(
-            data_yaml_path=data_yaml_path, output_dir=output_dir, output_suffix=output_suffix
+            data_yaml=data_yaml, output_dir=output_dir, output_suffix=output_suffix
         )
 
         if request.get("status") == "error":
