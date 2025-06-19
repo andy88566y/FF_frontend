@@ -843,7 +843,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
         # This line has to happen before renaming the index column, otherwise we won't be able to access index 0
         paged_statuses_df["lot_info"] = paged_statuses_df["lot_info"].apply(
             lambda data_paths: pformat([per_lot.get("lot_id", "") for per_lot in data_paths["data_paths"]])
-            if isinstance(data_paths, dict) and "data_paths" in data_paths
+            if isinstance(data_paths, dict) and "data_paths" in data_paths and data_paths["data_paths"] is not None
             else None
         )
 
@@ -1394,7 +1394,7 @@ def request_stop_job(job_id: str) -> str:
 
 
 #####################################################################################################
-# Yaml validation                                                                                   #
+# Data yaml                                                                                         #
 #####################################################################################################
 @st.cache_data(ttl="1s")
 def is_valid_yaml_config(yaml_config: Any, mode: Literal["recipe", "lots"]) -> dict[str, Any]:
@@ -1418,6 +1418,57 @@ def lrf_list_to_yaml(df: pd.DataFrame, original_str: str, replace_str: str) -> d
             "lrf_list_raw_data": df.to_json(),
             "original_str": original_str,
             "replace_str": replace_str,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
+
+
+@st.cache_data(ttl="1s")
+def filter_data_yaml(
+    original_data_yaml: dict[str, Any],
+    filters: dict[str, Any],
+    filter_lots_list: list[str],
+    keep_lots: bool,
+) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "filter_data_yaml",
+        json={
+            "original_data_yaml": original_data_yaml,
+            "filters": filters,
+            "filter_lots_list": filter_lots_list,
+            "keep_lots": keep_lots,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
+
+
+@st.cache_data(ttl="1s")
+def parse_data_yaml(data_yaml: dict[str, Any]) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "parse_data_yaml",
+        json={
+            "data_yaml": data_yaml,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
+
+
+@st.cache_data(ttl="1s")
+def generate_golden_set_from_data_yaml(
+    data_yaml: dict[str, Any], output_dir: str, output_suffix: str
+) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "generate_golden_set_from_data_yaml",
+        json={
+            "data_yaml": data_yaml,
+            "output_dir": output_dir,
+            "output_suffix": output_suffix,
         },
         timeout=TIMEOUT,
     )

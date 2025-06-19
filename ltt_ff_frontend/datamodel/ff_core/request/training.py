@@ -60,5 +60,8 @@ class FFCoreTrainingRequest(BaseModel):
         Field(description="Dict containing lot id, lrf path, and image dir for each group of training data."),
     ]
     hyper_params: Annotated[HyperParams, Field(description="Model training hyper parameters.")]
+    skip_particle_mode_defects: Annotated[
+        bool, Field(default=True, description="Flag to enable/disable training using particle mode defects.")
+    ]
 
     model_config = ConfigDict(extra="forbid")
