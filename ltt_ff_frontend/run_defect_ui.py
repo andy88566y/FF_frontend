@@ -34,7 +34,7 @@ if __name__ == "__main__":
     page_lrf_processor = st.Page(
         lrf_processor.app, url_path="lrf_processor", title="LRF Processor", icon=":material/description:"
     )
-   page_data_yaml_processor = st.Page(
+    page_data_yaml_processor = st.Page(
         data_yaml_processor.app, url_path="data_yaml_processor", title="Data Yaml Processor", icon=":material/schema:"
     )
 
