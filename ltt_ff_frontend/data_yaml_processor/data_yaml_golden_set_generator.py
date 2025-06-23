@@ -14,28 +14,56 @@ def app() -> None:
 
     data_yaml_file = st.file_uploader("Upload data yaml (.yaml)", type=".yaml")
 
-    output_dir_col, output_suffix_col = st.columns(2)
+    # Show preview of uploaded data yaml
+    if data_yaml_file is not None:
+        with st.expander(label="Data yaml preview"):
+            data_yaml = yaml.load(data_yaml_file, Loader=yaml.Loader)
+            st.json(data_yaml)
+
+    output_dir_col, output_prefix_col = st.columns(2)
     with output_dir_col:
         output_dir = st.text_input(label="LRF Output Directory", value="")
-    with output_suffix_col:
-        output_suffix = st.text_input(label="Output LRF suffix", value="")
+    with output_prefix_col:
+        output_prefix = st.text_input(label="Output LRF prefix", value="")
+
+    copy_images = st.toggle(
+        label="Copy Image Directory to LRF Output Directory and generate updated Data Yaml",
+        value=False,
+    )
+
+    if copy_images:
+        st.markdown(":red[If enabled, existing files in LRF Output Directory may be overwritten.]")
+        st.text(
+            "If enabled, image_dir must be included in the data yaml. If there are missing image_dir entries, "
+            + "they will not be copied, and the list of lots with missing image_dir will be shown."
+        )
+        st.text(
+            "A new data yaml file with the new LRF path and new image_dir will be generated in the LRF Output "
+            + "Directory. It can be directly  used as a data yaml file on the Inference UI."
+        )
 
     if st.button(label="Generate golden set LRFs"):
-        if not data_yaml_file or not output_dir or not output_suffix:
-            st.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF suffix.")
-            logger.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF suffix.")
+        if not data_yaml_file or not output_dir or not output_prefix:
+            st.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF prefix.")
+            logger.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF prefix.")
             return
 
-        data_yaml = yaml.load(data_yaml_file, Loader=yaml.Loader)
-
         request = api_helper.generate_golden_set_from_data_yaml(
-            data_yaml=data_yaml, output_dir=output_dir, output_suffix=output_suffix
+            data_yaml=data_yaml, output_dir=output_dir, output_prefix=output_prefix, copy_images=copy_images
         )
 
         if request.get("status") == "error":
             message = request.get("message")
             st.error(f"{message}")
             return
+
+        lot_ids_without_image_dir = request.get("lot_ids_without_image_dir", [])
+        if len(lot_ids_without_image_dir) > 0:
+            st.warning(
+                "Lots without image_dir were found. For the following lots, golden LRF was generated, but"
+                + " image_dir was not copied to LRF Output Directory, and it is not included in the golden yaml.\n\n"
+                + f"{lot_ids_without_image_dir}"
+            )
 
         st.success(f"{request.get('message')}")
 
