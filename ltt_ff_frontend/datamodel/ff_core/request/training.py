@@ -49,7 +49,6 @@ class HyperParams(BaseModel):
     early_stopping_monitor: Annotated[
         str,
         Field(
-            validation_alias=AliasChoices("early_stopping_monitor", "earlyStoppingMonitor"),
             default="val_loss",
             description="Quantity to be monitored. Should be a available metric.",
         ),
@@ -57,7 +56,6 @@ class HyperParams(BaseModel):
     early_stopping_mode: Annotated[
         str,
         Field(
-            validation_alias=AliasChoices("early_stopping_mode", "earlyStoppingMode"),
             default="min",
             description=(
                 "One of 'min', 'max'. In 'min' mode, training will stop when the quantity "
@@ -69,7 +67,6 @@ class HyperParams(BaseModel):
     early_stopping_patience: Annotated[
         int,
         Field(
-            validation_alias=AliasChoices("early_stopping_patience", "earlyStoppingPatience"),
             default=3,
             description=(
                 "Number of checks with no improvement after which training will be stopped. "
