@@ -44,6 +44,41 @@ class HyperParams(BaseModel):
         ),
     ]
     tool: Annotated[str, Field(default="x9u", description="Training tool.")]
+    
+    # Early stopping
+    early_stopping_monitor: Annotated[
+        str,
+        Field(
+            validation_alias=AliasChoices("early_stopping_monitor", "earlyStoppingMonitor"),
+            default="val_loss",
+            description="Quantity to be monitored. Should be a available metric.",
+        ),
+    ]
+    early_stopping_mode: Annotated[
+        str,
+        Field(
+            validation_alias=AliasChoices("early_stopping_mode", "earlyStoppingMode"),
+            default="min",
+            description=(
+                "One of 'min', 'max'. In 'min' mode, training will stop when the quantity "
+                "monitored has stopped decreasing and in 'max' mode it will stop when the "
+                "quantity monitored has stopped increasing."
+            ),
+        ),
+    ]
+    early_stopping_patience: Annotated[
+        int,
+        Field(
+            validation_alias=AliasChoices("early_stopping_patience", "earlyStoppingPatience"),
+            default=3,
+            description=(
+                "Number of checks with no improvement after which training will be stopped. "
+                "Under the default configuration, one check happens after every training epoch. "
+                "However, the frequency of validation can be modified by setting various parameters "
+                "on the Trainer, for example `check_val_every_n_epoch` and `val_check_interval`."
+            ),
+        ),
+    ]
 
     model_config = ConfigDict(extra="forbid")
 
