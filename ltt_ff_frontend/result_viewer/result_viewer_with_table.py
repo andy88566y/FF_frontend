@@ -149,6 +149,11 @@ def app() -> None:
     with st.expander(label="LRF ClassType count"):
         class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
 
+    with st.expander(label="Inference Result Table"):
+        selected_lot_id_list = multi_lot_stats.draw_stats_df(
+            multi_lot_model_data, recipe, inference_result_dir, key="recipe_stats_df"
+        )
+
     if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart_column, col_roc_curve_column = st.columns(2)

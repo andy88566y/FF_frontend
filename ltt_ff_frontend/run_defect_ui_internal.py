@@ -7,7 +7,7 @@ from ltt_ff_frontend.defect_review_ui import defect_review_gui
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
 from ltt_ff_frontend.model_converter import model_converter
-from ltt_ff_frontend.result_viewer import result_viewer
+from ltt_ff_frontend.result_viewer import result_viewer, result_viewer_with_table
 from ltt_ff_frontend.training import training, training_by_config
 
 
@@ -17,6 +17,12 @@ if __name__ == "__main__":
     page_result_viewer = st.Page(
         result_viewer.app,
         url_path="result_viewer",
+        title="Result Viewer Summary",
+        icon=":material/search_check_2:",
+    )
+    page_result_viewer_with_table = st.Page(
+        result_viewer_with_table.app,
+        url_path="result_viewer_with_table",
         title="Result Viewer",
         icon=":material/search_check_2:",
     )
@@ -49,6 +55,7 @@ if __name__ == "__main__":
     pg = st.navigation(
         [
             page_result_viewer,
+            page_result_viewer_with_table,
             page_inference,
             page_comparison,
             page_defect_review_gui,
