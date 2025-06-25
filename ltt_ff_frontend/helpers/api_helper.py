@@ -1463,7 +1463,7 @@ def parse_data_yaml(data_yaml: dict[str, Any]) -> dict[str, Any]:
 
 @st.cache_data(ttl="1s")
 def generate_golden_set_from_data_yaml(
-    data_yaml: dict[str, Any], output_dir: str, output_prefix: str, copy_images: bool
+    data_yaml: dict[str, Any], output_dir: str, output_prefix: str, output_suffix: str, copy_images: bool
 ) -> dict[str, Any]:
     r = requests.post(
         API_ROOT + "generate_golden_set_from_data_yaml",
@@ -1471,6 +1471,7 @@ def generate_golden_set_from_data_yaml(
             "data_yaml": data_yaml,
             "output_dir": output_dir,
             "output_prefix": output_prefix,
+            "output_suffix": output_suffix,
             "copy_images": copy_images,
         },
         timeout=TIMEOUT,
