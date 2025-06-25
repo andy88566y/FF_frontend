@@ -164,7 +164,9 @@ def app() -> None:
             with st.expander(label="1D Prob Distribution Chart"):
                 st.plotly_chart(
                     prob_distribution_fig.generate_multilot_1D_plot(
-                        model_raw_data, multi_lot_model_data.model_metadata_list, recipe_threshold, selected_lot_id_list
+                        model_raw_data,
+                        multi_lot_model_data.model_metadata_list,
+                        recipe_threshold,
                     )
                 )
         with col_roc_curve_column:
@@ -175,5 +177,4 @@ def app() -> None:
                     model_raw_data,
                     multi_lot_model_data.model_metadata_list,
                     recipe_threshold,
-                    selected_lot_id_list,
                 )
