@@ -5,7 +5,7 @@ import streamlit as st
 import yaml
 from loguru import logger
 
-from ltt_ff_frontend.constant import LayerGroup, MaskType, ModelType, PixelSize, Site, TechLayer, Tool
+from ltt_ff_frontend.constant import LayerGroup, LRFType, MaskType, ModelType, PixelSize, Site, TechLayer, Tool
 from ltt_ff_frontend.helpers import api_helper
 
 
@@ -52,6 +52,7 @@ def app() -> None:
         label="Pixel Sizes to keep in data yaml", options=[ps.value for ps in PixelSize if ps.value is not None]
     )
     wanted_mask_type = st.multiselect(label="Mask Types to keep in data yaml", options=[mt.value for mt in MaskType])
+    wanted_lrf_type = st.multiselect(label="LRF Types to keep in data yaml", options=[lt.value for lt in LRFType])
 
     if st.button(label="Prepare filtered data yaml", type="secondary"):
         if data_yaml_file is None:
@@ -71,6 +72,7 @@ def app() -> None:
                 "layer_group": wanted_layer_groups,
                 "pixel_size": wanted_pixel_size,
                 "mask_type": wanted_mask_type,
+                "lrf_type": wanted_lrf_type,
             },
             filter_lots_list=filter_lots_list,
             keep_lots=keep_lots,

@@ -241,3 +241,12 @@ class APIGroup(PrintValueEnum):
 class ModelArchitecture(Enum):
     DUALSTREAMCNN = "DUALSTREAMCNN"
     DUALSTREAMCNN_V2 = "DUALSTREAMCNN_V2"
+
+
+class LRFType(Enum):
+    ADD = "ADD"
+    LTTADC = "LTTADC"
+    LTTSWADC = "LTTSWADC"
+    LTTADCEX = "LTTADCEX"
+    classified = "classified"
+    Classified = "Classified"
