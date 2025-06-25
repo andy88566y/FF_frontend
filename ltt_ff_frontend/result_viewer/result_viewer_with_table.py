@@ -1,6 +1,8 @@
 import json
+from datetime import datetime
 from decimal import Decimal
 
+import pandas as pd
 import streamlit as st
 import yaml
 from loguru import logger
@@ -150,9 +152,16 @@ def app() -> None:
         class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
 
     with st.expander(label="Inference Result Table"):
-        selected_lot_id_list = multi_lot_stats.draw_stats_df(
+        selected_lot_id_list, df = multi_lot_stats.draw_stats_df(
             multi_lot_model_data, recipe, inference_result_dir, key="recipe_stats_df"
         )
+
+    st.download_button(
+        label="Download inference result table",
+        data=df.to_csv(index=False),
+        file_name=f"inference_result_{datetime.now().astimezone()}.csv",
+        mime="text/csv",
+    )
 
     if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve
