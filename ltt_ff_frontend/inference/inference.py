@@ -124,6 +124,7 @@ def app() -> None:
             recipe=recipe,
             overwrite=inf_overwrite,
             gen_optimized_recipe=inf_gen_optimized_recipe,
+            inference_batch_size=recipe.get("batch_size", 32),
         )
 
         if request.json().get("status") == "error":
