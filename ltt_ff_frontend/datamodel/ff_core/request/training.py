@@ -3,6 +3,41 @@ from typing import Annotated, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class EarlyStoppingParams(BaseModel):
+    monitor: Annotated[
+        str,
+        Field(
+            default="val_loss",
+            description="Quantity to be monitored. Should be a available metric.",
+        ),
+    ]
+    mode: Annotated[
+        str,
+        Field(
+            default="min",
+            description=(
+                "One of 'min', 'max'. In 'min' mode, training will stop when the quantity "
+                "monitored has stopped decreasing and in 'max' mode it will stop when the "
+                "quantity monitored has stopped increasing."
+            ),
+        ),
+    ]
+    patience: Annotated[
+        int,
+        Field(
+            default=3,
+            description=(
+                "Number of checks with no improvement after which training will be stopped. "
+                "Under the default configuration, one check happens after every training epoch. "
+                "However, the frequency of validation can be modified by setting various parameters "
+                "on the Trainer, for example `check_val_every_n_epoch` and `val_check_interval`."
+            ),
+        ),
+    ]
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class ModelParams(BaseModel):
     model_type: Annotated[
         str,
@@ -44,6 +79,9 @@ class HyperParams(BaseModel):
         ),
     ]
     tool: Annotated[str, Field(default="x9u", description="Training tool.")]
+    early_stopping_params: Annotated[
+        EarlyStoppingParams | None, Field(default=None, description="Parameters for early stopping callback.")
+    ]
 
     model_config = ConfigDict(extra="forbid")
 
