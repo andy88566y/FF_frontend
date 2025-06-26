@@ -20,11 +20,13 @@ def app() -> None:
             data_yaml = yaml.load(data_yaml_file, Loader=yaml.Loader)
             st.json(data_yaml)
 
-    output_dir_col, output_prefix_col = st.columns(2)
-    with output_dir_col:
-        output_dir = st.text_input(label="LRF Output Directory", value="")
+    output_dir = st.text_input(label="LRF Output Directory", value="")
+
+    output_prefix_col, output_suffix_col = st.columns(2)
     with output_prefix_col:
-        output_prefix = st.text_input(label="Output LRF prefix", value="")
+        output_prefix = st.text_input(label="Output LRF prefix", value="", placeholder="Optional")
+    with output_suffix_col:
+        output_suffix = st.text_input(label="Output LRF suffix", value="", placeholder="Optional")
 
     copy_images = st.toggle(
         label="Copy Image Directory to LRF Output Directory and generate updated Data Yaml",
@@ -43,13 +45,17 @@ def app() -> None:
         )
 
     if st.button(label="Generate golden set LRFs"):
-        if not data_yaml_file or not output_dir or not output_prefix:
-            st.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF prefix.")
-            logger.error("Please input Data Yaml Path, LRF Output Directory, and Output LRF prefix.")
+        if not data_yaml_file or not output_dir:
+            st.error("Please input Data Yaml Path and LRF Output Directory.")
+            logger.error("Please input Data Yaml Path and LRF Output Directory.")
             return
 
         request = api_helper.generate_golden_set_from_data_yaml(
-            data_yaml=data_yaml, output_dir=output_dir, output_prefix=output_prefix, copy_images=copy_images
+            data_yaml=data_yaml,
+            output_dir=output_dir,
+            output_prefix=output_prefix,
+            output_suffix=output_suffix,
+            copy_images=copy_images,
         )
 
         if request.get("status") == "error":

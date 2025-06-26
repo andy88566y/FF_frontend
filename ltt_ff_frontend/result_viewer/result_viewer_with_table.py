@@ -1,6 +1,8 @@
 import json
+from datetime import datetime
 from decimal import Decimal
 
+import pandas as pd
 import streamlit as st
 import yaml
 from loguru import logger
@@ -149,6 +151,18 @@ def app() -> None:
     with st.expander(label="LRF ClassType count"):
         class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
 
+    with st.expander(label="Inference Result Table"):
+        selected_lot_id_list, df = multi_lot_stats.draw_stats_df(
+            multi_lot_model_data, recipe, inference_result_dir, key="recipe_stats_df"
+        )
+
+    st.download_button(
+        label="Download inference result table",
+        data=df.to_csv(index=False),
+        file_name=f"inference_result_{datetime.now().astimezone()}.csv",
+        mime="text/csv",
+    )
+
     if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart_column, col_roc_curve_column = st.columns(2)
@@ -164,9 +178,7 @@ def app() -> None:
             with st.expander(label="1D Prob Distribution Chart"):
                 st.plotly_chart(
                     prob_distribution_fig.generate_multilot_1D_plot(
-                        model_raw_data,
-                        multi_lot_model_data.model_metadata_list,
-                        recipe_threshold,
+                        model_raw_data, multi_lot_model_data.model_metadata_list, recipe_threshold, selected_lot_id_list
                     )
                 )
         with col_roc_curve_column:
@@ -177,4 +189,5 @@ def app() -> None:
                     model_raw_data,
                     multi_lot_model_data.model_metadata_list,
                     recipe_threshold,
+                    selected_lot_id_list,
                 )

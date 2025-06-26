@@ -6,6 +6,7 @@ import streamlit as st
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
 
+
 BG_COLORS = {
     "red": "#ffcccb",
     "yellow": "#ffeb3b",
@@ -22,6 +23,7 @@ TEXT_COLORS = {
     "blue": "#1109D4",
     "default": "#000000",
 }
+
 
 def highlight_capture_rate(column):
     styles = []
@@ -59,33 +61,33 @@ def highlight_oos(row):
     false_filter_rate_index = row.index.get_loc(false_filter_rate_key)
 
     if false_filter_rate == -1:
-        highlight_text_color = TEXT_COLORS['default']
+        highlight_text_color = TEXT_COLORS["default"]
     else:
         if true_defect_count > 150:
             if false_filter_rate >= 0.9:
                 # blue
-                highlight_text_color = TEXT_COLORS['blue']
+                highlight_text_color = TEXT_COLORS["blue"]
             else:
                 # red
-                highlight_text_color = TEXT_COLORS['red']
+                highlight_text_color = TEXT_COLORS["red"]
         else:
             if total_defect_to_be_count <= 20:
                 # green
-                highlight_text_color = TEXT_COLORS['default']
+                highlight_text_color = TEXT_COLORS["default"]
             elif 20 < total_defect_to_be_count and total_defect_to_be_count <= 150:
-                if false_filter_rate >= 0.9: 
+                if false_filter_rate >= 0.9:
                     # green
-                    highlight_text_color = TEXT_COLORS['default']
+                    highlight_text_color = TEXT_COLORS["default"]
                 elif false_filter_rate < 0.9:
                     # orange, OOS, but not as critical
-                    highlight_text_color = TEXT_COLORS['orange']
+                    highlight_text_color = TEXT_COLORS["orange"]
             elif total_defect_to_be_count > 150:
                 # red, OOS
-                highlight_text_color = TEXT_COLORS['red']
+                highlight_text_color = TEXT_COLORS["red"]
     row_styles = [""] * len(row)
     row_styles[to_be_defect_count_index] = f"color: {highlight_text_color}; font-weight: bold;"
     row_styles[false_filter_rate_index] = f"color: {highlight_text_color}; font-weight: bold;"
-    
+
     return row_styles
 
 
@@ -105,7 +107,7 @@ def draw_stats_df(
     recipe: dict[str, Any],
     inference_result_dir: str,
     key: str,
-) -> list[str]:
+) -> tuple[list[str], pd.DataFrame]:
     rows = []
     count_rate_data = api_helper.get_recipe_filtered_results_from_api(inference_result_dir, recipe=recipe)
     for data, meta in zip(count_rate_data, multi_lot_model_data.model_metadata_list):
@@ -131,7 +133,7 @@ def draw_stats_df(
 def gen_stats_df_by_data_list(
     data: list[list[str]],
     key: str,
-) -> list[str]:
+) -> tuple[list[str], pd.DataFrame]:
     index = [
         ("Lot", "ID"),
         ("Total Defect Count", "As-is"),
@@ -166,4 +168,4 @@ def gen_stats_df_by_data_list(
     selected_rows = event.selection.rows
     selected_df = df.iloc[selected_rows]
     selected_lot_id_list = selected_df["Lot"]["ID"].tolist()
-    return selected_lot_id_list
+    return selected_lot_id_list, df
