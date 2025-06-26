@@ -20,7 +20,7 @@ def app() -> None:
             data_yaml = yaml.load(data_yaml_file, Loader=yaml.Loader)
             st.json(data_yaml)
 
-    output_dir = st.text_input(label="LRF Output Directory", value="")
+    output_dir = st.text_input(label="Output Directory", value="")
 
     output_prefix_col, output_suffix_col = st.columns(2)
     with output_prefix_col:
@@ -29,12 +29,11 @@ def app() -> None:
         output_suffix = st.text_input(label="Output LRF suffix", value="", placeholder="Optional")
 
     copy_images = st.toggle(
-        label="Copy Image Directory to LRF Output Directory and generate updated Data Yaml",
+        label="Copy Image Directory to Output Directory and generate updated Data Yaml",
         value=False,
     )
 
     if copy_images:
-        st.markdown(":red[If enabled, existing files in LRF Output Directory may be overwritten.]")
         st.text(
             "If enabled, image_dir must be included in the data yaml. If there are missing image_dir entries, "
             + "they will not be copied, and the list of lots with missing image_dir will be shown."
@@ -43,6 +42,10 @@ def app() -> None:
             "A new data yaml file with the new LRF path and new image_dir will be generated in the LRF Output "
             + "Directory. It can be directly  used as a data yaml file on the Inference UI."
         )
+
+        remove_existing_image_dir = st.toggle(label="Remove existing Image Directory in Output Directory", value=False)
+    else:
+        remove_existing_image_dir = False
 
     if st.button(label="Generate golden set LRFs"):
         if not data_yaml_file or not output_dir:
@@ -56,6 +59,7 @@ def app() -> None:
             output_prefix=output_prefix,
             output_suffix=output_suffix,
             copy_images=copy_images,
+            remove_existing_image_dir=remove_existing_image_dir,
         )
 
         if request.get("status") == "error":
