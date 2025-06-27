@@ -5,6 +5,7 @@ from ltt_ff_frontend.data_yaml_processor import data_yaml_processor
 from ltt_ff_frontend.defect_review_ui import defect_diff_viewer, defect_review_gui
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
+from ltt_ff_frontend.regression_test_ui import regression_test
 from ltt_ff_frontend.result_viewer import result_viewer, result_viewer_summary
 from ltt_ff_frontend.training import training, training_by_config
 
@@ -34,6 +35,12 @@ if __name__ == "__main__":
     page_defect_diff_viewer = st.Page(
         defect_diff_viewer.app, url_path="defect_diff_viewer", title="Defect Viewer", icon=":material/image_search:"
     )
+    page_regression_test = st.Page(
+        regression_test.app,
+        url_path="regression_test",
+        title="Regression Test",
+        icon=":material/action_key:",
+    )
     page_defect_review_gui = st.Page(
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
@@ -55,6 +62,8 @@ if __name__ == "__main__":
             page_result_viewer_summary,
             page_inference,
             page_result_viewer,
+            page_inference,
+            page_regression_test,
             page_defect_diff_viewer,
             page_defect_review_gui,
             page_training,

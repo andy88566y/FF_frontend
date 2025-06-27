@@ -1495,3 +1495,18 @@ def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
         data_lots = {d["lot_id"]: d for d in raw_data_lots["data_paths"]}
     logger.success(f"Total lots loaded: {len(data_lots)}")
     return data_lots
+
+
+#####################################################################################################
+# Regression Test                                                                                #
+#####################################################################################################
+def get_valid_lots(test_data: Any) -> dict[str, Any]:
+    data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
+    r = requests.post(
+        API_ROOT + "get_valid_lots",
+        json={
+            "data_lots": data_lots,
+        },
+        timeout=TIMEOUT,
+    )
+    return r.json()
