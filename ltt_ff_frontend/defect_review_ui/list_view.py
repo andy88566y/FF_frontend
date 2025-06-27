@@ -163,6 +163,8 @@ def app(result_dir: str, image_dir: str) -> None:
     # Initialize session state for filter criteria
     if "filter_column" not in st.session_state:
         st.session_state.filter_column = df.columns[0]
+    if "filter_operator" not in st.session_state:
+        st.session_state.filter_operator = "="
     if "filter_value" not in st.session_state:
         st.session_state.filter_value = ""
     if "filtered_df" not in st.session_state:
@@ -173,6 +175,7 @@ def app(result_dir: str, image_dir: str) -> None:
     previous_lot_id = st.session_state.get("lot_id", None)
     if previous_result_dir != result_dir or previous_lot_id != selected_lot_id:
         st.session_state.filter_column = df.columns[0]
+        st.session_state.filter_operator = "="
         st.session_state.filter_value = ""
         st.session_state.filtered_df = df
         st.session_state.selection_source = ""
@@ -180,7 +183,7 @@ def app(result_dir: str, image_dir: str) -> None:
         st.session_state.lot_id = selected_lot_id
 
     # Create three columns (prob threshold, filter options, message to show filtered values)
-    threshold_col, filter_options_col, filter_value_col, filter_message_col = st.columns([1, 1, 2, 1])
+    threshold_col, filter_options_col, filter_operators_col, filter_value_col, filter_message_col = st.columns([1, 1, 1, 2, 1])
 
     # Add threshold selection
     with threshold_col:
@@ -201,12 +204,23 @@ def app(result_dir: str, image_dir: str) -> None:
         specific_columns = ["UniqueID", "X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster"]
         # Filter the DataFrame columns to only include the specific columns
         filtered_columns = [col for col in df.columns if col in specific_columns]
-
+        print(filtered_columns)
         # Use the filtered columns in the selectbox
         st.session_state.filter_column = st.selectbox(
             label="Filter options",
             options=filtered_columns,
             index=filtered_columns.index(st.session_state.filter_column),
+        )
+
+    with filter_operators_col:
+        # Define the columns I want to display        
+        operator_columns = ["=", ">", ">=", "<=", "<"] 
+
+        # Use the filtered columns in the selectbox
+        st.session_state.filter_operator = st.selectbox(
+            label="Filter operators",
+            options=operator_columns,
+            index=operator_columns.index(st.session_state.filter_operator),
         )
 
     # Add filter value text input, confirm button, and cancel button
