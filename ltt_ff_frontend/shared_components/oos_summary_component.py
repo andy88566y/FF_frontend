@@ -92,12 +92,7 @@ def calculate_oos_summary(
     }
 
 
-def gen(
-    recipe: dict[str, Any],
-    inference_result_dir: str,
-) -> None:
-    inference_results = api_helper.get_recipe_filtered_results_from_api(inference_result_dir, recipe=recipe)
-
+def gen(inference_results: list[dict[str, Any]]) -> None:
     all_summary = calculate_oos_summary(inference_results, "ALL")
     greater_equal_150_summary = calculate_oos_summary(inference_results, ">=150")
     smaller_150_summary = calculate_oos_summary(inference_results, "<150")

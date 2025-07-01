@@ -100,6 +100,20 @@ def get_model_details(model_name: str) -> dict[str, Any]:
         return model_details
 
 
+#####################################################################################################
+# Result Viewer components                                                                          #
+#####################################################################################################
+def get_result_viewer_components(inference_result_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
+    params = {"inference_result_dir": inference_result_dir, "recipe": recipe}
+    r = requests.post(API_ROOT + "result/get_result_viewer_components", json=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "completed":
+        return r.json()["result_viewer_components"]
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
 def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]) -> list[dict[str, Any]]:
     """
     get calculated results from ff core
@@ -125,10 +139,10 @@ def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]
     params = {"inference_result_dir": output_dir, "recipe": recipe}
     r = requests.get(API_ROOT + "result/get_filtered_stats", json=params, timeout=TIMEOUT)
 
-    if r.status_code == requests.codes.ok:
-        return r.json()["filtered_stats"]
-    else:
+    if r.status_code != requests.codes.ok:
         r.raise_for_status()
+
+    return r.json()["filtered_stats"]
 
 
 def get_missed_defects(
@@ -164,6 +178,9 @@ def get_particle_mode_only_defects(
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
+#####################################################################################################
+# DB functions                                                                                      #
+#####################################################################################################
 @st.cache_data(ttl="10s")
 def get_db_metadata_lists(output_dir: str, lot_id: str = "") -> list[dict[str, Any]]:
     """
