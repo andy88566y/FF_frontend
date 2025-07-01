@@ -1510,3 +1510,51 @@ def get_valid_lots(test_data: Any) -> dict[str, Any]:
         timeout=TIMEOUT,
     )
     return r.json()
+
+def request_regression_test(
+    api_output_dir_root: str,
+    valid_data_lots: dict[str, Any],
+    recipe_config: dict[str, Any],
+    run_layer: list[str],
+    run_site: list[str],
+    run_mode: list[str]
+) -> requests.Response:
+    """
+    Calls FalseFilter API to run Regression Test.
+
+    Args:
+        output_dir: Directory to store the generated database file and filtered .lrf file.
+        multilot_config: Dict containing lot info (lot id, lrf path, image dir)
+        recipe: Inference recipe containing models names and thresholds.
+        base_model: Name of inference model.
+        confidence_threshold: Images with defect probability higher than confidence threshold is considered defective.
+        inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
+        overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
+                   If overwrite=True, the entire result directory will be cleared.
+        gen_optimized_recipe: If set to True, generate a new recipe with optimized threshold by threshold picker.
+
+    Returns the reponse of the API request.
+    """
+
+    r = requests.post(
+        API_ROOT + "run_regression_test",
+        json={
+            "api_server": API_ROOT,
+            "api_output_dir_root": api_output_dir_root,
+            "valid_data_lots": valid_data_lots,
+            "recipe_config": recipe_config,
+            "run_layer": run_layer,
+            "run_site": run_site,
+            "run_mode": run_mode,
+        },
+        timeout=TIMEOUT,
+    )
+
+    status = r.json()["status"]
+
+    if status == "started":
+        logger.info("Regression Test started running successfully!")
+    else:
+        logger.error(f"Error occurred when calling Regression Test API: {r.json()['message']}")
+
+    return r

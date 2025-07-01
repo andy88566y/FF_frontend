@@ -1,25 +1,22 @@
 # ruff: noqa: F841
 import json
+import os
 
+import pandas as pd
 import streamlit as st
 import yaml
 from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper
+from ltt_ff_frontend.shared_components import helper, stop_job_button
 
 from .regression_utils import gen_lots_stats, update_config_by_txt, update_config_by_yaml
 
-
-DEFAULT_API_SERVER = "http://192.168.201.11:7500"
 DEFAULT_DATA_YAML = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/WXXX_data_XXX.yaml"
-DEFAULT_OUTPUT_DIR_ROOT = "/mnt/output/mle_regression_test"
-
 
 def app():
     st.title("Regression Test Dashboard")
     st.caption("Configure and run regression tests")
-
-    api_server = st.text_input("API Server", value=DEFAULT_API_SERVER)
     r1_col1, _r1_col2, r1_col3 = st.columns([10, 1, 10])
     with r1_col1:
         # Load config
@@ -76,7 +73,7 @@ def app():
     r3_col1, _r3_col2, r3_col3 = st.columns([10, 1, 10])
     with r3_col1:
         layer_filter = st.multiselect("Layer Filter", layers, default=layers)
-        output_dir = st.text_input("Output Directory", value=f"{DEFAULT_OUTPUT_DIR_ROOT}/2025-06-27")
+        output_dir = st.text_input("Output Directory")
     with r3_col3:
         site_filter = st.multiselect("Site Filter", sites, default=sites)
         run_modes = st.multiselect(
@@ -85,17 +82,106 @@ def app():
 
     # Run button
     if st.button("Run Regression Test", type="primary"):
-        st.success("Regression test triggered (mock).")  # Replace with actual API call
+        if not helper.is_valid_output_dir(output_dir):
+            st.error("please enter valid output dir.")
+            return
+
+        # Ensure input result directory is safe
+        reg_output_dir = os.path.normpath(output_dir)
+
+        # Validate user input first
+        if not recipe_config:
+            logger.error("Missing input detected. Please upload .json recipe config file.")
+            st.error("Missing input detected. Please upload .json recipe config file.")
+        if not data_yaml:
+            logger.error("Missing input detected. Please upload .yaml data config file.")
+            st.error("Missing input detected. Please upload .yaml data  config file.")
+        if not reg_output_dir:
+            logger.error("Missing input detected. Please enter the Result Directory.")
+            st.error("Missing input detected. Please enter the Result Directory.")
+
+        lot_info_validity = api_helper.is_valid_yaml_config(test_data, "lots")
+        if lot_info_validity["status"] != "completed":
+            st.error(lot_info_validity["message"])
+            logger.error(lot_info_validity["message"])
+            return
+        request = api_helper.request_regression_test(
+            reg_output_dir,
+            valid_data_lots["valid_lots"],
+            recipe_config,
+            layer_filter,
+            site_filter,
+            run_modes
+        )
+
+        if request.json().get("status") == "error":
+            code = request.json().get("code")
+            message = request.json().get("message")
+            st.text(f"Error code: {code}\nError message: {message}")
+        else:
+            st.session_state.testcase_inference_map = request.json().get("testcase_inference_map")
+
 
     st.divider()
 
-    # Job status
-    st.subheader("Multilot Job Status")
-    if st.button("Check Multilot Jobs"):
-        jobs = api_helper.request_paginated_multilot_inference_status(page_size=10, current_page=1)
-        st.dataframe(jobs)
+    #####################################################################################################
+    # Multilot job status                                                                               #
+    #####################################################################################################
+    if "status_df_multi_inf" not in st.session_state:
+        st.session_state.status_df_multi_inf = pd.DataFrame()
+    if "detailed_df_multi_inf" not in st.session_state:
+        st.session_state.detailed_df_multi_inf = pd.DataFrame()
 
-    st.subheader("Inference Job Status")
-    if st.button("Check Inference Jobs"):
-        jobs = api_helper.request_paginated_inference_status(page_size=10, current_page=1)
-        st.dataframe(jobs)
+    col1, col2 = st.columns(2, vertical_alignment="bottom")
+
+    with col1:
+        if st.button("Check all multilot inference jobs"):
+            page_size = 10
+            current_page = 1
+            st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
+                page_size, current_page
+            )
+
+    progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
+
+    # Pagination settings
+    with col2:
+        page_size = 10
+        current_page = st.number_input("Page number", min_value=1, value=1, step=1, key="multilot_page")
+        st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
+            page_size, current_page
+        )
+
+    st.header("All multilot inference jobs") if not st.session_state.status_df_multi_inf.empty else st.write("")
+
+    # Draw status overview table
+    event_multilot_inf = (
+        st.dataframe(
+            st.session_state.status_df_multi_inf,
+            key="statuses_multilot_inference",
+            on_select="rerun",
+            selection_mode="multi-row",
+            use_container_width=True,
+            column_config={"progress": progress_column},
+        )
+        if not st.session_state.status_df_multi_inf.empty
+        else st.write("")
+    )
+
+    if event_multilot_inf and event_multilot_inf.selection:
+        # Check if the 'row' value's list is not empty
+        if event_multilot_inf.selection["rows"]:
+            # Get list of inference_id for all selected inference jobs
+            selected_multilot_inference_id = [
+                st.session_state.status_df_multi_inf.iloc[i]["multilot_inference_id"]
+                for i in event_multilot_inf.selection["rows"]
+            ]
+
+            # Get detailed statuses for each inference job and combine into one df
+            st.session_state.detailed_df_multi_inf = api_helper.request_multilot_inference_statuses(
+                selected_multilot_inference_id
+            )
+            st.dataframe(st.session_state.detailed_df_multi_inf, use_container_width=True)
+            stop_job_button.gen(st.session_state.detailed_df_multi_inf)
+
+
