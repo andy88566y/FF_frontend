@@ -1,4 +1,5 @@
 import os
+import operator
 import random
 import re
 
@@ -204,7 +205,6 @@ def app(result_dir: str, image_dir: str) -> None:
         specific_columns = ["UniqueID", "X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster"]
         # Filter the DataFrame columns to only include the specific columns
         filtered_columns = [col for col in df.columns if col in specific_columns]
-        print(filtered_columns)
         # Use the filtered columns in the selectbox
         st.session_state.filter_column = st.selectbox(
             label="Filter options",
@@ -212,15 +212,22 @@ def app(result_dir: str, image_dir: str) -> None:
             index=filtered_columns.index(st.session_state.filter_column),
         )
 
-    with filter_operators_col:
-        # Define the columns I want to display        
-        operator_columns = ["=", ">", ">=", "<=", "<"] 
+    
+    ops = {
+        "=": operator.eq,
+        ">": operator.gt,
+        ">=": operator.ge,
+        "<=": operator.le,
+        "<": operator.lt,
+    }
 
-        # Use the filtered columns in the selectbox
+    with filter_operators_col:
+        operator_columns = list(ops.keys())
+        index = operator_columns.index(st.session_state.filter_operator) if st.session_state.filter_operator in operator_columns else 0
         st.session_state.filter_operator = st.selectbox(
             label="Filter operators",
             options=operator_columns,
-            index=operator_columns.index(st.session_state.filter_operator),
+            index=index,
         )
 
     # Add filter value text input, confirm button, and cancel button
@@ -231,11 +238,25 @@ def app(result_dir: str, image_dir: str) -> None:
                 label="Filter value",
                 value=st.session_state.filter_value,
             )
+        
         with confirm_col:
-            if st.button(label="Apply Filter", icon=":material/check:", use_container_width=True):
-                st.session_state.filtered_df = df[
-                    df[st.session_state.filter_column].astype(str) == st.session_state.filter_value
-                ]
+            if st.button(label="Apply Filter", use_container_width=True):
+                try:
+                    col = st.session_state.filter_column
+                    op = ops[st.session_state.filter_operator]
+                    val = st.session_state.filter_value
+
+                    # Try to convert value to the same type as the column
+                    col_dtype = df[col].dtype
+                    if col_dtype.kind in "iuf": # numeric types
+                        val = float(val)
+                    elif col_dtype.kind == "b": # boolean
+                        val = val.lower() in ["true", "1", "yes"]
+                    # else keep as string
+                    st.session_state.filtered_df = df[op(df[col], val)]
+                except Exception as e:
+                    st.warning(f"Could not apply filter: {e}")
+
                 # st.session_state.filtered_df.set_index("No", inplace=True)
         with cancel_col:
             if st.button(label="Remove Filter", icon=":material/close:", use_container_width=True):
