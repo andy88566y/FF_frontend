@@ -13,89 +13,27 @@ The format of this summary mirrors the run test excel table done by the PE team.
 """
 
 
-def calculate_avg_ffr_per_lot(filtered_inference_results: list[dict[str, Any]]) -> float:
-    ffr_per_lot = []
-    for lot in filtered_inference_results:
-        true_negative = lot["true_negative"]
-        false_defects = lot["as_is_non_defect_count"]
-        false_filter_rate = true_negative / false_defects if false_defects > 0 else -1
-        if false_filter_rate >= 0.0:
-            ffr_per_lot.append(false_filter_rate)
-
-    return sum(ffr for ffr in ffr_per_lot) / len(ffr_per_lot) if len(ffr_per_lot) > 0 else -1
-
-
-# TODO: move calculations to backend
-def calculate_oos_summary(
-    inference_results: list[dict[str, Any]], mode: Literal["ALL", ">=150", "<150"]
-) -> dict[str, Any]:
-    if mode == ">=150":
-        filtered_inference_results = [lot for lot in inference_results if lot["as_is_defect_count"] >= 150]
-    elif mode == "<150":
-        filtered_inference_results = [lot for lot in inference_results if lot["as_is_defect_count"] < 150]
-    else:
-        filtered_inference_results = inference_results
-
-    logger.debug(f"Lot count: {len(filtered_inference_results)}")
-
-    as_is = sum(lot["as_is_defect_count"] for lot in filtered_inference_results)
-    logger.debug(f"As-is: {as_is}")
-
-    to_be = sum(lot["to_be_defect_count"] for lot in filtered_inference_results)
-    logger.debug(f"To-be: {to_be}")
-
-    # Calculate CR%
-    true_positives = sum(lot["to_be_true_defect_count"] for lot in filtered_inference_results)
-    true_defects = sum(lot["as_is_true_defect_count"] for lot in filtered_inference_results)
-    capture_rate = true_positives / true_defects if true_defects > 0 else -1
-    capture_rate_display = f"({true_positives}/{true_defects}) {(capture_rate * 100):.2f}%"
-    logger.debug(f"CR%: {capture_rate_display}")
-
-    # Calculate FFR%
-    true_negative = sum(lot["true_negative"] for lot in filtered_inference_results)
-    false_defects = sum(lot["as_is_non_defect_count"] for lot in filtered_inference_results)
-    false_filter_rate = true_negative / false_defects if false_defects > 0 else -1
-    false_filter_rate_display = f"({true_negative}/{false_defects}) {(false_filter_rate * 100):.2f}%"
-    logger.debug(f"FFR%: {false_filter_rate_display}")
-
-    avg_ffr_per_lot = calculate_avg_ffr_per_lot(filtered_inference_results)
-    avg_ffr_per_lot_display = f"{(avg_ffr_per_lot * 100):.2f}%"
-    logger.debug(f"FFR per Lots: {avg_ffr_per_lot_display}")
-
-    lots_with_miss_catch = sum(1 for lot in filtered_inference_results if lot["result"]["Capture Rate"] == "OOS")
-    logger.debug(f"A. Miss Catch: {lots_with_miss_catch}")
-
-    lots_with_high_false = sum(1 for lot in filtered_inference_results if lot["result"]["False Filter Rate"] == "OOS")
-    logger.debug(f"B. High False: {lots_with_high_false}")
-
-    success_lots = sum(
-        1
-        for lot in filtered_inference_results
-        if (lot["result"]["Capture Rate"] != "OOS" and lot["result"]["False Filter Rate"] != "OOS")
-    )
-    logger.debug(f"Success lots: {success_lots}")
-
-    return {
-        "Mode": mode,
-        "LOT": len(filtered_inference_results),
-        "As-is": as_is,
-        "To_be": to_be,
-        "AFD": true_positives,
-        "MDC": true_defects,
-        "FF": true_negative,
-        "CR%": capture_rate_display,
-        "FFR%": false_filter_rate_display,
-        "FFR per Lots": avg_ffr_per_lot_display,
-        "A. Miss Catch": lots_with_miss_catch,
-        "B. High False": lots_with_high_false,
-        "Success Lots": success_lots,
-    }
-
-
-def gen(inference_results: list[dict[str, Any]]) -> None:
-    all_summary = calculate_oos_summary(inference_results, "ALL")
-    greater_equal_150_summary = calculate_oos_summary(inference_results, ">=150")
-    smaller_150_summary = calculate_oos_summary(inference_results, "<150")
+def gen(oos_calculation: dict[str, Any]) -> None:
+    all_summary = oos_calculation["all"]
+    greater_equal_150_summary = oos_calculation[">=150"]
+    smaller_150_summary = oos_calculation["<150"]
 
     df = pd.DataFrame([all_summary, greater_equal_150_summary, smaller_150_summary])
+    df = df[
+        [
+            "Mode",
+            "LOT",
+            "As-is",
+            "To-be",
+            "AFD",
+            "MDC",
+            "FF",
+            "CR%",
+            "FFR%",
+            "FFR per Lots",
+            "A. Miss Catch",
+            "B. High False",
+            "Success Lots",
+        ]
+    ]
     st.dataframe(data=df, hide_index=True, use_container_width=False)

@@ -141,7 +141,7 @@ def app() -> None:
     )
 
     with st.expander(label="OOS Summary"):
-        oos_summary_component.gen(inference_results=result_viewer_components["oos_summary"])
+        oos_summary_component.gen(oos_calculation=result_viewer_components["oos_summary"])
 
     with st.expander(label="Missed defects"):
         missed_defects_component.gen(missed_defects=result_viewer_components["missed_defects"])
