@@ -11,6 +11,7 @@ from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper, stop_job_button
 
 from .regression_utils import gen_lots_stats, update_config_by_txt, update_config_by_yaml
+from .regression_constant import LAYERS, SITES, RUN_MODES
 
 DEFAULT_DATA_YAML = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/WXXX_data_XXX.yaml"
 
@@ -68,16 +69,15 @@ def app():
             st.dataframe(gen_lots_stats(valid_data_lots["valid_lots"]))
 
     # Layer and site filters
-    layers = ["OD", "PO", "CUT", "M0M2", "M1", "VIA"]
-    sites = ["F20", "F12", "F18A", "F18B", "F18EBO", "F15EBO"]
+
     r3_col1, _r3_col2, r3_col3 = st.columns([10, 1, 10])
     with r3_col1:
-        layer_filter = st.multiselect("Layer Filter", layers, default=layers)
+        layer_filter = st.multiselect("Layer Filter", LAYERS, default=LAYERS)
         output_dir = st.text_input("Output Directory")
     with r3_col3:
-        site_filter = st.multiselect("Site Filter", sites, default=sites)
+        site_filter = st.multiselect("Site Filter", SITES, default=SITES)
         run_modes = st.multiselect(
-            "Run modes", ["Normal", "with Rule", "Rule only"], ["Normal", "with Rule", "Rule only"]
+            "Run modes", RUN_MODES, RUN_MODES
         )
 
     # Run button

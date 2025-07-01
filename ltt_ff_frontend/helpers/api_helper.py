@@ -851,6 +851,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
             "end_time",
             "runtime",
             "lot_info",
+            "output_dir"
         ]
     )
 
