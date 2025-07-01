@@ -687,8 +687,8 @@ def request_multilot_inference(
     r = requests.post(
         API_ROOT + "multilot_inference",
         json={
-            "output_dir": output_dir,
-            "lot_info": multilot_config,
+            "result_dir": output_dir,
+            "multilot_config": multilot_config,
             "recipe": recipe,
             "batch_size": inference_batch_size,
             "overwrite": overwrite,
