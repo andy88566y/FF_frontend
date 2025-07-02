@@ -13,7 +13,9 @@ def gen(missed_defects: list[dict[str, Any]]) -> None:
 
     for missed_defect_per_lot in missed_defects:
         for k, v in missed_defect_per_lot.items():
-            df.loc[len(df)] = pd.Series({"Lot ID": k, "Missed defects": v if len(v) > 0 else ["No missed defects!"]})
+            if len(v) == 0:
+                continue
+            df.loc[len(df)] = pd.Series({"Lot ID": k, "Missed defects": v})
 
     st.download_button(
         label="Download missed defect list as csv",
