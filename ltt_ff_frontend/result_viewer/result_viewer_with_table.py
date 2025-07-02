@@ -138,18 +138,23 @@ def app() -> None:
     with st.container():
         st.subheader("Inference Results")
 
+    result_viewer_components = api_helper.get_result_viewer_components(
+        inference_result_dir=inference_result_dir, recipe=recipe
+    )
+
     with st.expander(label="OOS Summary"):
-        oos_summary_component.gen(recipe, inference_result_dir)
+        oos_summary_component.gen(oos_calculation=result_viewer_components["oos_summary"])
 
     with st.expander(label="Missed defects"):
-        missed_defects_component.gen(recipe, inference_result_dir)
+        missed_defects_component.gen(missed_defects=result_viewer_components["missed_defects"])
 
     with st.expander(label="ParticleMode defects"):
-        particle_mode_defects_component.gen(inference_result_dir)
+        particle_mode_defects_component.gen(
+            particle_mode_only_defects=result_viewer_components["particle_mode_only_defects"]
+        )
 
-    # TODO: Get classtype grouping from backend
     with st.expander(label="LRF ClassType count"):
-        class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
+        class_type_component.gen(classtype_count_list=result_viewer_components["classtype_count"])
 
     with st.expander(label="Inference Result Table"):
         selected_lot_id_list, df = multi_lot_stats.draw_stats_df(

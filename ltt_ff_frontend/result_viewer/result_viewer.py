@@ -151,9 +151,8 @@ def app() -> None:
             particle_mode_only_defects=result_viewer_components["particle_mode_only_defects"]
         )
 
-    # TODO: Get classtype grouping from backend
     with st.expander(label="LRF ClassType count"):
-        class_type_component.gen(inference_result_dir, multi_lot_model_data.model_metadata_list)
+        class_type_component.gen(classtype_count_list=result_viewer_components["classtype_count"])
 
     if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve
