@@ -5,17 +5,17 @@ import streamlit as st
 import yaml
 from loguru import logger
 
-from ltt_ff_frontend.constant import BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, ResultViewerComponents
+from ltt_ff_frontend.constant import INFERENCE_DEFAULT_RESULT_DIR, ResultViewerComponents
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import (
     class_type_component,
     helper,
     missed_defects_component,
-    multi_lot_stats,
     new_lrf_button,
     oos_summary_component,
     particle_mode_defects_component,
     prob_distribution_fig,
+    recipe_preview,
     roc_fig,
 )
 
@@ -33,8 +33,6 @@ def app() -> None:
 
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
 
-    recipe = None
-
     with r1_col1:
         inference_result_dir = st.text_input("Inference Result Directory", value=INFERENCE_DEFAULT_RESULT_DIR)
     with r1_col2:
@@ -44,92 +42,35 @@ def app() -> None:
             return
 
     if helper.is_valid_output_dir(inference_result_dir):
-        multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
-        with r1_col2:
-            if multi_lot_model_data is None:
-                st.error(f"Error getting result data from {inference_result_dir}")
-                return
+        # multi_lot_model_data contains metadata, defect_id_list, probability_list and answer_list for each DB
+        try:
+            multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
+        # logger.warning(len(multi_lot_model_data.model_metadata_list))
+        # logger.error(len(multi_lot_model_data.defect_id_lists))
+        # logger.warning(len(multi_lot_model_data.probability_lists))
+        # logger.error(len(multi_lot_model_data.answer_lists))
+        except ValueError as e:
+            st.error(f"{e}\n\nError getting result data from {inference_result_dir}")
+            return
+
         recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
         if all(recipe == recipe_list[0] for recipe in recipe_list):
             db_recipe = json.loads(recipe_list[0])
-            filtered_db_recipe = helper.filter_recipe_columns(db_recipe)
         else:
             st.error("Not all lots use same recipe.")
             return
     else:
-        filtered_db_recipe = {"recipes": []}
+        db_recipe = {}
 
-    if st_recipe_type == YAML_MODE:
-        col, _ = st.columns([3, 4])
-        with col:
-            yaml_help_text = """
-            **Example of a valid recipe:**\n
-            recipes:\n
-            \\- model_name: base/model_1.encrypted.pth\n
-            &nbsp;&nbsp;threshold: 0.5\n
-            \\- model_name: base/model_2.encrypted.pth\n
-            &nbsp;&nbsp;threshold: 0.9\n
-            """
-            recipe_file = st.file_uploader("Upload Recipe (.yaml)", type=".yaml", help=yaml_help_text)
-            if recipe_file is not None:
-                uploaded_recipe = yaml.load(recipe_file, Loader=yaml.Loader)
-                recipe_to_preview = uploaded_recipe
-                recipe = uploaded_recipe
-    elif st_recipe_type == DB_MODE:
-        if helper.is_valid_output_dir(inference_result_dir):
-            recipe_to_preview = filtered_db_recipe
-            recipe = db_recipe
-    elif st_recipe_type == CREATOR_MODE:
-        available_models = api_helper.get_base_models(include_blank=True)
-        recipe_models = []
-        recipe_model_thresholds = []
-        for i in range(5):
-            col1, col2, _ = st.columns([3, 2, 2])
-            with col1:
-                recipe_model = st.selectbox(
-                    f"Model {i + 1}", options=available_models, format_func=helper.format_model_name
-                )
-                recipe_models.append(recipe_model)
-            with col2:
-                input_threshold = st.number_input(
-                    label=f"Model {i + 1} threshold:",
-                    value=api_helper.get_model_threshold(model_name=recipe_model),
-                    step=1e-5,
-                    format="%.5f",
-                    help="Probabilities below threshold will be considered as non-defects.",
-                )
-                # Use Decimal for precise floating point arithmetic
-                # Passing the threshold as a string ensures that it does not first get interpreted as a float, which
-                # can introduce a precision error.
-                rounded_threshold = int(Decimal(f"{input_threshold}") * Decimal("1e5")) / Decimal("1e5")
-                recipe_model_thresholds.append(float(rounded_threshold))
-            # with col3:
-            #     recipe_model_shf = st.toggle("Model {i + 1} SHF")
-        user_input_recipe = {"recipes": []}
-        for recipe_model, threshold in zip(recipe_models, recipe_model_thresholds):
-            if recipe_model != BLANK_MODEL:
-                user_input_recipe["recipes"].append(
-                    {
-                        "model_name": recipe_model,
-                        "threshold": threshold,
-                    }
-                )
-        recipe = user_input_recipe
-        recipe_to_preview = user_input_recipe
-    st.divider()
-    if recipe is not None and recipe["recipes"] != []:
-        with st.expander(f"{st_recipe_type} Recipe preview:", expanded=True):
-            st.code(yaml.dump(recipe_to_preview), language="yaml")
-        st.divider()
+        if inference_result_dir != INFERENCE_DEFAULT_RESULT_DIR and inference_result_dir != "":
+            st.error(f"Output directory is invalid: {inference_result_dir}")
 
-        if filtered_db_recipe["recipes"] == []:
-            # no data, early return
-            return
-        if st_recipe_type in [YAML_MODE, CREATOR_MODE]:
-            new_lrf_button.gen(r1_col3, inference_result_dir, recipe, filtered_db_recipe)
-    else:
-        # recipe not ready, early return
+    recipe = recipe_preview.gen(recipe_type=st_recipe_type, db_recipe=db_recipe)
+    if not recipe or recipe["recipes"] == []:
         return
+
+    if st_recipe_type in [YAML_MODE, CREATOR_MODE] and recipe and db_recipe:
+        new_lrf_button.gen(r1_col3, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
 
     # Show Total/Defect/Non-defect/unlabeled count
     with st.container():
@@ -141,28 +82,37 @@ def app() -> None:
         ResultViewerComponents.PARTICLE_MODE_ONLY_DEFECT_LIST.value,
         ResultViewerComponents.CLASSTYPE_COUNT.value,
     ]
-    result_viewer_components = api_helper.get_result_viewer_components(
-        inference_result_dir=inference_result_dir,
-        recipe=recipe,
-        required_components=required_components,
-    )
 
-    if "oos_summary" in required_components:
-        with st.expander(label="OOS Summary"):
-            oos_summary_component.gen(oos_calculation=result_viewer_components["oos_summary"])
+    try:
+        result_viewer_components = api_helper.get_result_viewer_components(
+            inference_result_dir=inference_result_dir,
+            recipe=recipe,
+            required_components=required_components,
+        )
+    except ValueError as e:
+        st.error(e)
+        return
 
-    if "missed_defect_list" in required_components:
-        with st.expander(label="Missed defects"):
-            missed_defects_component.gen(missed_defects=result_viewer_components["missed_defect_list"])
+    try:
+        if "oos_summary" in required_components:
+            with st.expander(label="OOS Summary"):
+                oos_summary_component.gen(oos_calculation=result_viewer_components["oos_summary"])
 
-    if "particle_mode_only_defect_list" in required_components:
-        with st.expander(label="ParticleMode defects"):
-            particle_mode_defects_component.gen(
-                particle_mode_only_defects=result_viewer_components["particle_mode_only_defect_list"]
-            )
-    if "classtype_count" in required_components:
-        with st.expander(label="LRF ClassType count"):
-            class_type_component.gen(classtype_count_list=result_viewer_components["classtype_count"])
+        if "missed_defect_list" in required_components:
+            with st.expander(label="Missed defects"):
+                missed_defects_component.gen(missed_defects=result_viewer_components["missed_defect_list"])
+
+        if "particle_mode_only_defect_list" in required_components:
+            with st.expander(label="ParticleMode defects"):
+                particle_mode_defects_component.gen(
+                    particle_mode_only_defects=result_viewer_components["particle_mode_only_defect_list"]
+                )
+        if "classtype_count" in required_components:
+            with st.expander(label="LRF ClassType count"):
+                class_type_component.gen(classtype_count_list=result_viewer_components["classtype_count"])
+    except KeyError as e:
+        st.error(e)
+        return
 
     if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve

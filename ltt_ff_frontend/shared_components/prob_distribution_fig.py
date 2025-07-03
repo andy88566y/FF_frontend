@@ -31,7 +31,7 @@ def get_color_map(legends_list: list[str]) -> dict[str, Any]:
 
 
 def generate_multilot_1D_plot(
-    raw_data: tuple[list[int], list[float], list[int]],
+    raw_data: tuple[list[list[int]], list[list[float]], list[list[int]]],
     model_metadata_list: list[dict[str, Any]],
     selected_threshold: float,
     selected_lot_id_list: Optional[list[str]] = None,

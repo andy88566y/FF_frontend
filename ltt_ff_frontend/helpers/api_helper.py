@@ -618,21 +618,21 @@ class MultiLotModelData:
 
 def get_multilot_model_data(
     output_dir: str,
-) -> Optional[MultiLotModelData]:
-    try:
-        db_metadata = get_db_metadata_lists(output_dir=output_dir)
-        defect_id_lists = get_defect_id_lists(output_dir=output_dir)
-        probability_lists = get_probability(output_dir, defect_id_lists)
-        answer_lists = get_answer(output_dir, defect_id_lists)
-        assert len(defect_id_lists) == len(probability_lists), (
-            f"IDs: {len(defect_id_lists)} Prob: {len(probability_lists)}"
-        )
-        assert len(defect_id_lists) == len(answer_lists), f"IDs: {len(defect_id_lists)} Ans: {len(answer_lists)}"
+) -> MultiLotModelData:
+    db_metadata = get_db_metadata_lists(output_dir=output_dir)
+    defect_id_lists = get_defect_id_lists(output_dir=output_dir)
+    probability_lists = get_probability(output_dir, defect_id_lists)
+    answer_lists = get_answer(output_dir, defect_id_lists)
 
-        return MultiLotModelData(db_metadata, defect_id_lists, probability_lists, answer_lists)
-    except Exception as e:
-        logger.warning(f"Error getting model data from {output_dir}! {type(e)} {e}")
-        return None
+    assert len(defect_id_lists) == len(probability_lists), f"IDs: {len(defect_id_lists)} Prob: {len(probability_lists)}"
+    assert len(defect_id_lists) == len(answer_lists), f"IDs: {len(defect_id_lists)} Ans: {len(answer_lists)}"
+
+    return MultiLotModelData(db_metadata, defect_id_lists, probability_lists, answer_lists)
+
+
+# except Exception as e:
+#     logger.warning(f"Error getting model data from {output_dir}! {type(e)} {e}")
+#     return None
 
 
 def get_model_data_list(
