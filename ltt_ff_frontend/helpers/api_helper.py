@@ -103,8 +103,14 @@ def get_model_details(model_name: str) -> dict[str, Any]:
 #####################################################################################################
 # Result Viewer components                                                                          #
 #####################################################################################################
-def get_result_viewer_components(inference_result_dir: str, recipe: dict[str, Any]) -> dict[str, Any]:
-    params = {"inference_result_dir": inference_result_dir, "recipe": recipe}
+def get_result_viewer_components(
+    inference_result_dir: str, recipe: dict[str, Any], required_components: list[str]
+) -> dict[str, Any]:
+    params = {
+        "inference_result_dir": inference_result_dir,
+        "recipe": recipe,
+        "required_components": required_components,
+    }
     r = requests.post(API_ROOT + "result/get_result_viewer_components", json=params, timeout=TIMEOUT)
 
     if r.json()["status"] == "completed":

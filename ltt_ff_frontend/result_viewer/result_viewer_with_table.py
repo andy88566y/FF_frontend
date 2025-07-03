@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime
 from decimal import Decimal
 
@@ -7,7 +8,7 @@ import streamlit as st
 import yaml
 from loguru import logger
 
-from ltt_ff_frontend.constant import BLANK_MODEL
+from ltt_ff_frontend.constant import BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, ResultViewerComponents
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import (
     class_type_component,
@@ -35,11 +36,10 @@ def app() -> None:
 
     r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
 
-    output_dir_default = "/mnt/dbpc/xxx"
     recipe = None
 
     with r1_col1:
-        inference_result_dir = st.text_input("Inference Result Directory", value=output_dir_default)
+        inference_result_dir = st.text_input("Inference Result Directory", value=INFERENCE_DEFAULT_RESULT_DIR)
     with r1_col2:
         st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=DB_MODE)
         if st_recipe_type is None:
@@ -138,35 +138,56 @@ def app() -> None:
     with st.container():
         st.subheader("Inference Results")
 
+    start = time.perf_counter()
+
+    required_components = [
+        ResultViewerComponents.OOS_SUMMARY.value,
+        ResultViewerComponents.MISSED_DEFECT_LIST.value,
+        ResultViewerComponents.PARTICLE_MODE_ONLY_DEFECT_LIST.value,
+        ResultViewerComponents.CLASSTYPE_COUNT.value,
+        ResultViewerComponents.INFERENCE_RESULT_TABLE.value,
+    ]
     result_viewer_components = api_helper.get_result_viewer_components(
-        inference_result_dir=inference_result_dir, recipe=recipe
+        inference_result_dir=inference_result_dir,
+        recipe=recipe,
+        required_components=required_components,
     )
 
-    with st.expander(label="OOS Summary"):
-        oos_summary_component.gen(oos_calculation=result_viewer_components["oos_summary"])
+    if "oos_summary" in required_components:
+        with st.expander(label="OOS Summary"):
+            oos_summary_component.gen(oos_calculation=result_viewer_components["oos_summary"])
 
-    with st.expander(label="Missed defects"):
-        missed_defects_component.gen(missed_defects=result_viewer_components["missed_defects"])
+    if "missed_defect_list" in required_components:
+        with st.expander(label="Missed defects"):
+            missed_defects_component.gen(missed_defects=result_viewer_components["missed_defect_list"])
 
-    with st.expander(label="ParticleMode defects"):
-        particle_mode_defects_component.gen(
-            particle_mode_only_defects=result_viewer_components["particle_mode_only_defects"]
+    if "particle_mode_only_defect_list" in required_components:
+        with st.expander(label="ParticleMode defects"):
+            particle_mode_defects_component.gen(
+                particle_mode_only_defects=result_viewer_components["particle_mode_only_defect_list"]
+            )
+    if "classtype_count" in required_components:
+        with st.expander(label="LRF ClassType count"):
+            class_type_component.gen(classtype_count_list=result_viewer_components["classtype_count"])
+
+    end_summary = time.perf_counter()
+    elapsed = end_summary - start
+    logger.debug(f"Elapsed time (loading only summary components): {elapsed:.6f} seconds.")
+
+    if "inference_result_table" in required_components:
+        with st.expander(label="Inference Result Table"):
+            selected_lot_id_list, df = multi_lot_stats.draw_stats_df(
+                multi_lot_model_data, recipe, inference_result_dir, key="recipe_stats_df"
+            )
+
+        st.download_button(
+            label="Download inference result table",
+            data=df.to_csv(index=False),
+            file_name=f"inference_result_{datetime.now().astimezone()}.csv",
+            mime="text/csv",
         )
-
-    with st.expander(label="LRF ClassType count"):
-        class_type_component.gen(classtype_count_list=result_viewer_components["classtype_count"])
-
-    with st.expander(label="Inference Result Table"):
-        selected_lot_id_list, df = multi_lot_stats.draw_stats_df(
-            multi_lot_model_data, recipe, inference_result_dir, key="recipe_stats_df"
-        )
-
-    st.download_button(
-        label="Download inference result table",
-        data=df.to_csv(index=False),
-        file_name=f"inference_result_{datetime.now().astimezone()}.csv",
-        mime="text/csv",
-    )
+    else:
+        selected_lot_id_list = None
 
     if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve
@@ -196,3 +217,7 @@ def app() -> None:
                     recipe_threshold,
                     selected_lot_id_list,
                 )
+
+    end_all = time.perf_counter()
+    elapsed = end_all - start
+    logger.debug(f"Elapsed time (loading summary components + result table): {elapsed:.6f} seconds.")

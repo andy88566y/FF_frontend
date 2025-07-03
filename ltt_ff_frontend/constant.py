@@ -250,3 +250,11 @@ class LRFType(Enum):
     LTTADCEX = "LTTADCEX"
     classified = "classified"
     Classified = "Classified"
+
+
+class ResultViewerComponents(Enum):
+    OOS_SUMMARY = "oos_summary"
+    MISSED_DEFECT_LIST = "missed_defect_list"
+    PARTICLE_MODE_ONLY_DEFECT_LIST = "particle_mode_only_defect_list"
+    CLASSTYPE_COUNT = "classtype_count"
+    INFERENCE_RESULT_TABLE = "inference_result_table"
