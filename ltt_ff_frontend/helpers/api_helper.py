@@ -724,7 +724,7 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> pd.
         logger.error(f"Error occurred when retrieving inference status from RedisDB: {r.json()['message']}")
         raise ValueError(f"Error occurred when retrieving inference status from RedisDB: {r.json()['message']}")
 
-    logger.info(f"Status of inference request [{current_page}, {page_size}]: {paged_statuses}")
+    # logger.info(f"Status of inference request [{current_page}, {page_size}]: {paged_statuses}")
 
     paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 
@@ -796,7 +796,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
             f"Error occurred when retrieving multilot inference status from RedisDB: {r.json()['message']}"
         )
 
-    logger.info(f"Status of multilot inference request [{current_page}, {page_size}]: {paged_statuses}")
+    # logger.info(f"Status of multilot inference request [{current_page}, {page_size}]: {paged_statuses}")
 
     paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 

@@ -1,9 +1,10 @@
+import copy
 import re
 from typing import Any
 
 import pandas as pd
 import yaml
-import copy
+
 
 def gen_lots_stats(data_lots: dict[str, Any]) -> pd.DataFrame:
     lots_stats: dict[str, int] = {}
@@ -17,6 +18,7 @@ def gen_lots_stats(data_lots: dict[str, Any]) -> pd.DataFrame:
         .fillna(0)
         .astype("int32")
     )
+
 
 def update_week(config_data: dict, new_week: str) -> None:
     for layer, weeks in config_data.items():
@@ -32,12 +34,13 @@ def update_week(config_data: dict, new_week: str) -> None:
         del weeks[oldest_week]
         weeks[new_week] = new_week_data
 
+
 def update_config_by_txt(config_data: dict, recipe_file: Any) -> None:
     raw_lines = recipe_file.getvalue().decode("utf-8").splitlines()
     lines = [line.strip() for line in raw_lines if line.strip()]
 
     i = 0
-    update_week(config_data,lines[0])
+    update_week(config_data, lines[0])
 
     while i < len(lines):
         week = int(lines[i])

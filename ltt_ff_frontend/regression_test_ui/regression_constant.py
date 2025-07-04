@@ -1,6 +1,6 @@
 LAYERS = ["OD", "PO", "CUT", "M0M2", "M1", "VIA"]
-SITES =  ["F20", "F12", "F18A", "F18B", "F18EBO", "F15EBO"]
-RUN_MODES = ["Normal", "with Rule", "Rule only"]
+SITES = ["F20", "F12", "F18A", "F18B", "F18EBO", "F15EBO"]
+RUN_MODES = ["Normal", "with Rule", "Rule only", "Holdout"]
 LAYERS_FABS = [
     "OD_F20",
     "OD_F12",
