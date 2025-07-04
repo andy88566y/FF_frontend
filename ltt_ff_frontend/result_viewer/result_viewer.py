@@ -1,4 +1,5 @@
 import json
+import time
 from decimal import Decimal
 
 import streamlit as st
@@ -42,18 +43,16 @@ def app() -> None:
             return
 
     if helper.is_valid_output_dir(inference_result_dir):
-        # multi_lot_model_data contains metadata, defect_id_list, probability_list and answer_list for each DB
         try:
-            multi_lot_model_data = api_helper.get_multilot_model_data(inference_result_dir)
-        # logger.warning(len(multi_lot_model_data.model_metadata_list))
-        # logger.error(len(multi_lot_model_data.defect_id_lists))
-        # logger.warning(len(multi_lot_model_data.probability_lists))
-        # logger.error(len(multi_lot_model_data.answer_lists))
+            get_metadata_start_time = time.perf_counter()
+            db_metadata_list = api_helper.get_db_metadata_lists(output_dir=inference_result_dir)
+            get_metadata_time_taken = time.perf_counter() - get_metadata_start_time
+            logger.warning(f"Elapsed time (get metadata for each DB): {get_metadata_time_taken:.6f} seconds.")
         except ValueError as e:
             st.error(f"{e}\n\nError getting result data from {inference_result_dir}")
             return
 
-        recipe_list = [metadata["recipe"] for metadata in multi_lot_model_data.model_metadata_list]
+        recipe_list = [metadata["recipe"] for metadata in db_metadata_list]
         if all(recipe == recipe_list[0] for recipe in recipe_list):
             db_recipe = json.loads(recipe_list[0])
         else:
@@ -65,9 +64,12 @@ def app() -> None:
         if inference_result_dir != INFERENCE_DEFAULT_RESULT_DIR and inference_result_dir != "":
             st.error(f"Output directory is invalid: {inference_result_dir}")
 
+    recipe_preview_start_time = time.perf_counter()
     recipe = recipe_preview.gen(recipe_type=st_recipe_type, db_recipe=db_recipe)
     if not recipe or recipe["recipes"] == []:
         return
+    recipe_preview_time_taken = time.perf_counter() - recipe_preview_start_time
+    logger.warning(f"Elapsed time (recipe_preview_time_taken): {recipe_preview_time_taken:.6f} seconds.")
 
     if st_recipe_type in [YAML_MODE, CREATOR_MODE] and recipe and db_recipe:
         new_lrf_button.gen(r1_col3, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
@@ -81,8 +83,11 @@ def app() -> None:
         ResultViewerComponents.MISSED_DEFECT_LIST.value,
         ResultViewerComponents.PARTICLE_MODE_ONLY_DEFECT_LIST.value,
         ResultViewerComponents.CLASSTYPE_COUNT.value,
+        ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value,
+        ResultViewerComponents.CR_FFR_CURVE.value,
     ]
 
+    generate_summary_components_start = time.perf_counter()
     try:
         result_viewer_components = api_helper.get_result_viewer_components(
             inference_result_dir=inference_result_dir,
@@ -117,29 +122,30 @@ def app() -> None:
     if len(recipe["recipes"]) == 1:
         # Columns for drawing distribution chart and ROC curve
         col_1d_chart_column, col_roc_curve_column = st.columns(2)
+
         recipe_model_name = recipe["recipes"][0]["model_name"]
         recipe_threshold = recipe["recipes"][0]["threshold"]
-        model_raw_data = (
-            multi_lot_model_data.defect_id_lists,
-            multi_lot_model_data.probability_lists,
-            multi_lot_model_data.answer_lists,
-        )
-        # Draw 1D comparison chart
-        with col_1d_chart_column:
-            with st.expander(label="1D Prob Distribution Chart"):
-                st.plotly_chart(
-                    prob_distribution_fig.generate_multilot_1D_plot(
-                        model_raw_data,
-                        multi_lot_model_data.model_metadata_list,
-                        recipe_threshold,
+
+        if "one_d_defect_distribution_chart" in required_components:
+            # Draw 1D comparison chart
+            with col_1d_chart_column:
+                with st.expander(label="1D Prob Distribution Chart"):
+                    st.plotly_chart(
+                        prob_distribution_fig.generate_multilot_1D_plot(
+                            result_viewer_components["one_d_defect_distribution_chart"],
+                            recipe_threshold,
+                        )
                     )
-                )
-        with col_roc_curve_column:
-            with st.expander(label="Roc Curve Chart"):
-                roc_fig.gen(
-                    recipe_model_name,
-                    inference_result_dir,
-                    model_raw_data,
-                    multi_lot_model_data.model_metadata_list,
-                    recipe_threshold,
-                )
+
+        # with col_roc_curve_column:
+        #     with st.expander(label="Roc Curve Chart"):
+        #         roc_fig.gen(
+        #             recipe_model_name,
+        #             inference_result_dir,
+        #             model_raw_data,
+        #             multi_lot_model_data.model_metadata_list,
+        #             recipe_threshold,
+        #         )
+
+    generate_summary_components_time_taken = time.perf_counter() - generate_summary_components_start
+    logger.warning(f"Elapsed time (generate_summary_components): {generate_summary_components_time_taken:.6f} seconds.")

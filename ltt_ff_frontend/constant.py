@@ -258,3 +258,5 @@ class ResultViewerComponents(Enum):
     PARTICLE_MODE_ONLY_DEFECT_LIST = "particle_mode_only_defect_list"
     CLASSTYPE_COUNT = "classtype_count"
     INFERENCE_RESULT_TABLE = "inference_result_table"
+    ONE_D_DEFECT_DISTRIBUTION_CHART = "one_d_defect_distribution_chart"
+    CR_FFR_CURVE = "cr_ffr_curve"
