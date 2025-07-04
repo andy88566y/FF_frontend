@@ -93,6 +93,9 @@ def app() -> None:
             inference_result_dir=inference_result_dir,
             recipe=recipe,
             required_components=required_components,
+            required_input={
+                "recipe_threshold": recipe["recipes"][0]["threshold"],
+            },
         )
     except ValueError as e:
         st.error(e)
@@ -137,15 +140,14 @@ def app() -> None:
                         )
                     )
 
-        # with col_roc_curve_column:
-        #     with st.expander(label="Roc Curve Chart"):
-        #         roc_fig.gen(
-        #             recipe_model_name,
-        #             inference_result_dir,
-        #             model_raw_data,
-        #             multi_lot_model_data.model_metadata_list,
-        #             recipe_threshold,
-        #         )
+        if "cr_ffr_curve" in required_components:
+            with col_roc_curve_column:
+                with st.expander(label="Roc Curve Chart"):
+                    roc_fig.gen(
+                        model_name=recipe_model_name,
+                        roc_data=result_viewer_components["cr_ffr_curve"],
+                        threshold=recipe_threshold,
+                    )
 
     generate_summary_components_time_taken = time.perf_counter() - generate_summary_components_start
     logger.warning(f"Elapsed time (generate_summary_components): {generate_summary_components_time_taken:.6f} seconds.")

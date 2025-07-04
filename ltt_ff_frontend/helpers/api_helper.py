@@ -104,12 +104,16 @@ def get_model_details(model_name: str) -> dict[str, Any]:
 # Result Viewer components                                                                          #
 #####################################################################################################
 def get_result_viewer_components(
-    inference_result_dir: str, recipe: dict[str, Any], required_components: list[str]
+    inference_result_dir: str,
+    recipe: dict[str, Any],
+    required_components: list[str],
+    required_input: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     params = {
         "inference_result_dir": inference_result_dir,
         "recipe": recipe,
         "required_components": required_components,
+        "required_input": required_input if required_input is not None else {},
     }
     r = requests.post(API_ROOT + "result/get_result_viewer_components", json=params, timeout=TIMEOUT)
 
