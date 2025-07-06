@@ -1,0 +1,130 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import streamlit as st
+from loguru import logger
+from matplotlib.axes import Axes
+
+from ltt_ff_frontend.helpers import api_helper
+
+
+# TODO: Change to Plotly
+def draw_diff_img(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, diff_clip: int = 0.3):
+    data_lots = api_helper.list_yaml_lots(data_yaml_path)
+    diff_img_data = api_helper.generate_diff_images(data_yaml_path, lot_id, defect_id, norm)
+
+    defect_info = diff_img_data["defect_meta"]
+    image_data = diff_img_data["image_data"]
+    layer_name = data_lots[lot_id].get("layer_group", "")
+
+    tensor_keys = ["aligned_ref", "aligned_test", "aligned_diff"]
+    for p in ["Rt", "T"]:
+        for k in image_data[p]:
+            if k in tensor_keys:
+                image_data[p][k] = np.array(image_data[p][k])
+
+    def set_ticks(ax: Axes) -> None:
+        # ax.set_axis_off()
+        ax.set_xticks(np.linspace(0, 256, num=8 + 1))
+        ax.set_yticks(np.linspace(0, 256, num=8 + 1))
+
+    logger.debug(f"[{lot_id}:{defect_id}] Generating diff image...")
+
+    fig, axes = plt.subplots(2, 3, width_ratios=(0.8, 0.8, 1.0), figsize=(15, 10))
+    fig.suptitle(
+        f"[Defect Aligned Comparison] {layer_name} Lot: {lot_id} | Defect ID: {defect_id}"
+        f" | X: {defect_info['X']} | Y: {defect_info['Y']}\n"
+        f"ClassType: {defect_info['ClassType']}, isDefect: {defect_info['isDefect']},"
+        f" ParticleModeOnly: {defect_info['particleModeOnly']} "
+        f"(lrf-ORIG | pc: {defect_info['PixelCount']}, h: {defect_info['H']}, w: {defect_info['W']})",
+        fontsize=14,
+    )
+
+    for rid, ptype in enumerate(["Rt", "T"]):
+        axes[rid, 0].imshow(image_data[ptype]["aligned_ref"], cmap="gray")
+        if len(image_data["avail_refs"]) == 1:
+            axes[rid, 0].set_title(f"Reference [{ptype}]\n(Available Refs: {image_data['avail_refs'][0]})")
+        else:
+            axes[rid, 0].set_title(
+                f"Reference [{ptype}]\n(Available Refs: Median of {['C'] + image_data['avail_refs']})"
+            )
+        set_ticks(axes[rid, 0])
+        axes[rid, 1].imshow(image_data[ptype]["aligned_test"], cmap="gray")
+        axes[rid, 1].set_title(
+            f"Test ({image_data['worst_test']}) [{ptype}]\n"
+            f"(best_pos: {[round(float(x), 2) for x in image_data[ptype]['best_pos']]})"
+        )
+        set_ticks(axes[rid, 1])
+        # Colormaps: seismic, coolwarm, viridis
+        rt_diff_img = axes[rid, 2].imshow(
+            image_data[ptype]["aligned_diff"], cmap="seismic", vmin=-diff_clip, vmax=diff_clip
+        )
+        axes[rid, 2].set_title(f"Difference [{ptype}]\n(max_diff: {round(image_data[ptype]['max_diff'], 3)})")
+        set_ticks(axes[rid, 2])
+        fig.colorbar(rt_diff_img, ax=axes[rid, 2], location="right", shrink=0.7, fraction=0.15, pad=0.05)
+
+        max_pos = np.unravel_index(image_data[ptype]["aligned_diff"].argmax(), image_data[ptype]["aligned_diff"].shape)
+        min_pos = np.unravel_index(image_data[ptype]["aligned_diff"].argmin(), image_data[ptype]["aligned_diff"].shape)
+
+        crop_size = 16
+        for ax_idx in range(3):
+            # It is known that due to edges, MATRICS_DefectPoint is not always on 128, 128.
+            # TODO: Dynamic crop size according to lrf info (H, W, PixelSize)
+            # Tool Defect position (green box)
+            rect_tool = plt.Rectangle(
+                (
+                    image_data[ptype]["tool_defect_loc"][0] + round(image_data[ptype]["best_pos"][1]) - 16 - crop_size,
+                    image_data[ptype]["tool_defect_loc"][1] + round(image_data[ptype]["best_pos"][0]) - 16 - crop_size,
+                ),
+                crop_size * 2,
+                crop_size * 2,
+                fill=False,
+                color="green",
+                linewidth=0.5,
+            )
+            axes[rid, ax_idx].add_patch(rect_tool)
+
+            # Max position (red box)
+            rect_max = plt.Rectangle(
+                (max_pos[1] - crop_size, max_pos[0] - crop_size),
+                crop_size * 2,
+                crop_size * 2,
+                fill=False,
+                color="red",
+                linewidth=1,
+            )
+            axes[rid, ax_idx].add_patch(rect_max)
+
+            # Min position (blue box)
+            rect_min = plt.Rectangle(
+                (min_pos[1] - crop_size, min_pos[0] - crop_size),
+                crop_size * 2,
+                crop_size * 2,
+                fill=False,
+                color="blue",
+                linewidth=1,
+            )
+            axes[rid, ax_idx].add_patch(rect_min)
+
+    fig.tight_layout(pad=1.5, h_pad=2.2, w_pad=2.2)
+
+    st.pyplot(fig)
+
+
+def app() -> None:
+    st.title("Defect Viewer")
+
+    data_yaml_path = st.text_input("Data Yaml Path", "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/Wxxx_data_2025xxxx.yaml")
+
+    data_lots = api_helper.list_yaml_lots(data_yaml_path)
+
+    r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
+
+    with r1_col1:
+        lot_id = st.selectbox("Lot ID", [""] + list(data_lots.keys()))
+    with r1_col2:
+        defect_id = st.text_input("Defect ID")
+    with r1_col3:
+        norm = st.toggle("Normalize", value=True)
+
+    if lot_id != "" and defect_id != "":
+        draw_diff_img(data_yaml_path, lot_id, defect_id, norm, diff_clip=0.3)

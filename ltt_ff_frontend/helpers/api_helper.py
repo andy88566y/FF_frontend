@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
+import yaml
 from loguru import logger
 
 from ltt_ff_frontend.constant import API_ROOT, BLANK_MODEL, TIMEOUT, APIGroup
@@ -1499,3 +1500,31 @@ def convert_model(model_details: dict[str, Any]) -> dict[str, Any]:
     )
 
     return r.json()
+
+
+#####################################################################################################
+# Defect Viewer                                                                                     #
+#####################################################################################################
+def generate_diff_images(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool = True) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "generate_diff_images",
+        json={
+            "data_yaml_path": data_yaml_path,
+            "lot_id": lot_id,
+            "defect_id": defect_id,
+            "norm": norm,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
+
+
+# TODO: Move to backend
+@st.cache_data(ttl="60s")
+def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
+    with open(data_yaml_path, encoding="utf-8") as f:
+        raw_data_lots = yaml.load(f, Loader=yaml.Loader)
+        data_lots = {d["lot_id"]: d for d in raw_data_lots["data_paths"]}
+    logger.success(f"Total lots loaded: {len(data_lots)}")
+    return data_lots
