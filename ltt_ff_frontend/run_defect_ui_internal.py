@@ -3,7 +3,7 @@ from loguru import logger
 
 from ltt_ff_frontend.comparison_ui import comparison_viewer
 from ltt_ff_frontend.data_yaml_processor import data_yaml_processor
-from ltt_ff_frontend.defect_review_ui import defect_review_gui
+from ltt_ff_frontend.defect_review_ui import defect_diff_viewer, defect_review_gui
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
 from ltt_ff_frontend.model_converter import model_converter
@@ -35,16 +35,23 @@ if __name__ == "__main__":
     page_comparison = st.Page(
         comparison_viewer.app, url_path="comparison", title="Model Comparison", icon=":material/compare_arrows:"
     )
+
+    page_defect_diff_viewer = st.Page(
+        defect_diff_viewer.app, url_path="defect_diff_viewer", title="Defect Viewer", icon=":material/image_search:"
+    )
     page_defect_review_gui = st.Page(
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
+
     page_training = st.Page(training.app, url_path="training", title="Training", icon=":material/build:")
     page_training_by_config = st.Page(
         training_by_config.app, url_path="training_by_config", title="Training By Config", icon=":material/build:"
     )
+
     page_model_converter = st.Page(
         model_converter.app, url_path="model_converter", title="Model Converter", icon=":material/swap_horiz:"
     )
+
     page_lrf_processor = st.Page(
         lrf_processor.app, url_path="lrf_processor", title="LRF Processor", icon=":material/description:"
     )
@@ -58,6 +65,7 @@ if __name__ == "__main__":
             page_result_viewer_with_table,
             page_inference,
             page_comparison,
+            page_defect_diff_viewer,
             page_defect_review_gui,
             page_training,
             page_training_by_config,
@@ -74,6 +82,6 @@ if __name__ == "__main__":
         initial_sidebar_state="collapsed",
     )
 
-    st.sidebar.markdown("###### FF-FE v0.10.0 IH")
+    st.sidebar.markdown("###### FF-FE v0.11.0 IH")
 
     pg.run()
