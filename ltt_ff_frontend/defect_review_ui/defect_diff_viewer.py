@@ -12,6 +12,10 @@ def draw_diff_img(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, 
     data_lots = api_helper.list_yaml_lots(data_yaml_path)
     diff_img_data = api_helper.generate_diff_images(data_yaml_path, lot_id, defect_id, norm)
 
+    if diff_img_data["status"] == "error":
+        st.error(f"Error: {diff_img_data['message']}")
+        return
+
     defect_info = diff_img_data["defect_meta"]
     image_data = diff_img_data["image_data"]
     layer_name = data_lots[lot_id].get("layer_group", "")
@@ -113,7 +117,10 @@ def draw_diff_img(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, 
 def app() -> None:
     st.title("Defect Viewer")
 
-    data_yaml_path = st.text_input("Data Yaml Path", "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/Wxxx_data_2025xxxx.yaml")
+    default_data_yaml_path = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/Wxxx_data_2025xxxx.yaml"
+    data_yaml_path = st.text_input("Data Yaml Path", default_data_yaml_path)
+    if data_yaml_path == default_data_yaml_path:
+        return
 
     data_lots = api_helper.list_yaml_lots(data_yaml_path)
 
