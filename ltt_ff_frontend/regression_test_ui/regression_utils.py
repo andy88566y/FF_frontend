@@ -19,6 +19,21 @@ def gen_lots_stats(data_lots: dict[str, Any]) -> pd.DataFrame:
         .astype("int32")
     )
 
+def get_detailed_stats(stats: list[Any]) -> pd.DataFrame:
+    stats_df = (
+        pd.DataFrame.from_records(data=stats)
+        .pivot(
+            index=["layer_group", "site", "tool", "pixel_size", "mask_type", "lrf_type", "lot_id"],
+            columns=["is_defect", "class_type"],
+            values="count",
+        )
+        .fillna(0)
+        .astype("int32")
+        .sort_index(axis=0)
+        .sort_index(axis=1)
+    )
+    return stats_df
+
 
 def update_week(config_data: dict, new_week: str) -> None:
     for layer, weeks in config_data.items():

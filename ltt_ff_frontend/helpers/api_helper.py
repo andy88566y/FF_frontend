@@ -1504,12 +1504,15 @@ def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
 #####################################################################################################
 # Regression Test                                                                                #
 #####################################################################################################
-def get_valid_lots(test_data: Any) -> dict[str, Any]:
+
+@st.cache_data
+def get_valid_lots(test_data: Any, gen_stats: bool) -> dict[str, Any]:
     data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
     r = requests.post(
         API_ROOT + "get_valid_lots",
         json={
             "data_lots": data_lots,
+            "gen_stats": gen_stats
         },
         timeout=TIMEOUT,
     )

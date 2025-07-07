@@ -10,8 +10,13 @@ from loguru import logger
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper, stop_job_button
 
-from .regression_constant import LAYERS, RUN_MODES, SITES
-from .regression_utils import gen_lots_stats, update_config_by_txt, update_config_by_yaml
+from .regression_constant import LAYERS, SITES
+from .regression_utils import (
+    get_detailed_stats,
+    gen_lots_stats,
+    update_config_by_txt,
+    update_config_by_yaml
+)
 
 
 DEFAULT_DATA_YAML = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/WXXX_data_XXX.yaml"
@@ -63,14 +68,20 @@ def app():
 
     if data_yaml:
         with r2_col2:
-            st.subheader("Lot Statistics")
+            show_lot_stats = st.toggle("Show Lot Statistics", value = True)
+            show_detaild_stats = st.toggle("Show Detailed Lot Statistics", value = False)
             test_data = yaml.safe_load(data_yaml)
-            valid_data_lots = api_helper.get_valid_lots(test_data)
+            valid_data_lots = api_helper.get_valid_lots(test_data, show_detaild_stats)
             if valid_data_lots["status"] != "completed":
                 st.error(valid_data_lots["message"])
                 logger.error(valid_data_lots["message"])
                 return
-            st.dataframe(gen_lots_stats(valid_data_lots["valid_lots"]))
+            if show_lot_stats:
+                with st.expander("Lots Statistics", expanded=False):
+                    st.dataframe(gen_lots_stats(valid_data_lots["valid_lots"]))
+            if show_detaild_stats:
+                with st.expander("Detailed Lots Statistics", expanded=False):
+                    st.dataframe(get_detailed_stats(valid_data_lots["stats"]))
 
     # Layer and site filters
 
