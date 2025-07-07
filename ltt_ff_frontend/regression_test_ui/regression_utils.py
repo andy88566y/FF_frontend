@@ -38,41 +38,66 @@ def update_week(config_data: dict, new_week: str) -> None:
 def update_config_by_txt(config_data: dict, recipe_file: Any) -> None:
     raw_lines = recipe_file.getvalue().decode("utf-8").splitlines()
     lines = [line.strip() for line in raw_lines if line.strip()]
+    week = lines[0].strip()
+    update_week(config_data, week)
+    current_layer = None
 
-    i = 0
-    update_week(config_data, lines[0])
+    site_pattern = re.compile(r'\[(.*?)\]')
+    recipe_pattern = re.compile(r'(\d{4})-([a-fA-F0-9]+)')
+    threshold_pattern = re.compile(r'\(TH:(\d*\.?\d*)(?:,THC:(\d*\.?\d*))?\)')
+    min_k_pattern = re.compile(r'min_k\s*=\s*(\d+)')
+    top_k_pattern = re.compile(r'top_k\s*=\s*(\d+)')
 
-    while i < len(lines):
-        week = int(lines[i])
-        layer = lines[i + 1]
-        site = lines[i + 2]
-        i += 3
-        recipes = []
+    for line in lines[1:]:
+        if not line:
+            continue
+        if line.isupper():
+            current_layer = line
+            if current_layer == "ODPO":
+                current_layer = "OD"
+            continue
+
+        filter_line = line
+        for old, new in [("*new*", ""), ("TH: ", "TH:"), (" THC: ", "THC:"), (" \u200BTHC: ", "THC:")]:
+            filter_line = filter_line.replace(old, new)
+
+
+        recipe = []
         min_k = None
         top_k = None
-        while i < len(lines) and not re.match(r"^\d+$", lines[i]):
-            rs = re.match(r"(?P<model>\w+)\s+threshold:\s+(?P<th>[\d.]+)\s+threshold_c:\s+(?P<th_c>[\d.]+)", lines[i])
-            min_k_match = re.match(r"min_[k]:\s*(\d+)", lines[i])
-            top_k_match = re.match(r"top_[k]:\s*(\d+)", lines[i])
-            if rs:
-                recipe_id = rs.group("model")
-                threshold = float(rs.group("th"))
-                threshold_c = float(rs.group("th_c"))
-                recipes.append([recipe_id, threshold, threshold_c])
-            elif min_k_match:
-                min_k = int(min_k_match.group(1))
-            elif top_k_match:
-                top_k = int(top_k_match.group(1))
+
+        for item in filter_line.split():
+            if site_pattern.match(item):
+                site = site_pattern.search(item).group(1)
+            elif recipe_pattern.match(item):
+                _, model_id = item.split('-')
+            elif item.startswith("RULE"):
+                model_id = item
+            elif threshold_pattern.match(item):
+                th_match = threshold_pattern.search(item)
+                if th_match:
+                    th = float(th_match.group(1))
+                    th_c = float(th_match.group(2)) if th_match.group(2) else None
+                    if model_id:
+                        if th_c is not None:
+                            recipe.append((model_id,th,th_c))
+                        else:
+                            recipe.append((model_id,th))
+                    else:
+                        raise ValueError("threshold should be come after model id!")
+            elif min_k_pattern.match(item):
+                min_k = int(min_k_pattern.search(item).group(1))
+            elif top_k_pattern.match(item):
+                top_k = int(top_k_pattern.search(item).group(1))
             else:
-                raise ValueError(f"Could not parse recipe line: {lines[i]}")
-            i += 1
-        config_data.setdefault(layer, {}).setdefault(str(week), {})[site] = {
-            "recipes": recipes,
-        }
-        if min_k:
-            config_data[layer][week][site]["min_k"] = min_k
-        if top_k:
-            config_data[layer][week][site]["top_k"] = top_k
+                raise ValueError(f"Can not parse line: {item}")
+        if current_layer == "OD" and config_data[current_layer][week].get(site,None) is not None:
+            current_layer = "PO"
+        config_data[current_layer][week][site] = {"recipes": recipe}
+        if min_k is not None:
+            config_data[current_layer][week][site]["min_k"] = min_k
+        if top_k is not None:
+            config_data[current_layer][week][site]["top_k"] = top_k
 
 
 def update_config_by_yaml(config_data: dict, recipe_yaml: Any) -> None:

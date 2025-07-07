@@ -80,8 +80,8 @@ def app():
         output_dir = st.text_input("Output Directory", value=DEFAULT_OUTPUT_PATH)
     with r3_col3:
         site_filter = st.multiselect("Run Sites", SITES, default=SITES)
-        run_modes = st.multiselect("Run modes", RUN_MODES, RUN_MODES)
-        if "Holdout" in run_modes:
+        run_holdout = st.toggle("Run additional holdout datasets", value=True)
+        if run_holdout:
             h_help_text = f"**Example: {DEFAULT_DATA_YAML}**\n"
             holdout_data_yaml = st.file_uploader("Upload Holdout Test Data (.yaml)", type=".yaml", help=h_help_text)
             if holdout_data_yaml:
@@ -111,18 +111,17 @@ def app():
             st.error("Missing required inputs.")
             return
 
-        if run_modes != ["Holdout"]:
-            request = api_helper.request_regression_test(
-                reg_output_dir, valid_data_lots["valid_lots"], recipe_config, layer_filter, site_filter, run_modes
-            )
+        request = api_helper.request_regression_test(
+            reg_output_dir, valid_data_lots["valid_lots"], recipe_config, layer_filter, site_filter
+        )
 
-            if request.json().get("status") == "error":
-                code = request.json().get("code")
-                message = request.json().get("message")
-                st.text(f"Error code: {code}\nError message: {message}")
-            else:
-                st.text("norma; success")
-                st.session_state.testcase_inference_map = request.json().get("testcase_inference_map")
+        if request.json().get("status") == "error":
+            code = request.json().get("code")
+            message = request.json().get("message")
+            st.text(f"Error code: {code}\nError message: {message}")
+        else:
+            st.success("Start running regression test!")
+            st.session_state.testcase_inference_map = request.json().get("testcase_inference_map")
 
         if holdout_valid_data_lots:
             holdout_request = api_helper.request_regression_test(
@@ -131,14 +130,13 @@ def app():
                 recipe_config,
                 layer_filter,
                 site_filter,
-                ["Normal"],
             )
             if holdout_request.json().get("status") == "error":
                 code = holdout_request.json().get("code")
                 message = holdout_request.json().get("message")
                 st.text(f"Holdout Error code: {code}\nError message: {message}")
             else:
-                st.text("Holdout success")
+                st.success("Start running holdout regression test!")
 
     st.divider()
 

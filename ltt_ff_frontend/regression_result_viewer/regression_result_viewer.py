@@ -75,7 +75,7 @@ def get_table_summary(results: dict[str, list], weeks: list) -> list:
                     formatted, prev_n1 = parse_cr_value(total_n1, prev_n1, denominator)
                 else:
                     assert col == FFR_COL
-                    formatted, prev_n1, prev_n2 = parse_ffr_value(total_n1, total_n1, prev_n1, prev_n2, denominator)
+                    formatted, prev_n1, prev_n2 = parse_ffr_value(total_n1, total_n2, prev_n1, prev_n2, denominator)
                 row.append(formatted)
 
         table_summary.append(row)
@@ -191,7 +191,7 @@ def app() -> None:
     if previous_week and current_week and regression_result_dir:
         weeks = [f"W{previous_week}", f"W{current_week}"]
         rule_weeks = [f"W{current_week}", f"W{current_week}RULE"]
-        rule_only_weeks = [f"W{current_week}RULEONLY"]
+        r_only_weeks = [f"W{current_week}RULE"]
     else:
         return
 
@@ -203,7 +203,7 @@ def app() -> None:
     if mode == "Normal":
         if "normal" not in st.session_state:
             prefixes = [f"{w}_{lf}" for lf, w in itertools.product(LAYERS_FABS, weeks)]
-            regression_results = get_regression_result(regression_test_cases, prefixes, regression_result_dir, mode)
+            regression_results = get_regression_result(regression_test_cases, prefixes, regression_result_dir, mode+"!")
 
             headers = [f"{week} {col}" for col in TABLE_COLUMNS for week in weeks]
             table_summary = get_table_summary(regression_results, weeks)
@@ -265,11 +265,11 @@ def app() -> None:
 
     elif mode == "Rule only":
         if "rule_only" not in st.session_state:
-            prefixes = [f"{w}_{lf}" for lf, w in itertools.product(RULE_LAYERS_FABS, rule_only_weeks)]
+            prefixes = [f"{w}_{lf}" for lf, w in itertools.product(RULE_LAYERS_FABS, r_only_weeks)]
             r_only_results = get_regression_result(regression_test_cases, prefixes, regression_result_dir, mode)
-            table_summary_per_fab, layer_per_fab = get_table_summary_per_fab(r_only_results, TABLE_COLUMNS, rule_weeks)
-            headers = [f"{week} {col}" for col in TABLE_COLUMNS for week in rule_only_weeks]
-            st.session_state.rule_only = pd.DataFrame(table_summary_per_fab, columns=headers, index=layer_per_fab)
+            t_summary_per_fab, layer_per_fab = get_table_summary_per_fab(r_only_results, TABLE_COLUMNS, r_only_weeks)
+            headers = [f"{week} {col}" for col in TABLE_COLUMNS for week in r_only_weeks]
+            st.session_state.rule_only = pd.DataFrame(t_summary_per_fab, columns=headers, index=layer_per_fab)
         st.subheader("RULE ONLY Regression Results Summary (Per FAB):")
         st.dataframe(st.session_state.rule_only)
 

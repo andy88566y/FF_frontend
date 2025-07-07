@@ -152,7 +152,10 @@ def get_recipe_filtered_results_from_api(output_dir: str, recipe: dict[str, Any]
         {...}
     ]
     """
-    params = {"inference_result_dir": output_dir, "recipe": recipe}
+    params = {
+        "inference_result_dir": output_dir,
+        "recipe": recipe,
+    }
     r = requests.get(API_ROOT + "result/get_filtered_stats", json=params, timeout=TIMEOUT)
 
     if r.status_code != requests.codes.ok:
@@ -1518,7 +1521,6 @@ def request_regression_test(
     recipe_config: dict[str, Any],
     run_layer: list[str],
     run_site: list[str],
-    run_mode: list[str]
 ) -> requests.Response:
     """
     Calls FalseFilter API to run Regression Test.
@@ -1546,7 +1548,6 @@ def request_regression_test(
             "recipe_config": recipe_config,
             "run_layer": run_layer,
             "run_site": run_site,
-            "run_mode": run_mode,
         },
         timeout=TIMEOUT,
     )
