@@ -3,9 +3,6 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.helpers.api_helper import MultiLotModelData
-
 
 BG_COLORS = {
     "red": "#ffcccb",
@@ -102,38 +99,12 @@ def draw_column_background_color(s):
     return [col_to_colors.get(first_col, bg_css_settings["default"]) for first_col in s.index.get_level_values(0)]
 
 
-def draw_stats_df(
-    multi_lot_model_data: MultiLotModelData,
-    recipe: dict[str, Any],
-    inference_result_dir: str,
+def gen(
+    inference_data: list[list[Any]],
     key: str,
 ) -> tuple[list[str], pd.DataFrame]:
-    rows = []
-    count_rate_data = api_helper.get_recipe_filtered_results_from_api(inference_result_dir, recipe=recipe)
-    for data, meta in zip(count_rate_data, multi_lot_model_data.model_metadata_list):
-        rows.append(
-            [
-                meta["lot_id"],
-                data["as_is_defect_count"],
-                data["to_be_defect_count"],
-                f"{data['filter_rate']:.4f}",
-                data["as_is_true_defect_count"],
-                data["to_be_true_defect_count"],
-                f"{data['capture_rate']:.4f}",
-                data["as_is_non_defect_count"],
-                data["to_be_non_defect_count"],
-                f"{data['false_filter_rate']:.4f}",
-                data["unlabeled"],
-                data["filtered_unlabeled_defect_count"],
-            ]
-        )
-    return gen_stats_df_by_data_list(rows, key)
+    rows = inference_data
 
-
-def gen_stats_df_by_data_list(
-    data: list[list[str]],
-    key: str,
-) -> tuple[list[str], pd.DataFrame]:
     index = [
         ("Lot", "ID"),
         ("Total Defect Count", "As-is"),
@@ -148,8 +119,10 @@ def gen_stats_df_by_data_list(
         ("Unlabeled Count", "Total"),
         ("Unlabeled Count", "Filtered"),
     ]
+
     pd_multiindex = pd.MultiIndex.from_tuples(index)
-    df = pd.DataFrame(data, columns=pd_multiindex)
+    df = pd.DataFrame(rows, columns=pd_multiindex)
+
     styled_df = (
         df.style.apply(draw_column_background_color, axis=1)
         .apply(highlight_oos, axis=1)
@@ -162,7 +135,7 @@ def gen_stats_df_by_data_list(
         hide_index=True,
         on_select="rerun",
         selection_mode="multi-row",
-        height=35 * (len(data) + 2),
+        height=35 * (len(rows) + 2),
     )
 
     selected_rows = event.selection.rows

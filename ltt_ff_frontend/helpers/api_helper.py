@@ -105,15 +105,19 @@ def get_model_details(model_name: str) -> dict[str, Any]:
 #####################################################################################################
 def get_result_viewer_components(
     inference_result_dir: str,
-    recipe: dict[str, Any],
     required_components: list[str],
+    recipe: dict[str, Any] | None = None,
     required_input: Optional[dict[str, Any]] = None,
+    secondary_inference_result_dir: str | None = None,  # only required for 2D Dist. Chart
 ) -> dict[str, Any]:
     params = {
         "inference_result_dir": inference_result_dir,
         "recipe": recipe,
         "required_components": required_components,
         "required_input": required_input if required_input is not None else {},
+        "secondary_inference_result_dir": secondary_inference_result_dir
+        if secondary_inference_result_dir is not None
+        else "",
     }
     r = requests.post(API_ROOT + "result/get_result_viewer_components", json=params, timeout=TIMEOUT)
 
@@ -583,74 +587,6 @@ def relabel_lrf(
         logger.error(f"Error occurred when calling lrf_relabel API: {r.json()['message']}")
 
     return r
-
-
-def get_model_data(
-    output_dir: str,
-) -> tuple[dict[str, Any], tuple[list[int], list[float], list[int]]] | tuple[None, None]:
-    try:
-        model_data_list = get_model_data_list(output_dir)
-        db_metadata = model_data_list[0]
-        defect_id_lists = model_data_list[1][0]
-        probability_list = model_data_list[1][1]
-        answer_list = model_data_list[1][2]
-        return db_metadata[0], (defect_id_lists[0], probability_list[0], answer_list[0])
-    except Exception as e:
-        logger.warning(f"Error getting model data from {output_dir}! {e}")
-        return None, None
-
-
-class MultiLotModelData:
-    def __init__(
-        self,
-        model_metadata_list: list[dict[str, Any]],
-        defect_id_lists: list[list[int]],
-        probability_lists: list[list[float]],
-        answer_lists: list[list[int]],
-    ):
-        self.model_metadata_list = model_metadata_list
-        self.defect_id_lists = defect_id_lists
-        self.probability_lists = probability_lists
-        self.answer_lists = answer_lists
-
-    def __repr__(self) -> str:
-        return f"""MultiLotModelData(model_metadata_list={self.model_metadata_list},
-                defect_id_lists={self.defect_id_lists},
-                probability_lists={self.probability_lists},
-                answer_lists={self.answer_lists})"""
-
-
-def get_multilot_model_data(
-    output_dir: str,
-) -> MultiLotModelData:
-    db_metadata = get_db_metadata_lists(output_dir=output_dir)
-    defect_id_lists = get_defect_id_lists(output_dir=output_dir)
-    probability_lists = get_probability(output_dir, defect_id_lists)
-    answer_lists = get_answer(output_dir, defect_id_lists)
-
-    assert len(defect_id_lists) == len(probability_lists), f"IDs: {len(defect_id_lists)} Prob: {len(probability_lists)}"
-    assert len(defect_id_lists) == len(answer_lists), f"IDs: {len(defect_id_lists)} Ans: {len(answer_lists)}"
-
-    return MultiLotModelData(db_metadata, defect_id_lists, probability_lists, answer_lists)
-
-
-# except Exception as e:
-#     logger.warning(f"Error getting model data from {output_dir}! {type(e)} {e}")
-#     return None
-
-
-def get_model_data_list(
-    output_dir: str,
-) -> list[tuple[dict[str, Any], tuple[list[int], list[float], list[int]]]] | list[tuple[None, None]]:
-    try:
-        db_metadata = get_db_metadata_lists(output_dir)
-        defect_id_list = get_defect_id_lists(output_dir)
-        probability_list = get_probability(output_dir, defect_id_list)
-        answer_list = get_answer(output_dir, defect_id_list)
-        return db_metadata, (defect_id_list, probability_list, answer_list)
-    except Exception as e:
-        logger.warning(f"Error getting model data from {output_dir}! {e}")
-        return None, None
 
 
 @st.cache_data(ttl="10s")

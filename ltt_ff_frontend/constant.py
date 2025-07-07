@@ -259,4 +259,5 @@ class ResultViewerComponents(Enum):
     CLASSTYPE_COUNT = "classtype_count"
     INFERENCE_RESULT_TABLE = "inference_result_table"
     ONE_D_DEFECT_DISTRIBUTION_CHART = "one_d_defect_distribution_chart"
+    TWO_D_DEFECT_DISTRIBUTION_CHART = "two_d_defect_distribution_chart"
     CR_FFR_CURVE = "cr_ffr_curve"

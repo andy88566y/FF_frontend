@@ -1,9 +1,7 @@
 import json
 import time
-from decimal import Decimal
 
 import streamlit as st
-import yaml
 from loguru import logger
 
 from ltt_ff_frontend.constant import INFERENCE_DEFAULT_RESULT_DIR, ResultViewerComponents
@@ -15,9 +13,7 @@ from ltt_ff_frontend.shared_components import (
     new_lrf_button,
     oos_summary_component,
     particle_mode_defects_component,
-    prob_distribution_fig,
     recipe_preview,
-    roc_fig,
 )
 
 
@@ -60,7 +56,6 @@ def app() -> None:
             return
     else:
         db_recipe = {}
-
         if inference_result_dir != INFERENCE_DEFAULT_RESULT_DIR and inference_result_dir != "":
             st.error(f"Output directory is invalid: {inference_result_dir}")
 
@@ -83,8 +78,6 @@ def app() -> None:
         ResultViewerComponents.MISSED_DEFECT_LIST.value,
         ResultViewerComponents.PARTICLE_MODE_ONLY_DEFECT_LIST.value,
         ResultViewerComponents.CLASSTYPE_COUNT.value,
-        ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value,
-        ResultViewerComponents.CR_FFR_CURVE.value,
     ]
 
     generate_summary_components_start = time.perf_counter()
@@ -121,33 +114,6 @@ def app() -> None:
     except KeyError as e:
         st.error(e)
         return
-
-    if len(recipe["recipes"]) == 1:
-        # Columns for drawing distribution chart and ROC curve
-        col_1d_chart_column, col_roc_curve_column = st.columns(2)
-
-        recipe_model_name = recipe["recipes"][0]["model_name"]
-        recipe_threshold = recipe["recipes"][0]["threshold"]
-
-        if "one_d_defect_distribution_chart" in required_components:
-            # Draw 1D comparison chart
-            with col_1d_chart_column:
-                with st.expander(label="1D Prob Distribution Chart"):
-                    st.plotly_chart(
-                        prob_distribution_fig.generate_multilot_1D_plot(
-                            result_viewer_components["one_d_defect_distribution_chart"],
-                            recipe_threshold,
-                        )
-                    )
-
-        if "cr_ffr_curve" in required_components:
-            with col_roc_curve_column:
-                with st.expander(label="Roc Curve Chart"):
-                    roc_fig.gen(
-                        model_name=recipe_model_name,
-                        roc_data=result_viewer_components["cr_ffr_curve"],
-                        threshold=recipe_threshold,
-                    )
 
     generate_summary_components_time_taken = time.perf_counter() - generate_summary_components_start
     logger.warning(f"Elapsed time (generate_summary_components): {generate_summary_components_time_taken:.6f} seconds.")

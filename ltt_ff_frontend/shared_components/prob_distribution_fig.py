@@ -30,7 +30,7 @@ def get_color_map(legends_list: list[str]) -> dict[str, Any]:
     return color_map
 
 
-def generate_multilot_1D_plot(
+def gen(
     aggregated_lists: tuple[list[str], list[float], list[int], list[str]],
     selected_threshold: float,
     selected_lot_id_list: Optional[list[str]] = None,
