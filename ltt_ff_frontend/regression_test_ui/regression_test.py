@@ -11,12 +11,7 @@ from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper, stop_job_button
 
 from .regression_constant import LAYERS, SITES
-from .regression_utils import (
-    get_detailed_stats,
-    gen_lots_stats,
-    update_config_by_txt,
-    update_config_by_yaml
-)
+from .regression_utils import gen_lots_stats, get_detailed_stats, update_config_by_txt, update_config_by_yaml
 
 
 DEFAULT_DATA_YAML = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/WXXX_data_XXX.yaml"
@@ -27,34 +22,32 @@ DEFAULT_OUTPUT_PATH = "/mnt/fs0/MLE/ff_docker_output/mle_regression_test/"
 def app():
     st.title("Regression Test Dashboard")
     st.caption("Configure and run regression tests")
-    r1_col1, _r1_col2, r1_col3 = st.columns([10, 1, 10])
+
+    # Upload section
+    r1_col1, _, r1_col3 = st.columns([10, 1, 10])
     with r1_col1:
-        # Load config
         recipe_file = st.file_uploader("Upload Recipe Config (.json)")
-
     with r1_col3:
-        yaml_help_text = f"**Example: {DEFAULT_DATA_YAML}**\n"
-        data_yaml = st.file_uploader("Upload Test Data (.yaml)", type=".yaml", help=yaml_help_text)
+        yaml_help_text = f"**Example:**\n```yaml\n{DEFAULT_DATA_YAML}\n```"
+        data_yaml = st.file_uploader("Upload Test Data (.yaml)", type="yaml", help=yaml_help_text)
 
+    # Recipe config section
     r2_col1, _, r2_col2 = st.columns([10, 1, 10])
     with r2_col1:
         recipe_config = {}
         if recipe_file:
-            # recipe_config = load_recipe_config(recipe_file)
-            st.subheader("Recipe preview")
+            st.subheader("📄 Recipe Preview")
             recipe_config = json.load(recipe_file)
-            with st.expander("📄 Original Recipe Config", expanded=False):
+            with st.expander("Original Recipe Config", expanded=False):
                 st.json(recipe_config)
 
-            update_recipe_file = st.file_uploader("Upload update recipe file (.txt or .yaml)", type=[".txt", ".yaml"])
+            update_recipe_file = st.file_uploader("Upload Update Recipe File (.txt or .yaml)", type=["txt", "yaml"])
             if update_recipe_file:
                 if update_recipe_file.name.endswith(".txt"):
-                    st.text(update_recipe_file)
                     update_config_by_txt(recipe_config, update_recipe_file)
                 else:
-                    st.json(update_recipe_file)
                     update_config_by_yaml(recipe_config, update_recipe_file)
-                st.success("✅ Recipe config updated successfully")
+                st.success("Recipe config updated successfully")
                 with st.expander("🆕 Updated Recipe Config", expanded=True):
                     st.json(recipe_config)
 
@@ -66,10 +59,12 @@ def app():
                     mime="application/json",
                 )
 
+    # Test data section
+    valid_data_lots = None
     if data_yaml:
         with r2_col2:
-            show_lot_stats = st.toggle("Show Lot Statistics", value = True)
-            show_detaild_stats = st.toggle("Show Detailed Lot Statistics", value = False)
+            show_lot_stats = st.toggle("Show Lot Statistics", value=True)
+            show_detaild_stats = st.toggle("Show Detailed Lot Statistics", value=False)
             test_data = yaml.safe_load(data_yaml)
             valid_data_lots = api_helper.get_valid_lots(test_data, show_detaild_stats)
             if valid_data_lots["status"] != "completed":
@@ -83,45 +78,49 @@ def app():
                 with st.expander("Detailed Lots Statistics", expanded=False):
                     st.dataframe(get_detailed_stats(valid_data_lots["stats"]))
 
-    # Layer and site filters
-
-    r3_col1, _r3_col2, r3_col3 = st.columns([10, 1, 10])
+    # Filters
+    r3_col1, _, r3_col3 = st.columns([10, 1, 10])
     with r3_col1:
         layer_filter = st.multiselect("Run Layers", LAYERS, default=LAYERS)
         output_dir = st.text_input("Output Directory", value=DEFAULT_OUTPUT_PATH)
     with r3_col3:
         site_filter = st.multiselect("Run Sites", SITES, default=SITES)
         run_holdout = st.toggle("Run additional holdout datasets", value=True)
+        holdout_valid_data_lots = None
+
         if run_holdout:
-            h_help_text = f"**Example: {DEFAULT_DATA_YAML}**\n"
-            holdout_data_yaml = st.file_uploader("Upload Holdout Test Data (.yaml)", type=".yaml", help=h_help_text)
+            holdout_data_yaml = st.file_uploader("Upload Holdout Test Data (.yaml)", type="yaml", help=yaml_help_text)
             if holdout_data_yaml:
-                st.subheader("Holdout Lot Statistics")
+                show_h_lot_stats = st.toggle("Show Lot Statistics", value=True)
+                show_h_detaild_stats = st.toggle("Show Detailed Lot Statistics", value=False)
+                st.subheader("📊 Holdout Lot Statistics")
                 holdout_test_data = yaml.safe_load(holdout_data_yaml)
-                holdout_valid_data_lots = api_helper.get_valid_lots(holdout_test_data)
+                holdout_valid_data_lots = api_helper.get_valid_lots(holdout_test_data, show_h_detaild_stats)
+
                 if holdout_valid_data_lots["status"] != "completed":
-                    st.error(holdout_valid_data_lots["message"])
-                    logger.error(holdout_valid_data_lots["message"])
+                    st.error(f"Holdout validation failed: {holdout_valid_data_lots['message']}")
+                    logger.error(f"[Holdout Error] {holdout_valid_data_lots['message']}")
                     return
-                st.dataframe(gen_lots_stats(holdout_valid_data_lots["valid_lots"]))
-            else:
-                holdout_valid_data_lots = None
-        else:
-            holdout_valid_data_lots = None
+
+                if show_h_lot_stats:
+                    with st.expander("Lots Statistics", expanded=False):
+                        st.dataframe(gen_lots_stats(holdout_valid_data_lots["valid_lots"]))
+                if show_h_detaild_stats:
+                    with st.expander("Detailed Lots Statistics", expanded=False):
+                        st.dataframe(get_detailed_stats(holdout_valid_data_lots["stats"]))
+
     # Run button
     if st.button("Run Regression Test", type="primary"):
         if not helper.is_valid_output_dir(output_dir):
-            st.error("please enter valid output dir.")
+            st.error("Please enter a valid output directory.")
             return
-
-        # Ensure input result directory is safe
         reg_output_dir = os.path.normpath(output_dir)
 
-        # Validate user input first
         if not recipe_config or not valid_data_lots:
             st.error("Missing required inputs.")
             return
 
+        logger.info("[Regression Test] Starting main test...")
         request = api_helper.request_regression_test(
             reg_output_dir, valid_data_lots["valid_lots"], recipe_config, layer_filter, site_filter
         )
@@ -129,12 +128,14 @@ def app():
         if request.json().get("status") == "error":
             code = request.json().get("code")
             message = request.json().get("message")
-            st.text(f"Error code: {code}\nError message: {message}")
+            st.error(f"Error code: {code}\nMessage: {message}")
+            logger.error(f"[Regression Test Error] Code: {code}, Message: {message}")
         else:
-            st.success("Start running regression test!")
+            st.success("Regression test started successfully!")
             st.session_state.testcase_inference_map = request.json().get("testcase_inference_map")
 
         if holdout_valid_data_lots:
+            logger.info("[Regression Test] Starting holdout test...")
             holdout_request = api_helper.request_regression_test(
                 reg_output_dir + "_holdout",
                 holdout_valid_data_lots["valid_lots"],
@@ -145,9 +146,10 @@ def app():
             if holdout_request.json().get("status") == "error":
                 code = holdout_request.json().get("code")
                 message = holdout_request.json().get("message")
-                st.text(f"Holdout Error code: {code}\nError message: {message}")
+                st.error(f"Holdout Error code: {code}\nMessage: {message}")
+                logger.error(f"[Holdout Test Error] Code: {code}, Message: {message}")
             else:
-                st.success("Start running holdout regression test!")
+                st.success("Holdout regression test started successfully!")
 
     st.divider()
 

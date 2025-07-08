@@ -203,7 +203,9 @@ def app() -> None:
     if mode == "Normal":
         if "normal" not in st.session_state:
             prefixes = [f"{w}_{lf}" for lf, w in itertools.product(LAYERS_FABS, weeks)]
-            regression_results = get_regression_result(regression_test_cases, prefixes, regression_result_dir, mode+"!")
+            regression_results = get_regression_result(
+                regression_test_cases, prefixes, regression_result_dir, mode + "!"
+            )
 
             headers = [f"{week} {col}" for col in TABLE_COLUMNS for week in weeks]
             table_summary = get_table_summary(regression_results, weeks)
