@@ -1,11 +1,10 @@
 import json
-import time
 from datetime import datetime
 
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.constant import BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, ResultViewerComponents
+from ltt_ff_frontend.constant import INFERENCE_DEFAULT_RESULT_DIR, ResultViewerComponents
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import (
     class_type_component,
@@ -44,10 +43,7 @@ def app() -> None:
 
     if helper.is_valid_output_dir(inference_result_dir):
         try:
-            get_metadata_start_time = time.perf_counter()
             db_metadata_list = api_helper.get_db_metadata_lists(output_dir=inference_result_dir)
-            get_metadata_time_taken = time.perf_counter() - get_metadata_start_time
-            logger.warning(f"Elapsed time (get metadata for each DB): {get_metadata_time_taken:.6f} seconds.")
         except ValueError as e:
             st.error(f"{e}\n\nError getting result data from {inference_result_dir}")
             return
@@ -63,12 +59,9 @@ def app() -> None:
         if inference_result_dir != INFERENCE_DEFAULT_RESULT_DIR and inference_result_dir != "":
             st.error(f"Output directory is invalid: {inference_result_dir}")
 
-    recipe_preview_start_time = time.perf_counter()
     recipe = recipe_preview.gen(recipe_type=st_recipe_type, db_recipe=db_recipe)
     if not recipe or recipe["recipes"] == []:
         return
-    recipe_preview_time_taken = time.perf_counter() - recipe_preview_start_time
-    logger.warning(f"Elapsed time (recipe_preview_time_taken): {recipe_preview_time_taken:.6f} seconds.")
 
     if st_recipe_type in [YAML_MODE, CREATOR_MODE] and recipe and db_recipe:
         new_lrf_button.gen(r1_col3, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
@@ -87,7 +80,6 @@ def app() -> None:
         ResultViewerComponents.CR_FFR_CURVE.value,
     ]
 
-    generate_all_rv_components_start = time.perf_counter()
     try:
         result_viewer_components = api_helper.get_result_viewer_components(
             inference_result_dir=inference_result_dir,
@@ -165,6 +157,3 @@ def app() -> None:
                         threshold=recipe_threshold,
                         selected_lot_id_list=selected_lot_id_list,
                     )
-
-    generate_all_rv_components_time_taken = time.perf_counter() - generate_all_rv_components_start
-    logger.warning(f"Elapsed time (generate_all_rv_components): {generate_all_rv_components_time_taken:.6f} seconds.")
