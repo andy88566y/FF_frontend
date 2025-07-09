@@ -1,76 +1,13 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import streamlit as st
 
-from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.shared_components import helper
 from ltt_ff_frontend.shared_components.prob_distribution_fig import get_color_map
 
 
-def gen(result_dir_1: str, result_dir_2: str) -> None:
-    if helper.is_valid_output_dir(result_dir_1) and helper.is_valid_output_dir(result_dir_2):
-        multi_lot_model_data_1 = api_helper.get_multilot_model_data(result_dir_1)
-        multi_lot_model_data_2 = api_helper.get_multilot_model_data(result_dir_2)
-        recipe_model_count_1 = multi_lot_model_data_1.model_metadata_list[0]["model_count"]
-        recipe_model_count_2 = multi_lot_model_data_2.model_metadata_list[0]["model_count"]
-
-        if recipe_model_count_1 != 1:
-            st.error("Base Model recipe has more than 1 model.")
-        elif recipe_model_count_2 != 1:
-            st.error("Candidate Model recipe has more than 1 model.")
-        elif recipe_model_count_1 == 1 and recipe_model_count_2 == 1:
-            m1_threshold = multi_lot_model_data_1.model_metadata_list[0]["model_threshold_0"]
-            m2_threshold = multi_lot_model_data_2.model_metadata_list[0]["model_threshold_0"]
-            aggregated_model_data_1 = helper.aggregate_lists(
-                (
-                    multi_lot_model_data_1.defect_id_lists,
-                    multi_lot_model_data_1.probability_lists,
-                    multi_lot_model_data_1.answer_lists,
-                ),
-                multi_lot_model_data_1.model_metadata_list,
-            )
-            aggregated_model_data_2 = helper.aggregate_lists(
-                (
-                    multi_lot_model_data_2.defect_id_lists,
-                    multi_lot_model_data_2.probability_lists,
-                    multi_lot_model_data_2.answer_lists,
-                ),
-                multi_lot_model_data_2.model_metadata_list,
-            )
-            col1, col2 = st.columns(2)
-            with col1:
-                input_m1_threshold = st.number_input(
-                    label="Model 1 threshold:",
-                    value=m1_threshold,
-                    step=1e-5,
-                    format="%.5f",
-                    help="Probabilities below threshold will be considered as non-defects.",
-                )
-            with col2:
-                input_m2_threshold = st.number_input(
-                    label="Model 2 threshold:",
-                    value=m2_threshold,
-                    step=1e-5,
-                    format="%.5f",
-                    help="Probabilities below threshold will be considered as non-defects.",
-                )
-
-            _, plot_container, _ = st.columns([1, 8, 1])
-            with plot_container:
-                st.plotly_chart(
-                    generate_fig(
-                        aggregated_model_data_1,
-                        aggregated_model_data_2,
-                        input_m1_threshold,
-                        input_m2_threshold,
-                    )
-                )
-
-
-def generate_fig(
-    aggregated_model_data_1: tuple[list[int], list[float], list[int], list[str]],
-    aggregated_model_data_2: tuple[list[int], list[float], list[int], list[str]],
+def gen(
+    aggregated_model_data_1: tuple[list[str], list[float], list[int], list[str]],
+    aggregated_model_data_2: tuple[list[str], list[float], list[int], list[str]],
     m1_threshold: float,
     m2_threshold: float,
 ) -> go.Figure:

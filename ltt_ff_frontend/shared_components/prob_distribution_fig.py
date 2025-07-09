@@ -30,9 +30,8 @@ def get_color_map(legends_list: list[str]) -> dict[str, Any]:
     return color_map
 
 
-def generate_multilot_1D_plot(
-    raw_data: tuple[list[int], list[float], list[int]],
-    model_metadata_list: list[dict[str, Any]],
+def gen(
+    aggregated_lists: tuple[list[str], list[float], list[int], list[str]],
     selected_threshold: float,
     selected_lot_id_list: Optional[list[str]] = None,
 ) -> go.Figure:
@@ -40,14 +39,12 @@ def generate_multilot_1D_plot(
     Generates a 1D plot for defect probability distribution across multiple lots.
 
     Parameters:
-    raw_data (tuple[list[int], list[float], list[int]]):
-        A tuple containing three lists:
-        - list[int]: List of defect IDs.
-        - list[float]: List of probabilities.
-        - list[int]: List of labels (0 for non-defect, 1 for defect, other values for unlabeled).
-
-    model_metadata_list (list[dict[str, Any]]):
-        A list of dictionaries containing metadata for each model.
+    aggregated_lists:
+        A tuple containing four lists of lists:
+        - list[list[str]]: List of defect No or UniqueID.
+        - list[list[float]]: List of probabilities.
+        - list[list[int]]: List of labels (0 for non-defect, 1 for defect, other values for unlabeled).
+        - list[str]: List of Lot IDs
 
     selected_threshold (float):
         The threshold value for classification.
@@ -63,7 +60,9 @@ def generate_multilot_1D_plot(
 
     if selected_lot_id_list is None:
         selected_lot_id_list = []
-    id_list, prob_list, ans_list, lot_id_list = helper.aggregate_lists(raw_data, model_metadata_list)
+
+    id_list, prob_list, ans_list, lot_id_list = aggregated_lists
+
     df = pd.DataFrame(
         data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
     )
