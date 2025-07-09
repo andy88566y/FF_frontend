@@ -5,16 +5,10 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
+import yaml
 from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.regression_test_ui.regression_constant import (
-    LAYERS,
-    LAYERS_FABS,
-    RULE_LAYERS_FABS,
-    RUN_MODES,
-    SITES,
-)
 
 
 CR_COL = "(CR OOS lots)"
@@ -22,6 +16,8 @@ FFR_COL = "(FFR OOS lots) Exclude flush"
 AVG_FFR_COL = "avg ffr"
 TABLE_COLUMNS = [CR_COL, FFR_COL]
 RULE_TABLE_COLUMNS = [CR_COL, FFR_COL, AVG_FFR_COL]
+RUN_MODES = ["Normal", "with Rule", "Rule only", "Holdout"]
+CONFIG_NAME = "regression_config.yaml"
 
 
 def check_new_dir(result_dir: str) -> None:
@@ -78,18 +74,18 @@ def get_summary(layer_filter: list[str], results: dict[str, list], weeks: list) 
     return summary
 
 
-def get_summary_p_fab(layer_filter: list[str], results: dict[str, list], columns: list, weeks: list) -> tuple:
-    summary_per_fab = []
-    layer_per_fab = []
+def get_summary_p_site(layer_filter: list[str], results: dict[str, list], columns: list, weeks: list) -> tuple:
+    summary_per_site = []
+    layer_per_site = []
 
     for layer in layer_filter:
-        fab_len = len(results[f"{weeks[0]}#{layer}#{columns[0]}"])
-        for i in range(fab_len):
+        site_len = len(results[f"{weeks[0]}#{layer}#{columns[0]}"])
+        for i in range(site_len):
             row = []
             for col in columns:
                 prev_n1 = prev_n2 = 9999
                 for week in weeks:
-                    fab, info = results[f"{week}#{layer}#{col}"][i].split()
+                    site, info = results[f"{week}#{layer}#{col}"][i].split()
                     if "/" not in info:
                         row.append(results[f"{week}#{layer}#{col}"][i])
                         continue
@@ -101,12 +97,12 @@ def get_summary_p_fab(layer_filter: list[str], results: dict[str, list], columns
                         formatted, prev_n1, prev_n2 = parse_ffr_value(n1, n2, prev_n1, prev_n2, d)
                     else:
                         continue  # or raise error
-                    row.append(f"{fab} {formatted}")
-            summary_per_fab.append(row)
+                    row.append(f"{site} {formatted}")
+            summary_per_site.append(row)
 
-        layer_per_fab.extend([layer] * fab_len)
+        layer_per_site.extend([layer] * site_len)
 
-    return summary_per_fab, layer_per_fab
+    return summary_per_site, layer_per_site
 
 
 def get_holdout_layer_filter(layer_filter: list[str], results: dict[str, Any], w: str, c: str) -> list[str]:
@@ -132,22 +128,29 @@ def app() -> None:
         if regression_result_parent_dir and specific_dir:
             regression_result_dir = os.path.join(regression_result_parent_dir, specific_dir)
         check_new_dir(regression_result_dir)
+        yaml_path = os.path.join(regression_result_parent_dir, CONFIG_NAME)
+        data = None
+        if os.path.isfile(yaml_path):
+            with open(yaml_path) as f:
+                data = yaml.safe_load(f)
+        layers = data["layers"] if data else ["OD", "PO", "CUT", "M0M2", "M1", "VIA"]
+        sites = data["sites"] if data else ["F20", "F12", "F18A", "F18B", "F18EBO", "F15EBO"]
+        p_week, c_week = data["weeks"] if data else (None, None)
 
     r2_col1, r2_col2 = st.columns([1, 1])
     with r2_col1:
-        previous_week = st.text_input("Previous Week")
+        previous_week = st.text_input("Previous Week", value=p_week)
     with r2_col2:
-        current_week = st.text_input("Current Week")
+        current_week = st.text_input("Current Week", value=c_week)
 
     r3_col1, r3_col2 = st.columns([1, 1])
     with r3_col1:
-        layer_filter = st.multiselect("View Layers", LAYERS, default=LAYERS)
+        layer_filter = st.multiselect("View Layers", layers, default=layers)
 
     with r3_col2:
-        fab_filter = st.multiselect("View Sites", SITES, default=SITES)
+        site_filter = st.multiselect("View Sites", sites, default=sites)
 
-    combinations = {f"{layer}_{site}" for layer in layer_filter for site in fab_filter}
-    rule_layer_fab_filter = combinations.intersection(RULE_LAYERS_FABS)
+    layer_site_filter = {f"{layer}_{site}" for layer in layer_filter for site in site_filter}
     mode = st.segmented_control("Run Mode", RUN_MODES, default="Normal")
 
     if mode is None:
@@ -167,23 +170,23 @@ def app() -> None:
 
     if mode == "Normal":
         if "normal" not in st.session_state:
-            prefixes = [f"{w}_{lf}" for lf, w in itertools.product(LAYERS_FABS, weeks)]
-            st.session_state.normal = api_helper.get_regression_result(
+            prefixes = [f"{w}_{lf}" for lf, w in itertools.product(layer_site_filter, weeks)]
+            st.session_state.normal = api_helper.fetch_regression_result(
                 regression_testcases, prefixes, regression_result_dir, mode
             )["regression_result"]
         headers = [f"{week} {col}" for col in TABLE_COLUMNS for week in weeks]
         summary = get_summary(layer_filter, st.session_state.normal, weeks)
-        summary_p_fab, layer_p_fab = get_summary_p_fab(layer_filter, st.session_state.normal, TABLE_COLUMNS, weeks)
+        summary_p_site, layer_p_site = get_summary_p_site(layer_filter, st.session_state.normal, TABLE_COLUMNS, weeks)
         st.subheader("Regression Results Summary")
         st.dataframe(pd.DataFrame(summary, columns=headers, index=layer_filter))
-        st.subheader("Regression Results Summary (Per FAB):")
-        st.dataframe(pd.DataFrame(summary_p_fab, columns=headers, index=layer_p_fab))
+        st.subheader("Regression Results Summary (Per SITE):")
+        st.dataframe(pd.DataFrame(summary_p_site, columns=headers, index=layer_p_site))
 
     elif mode == "with Rule":
         if "rule" not in st.session_state:
             st.session_state.rule = {"regression_result": defaultdict(list), "ffr_check_memo": defaultdict()}
             for m in ["Normal", "with Rule"]:
-                prefixes = [f"{w}_{lf}" for lf, w in itertools.product(LAYERS_FABS, rule_weeks)]
+                prefixes = [f"{w}_{lf}" for lf, w in itertools.product(layer_site_filter, rule_weeks)]
                 result = api_helper.get_regression_result(regression_testcases, prefixes, regression_result_dir, m)
                 st.session_state.rule["regression_result"].update(result["regression_result"])
                 st.session_state.rule["ffr_check_memo"].update(result["ffr_check_memo"])
@@ -192,15 +195,15 @@ def app() -> None:
         ffr_check_memo = st.session_state.rule["ffr_check_memo"]
         headers_weeks = [rule_weeks[0], f"{rule_weeks[0]}with Rule"]
         headers = [f"{week} {col}" for col in TABLE_COLUMNS for week in headers_weeks]
-        summary_p_fab, layer_p_fab = get_summary_p_fab(layer_filter, regression_result, TABLE_COLUMNS, headers_weeks)
-        st.subheader("RULE Regression Results Summary (Per FAB):")
-        st.dataframe(pd.DataFrame(summary_p_fab, columns=headers, index=layer_p_fab))
+        summary_p_site, layer_p_site = get_summary_p_site(layer_filter, regression_result, TABLE_COLUMNS, headers_weeks)
+        st.subheader("RULE Regression Results Summary (Per SITE):")
+        st.dataframe(pd.DataFrame(summary_p_site, columns=headers, index=layer_p_site))
         # list out ffr drop > 5% lots
         warnings = []
 
-        for layer_fab in rule_layer_fab_filter:
-            original_key = f"{headers_weeks[0]}_{layer_fab}"
-            with_rule_key = f"{headers_weeks[1]}_{layer_fab}"
+        for layer_site in layer_site_filter:
+            original_key = f"{headers_weeks[0]}_{layer_site}"
+            with_rule_key = f"{headers_weeks[1]}_{layer_site}"
             for mask_type in ["flush", "production"]:
                 memo = ffr_check_memo.get(f"{with_rule_key}_{mask_type}", {})
                 for lot_id, rule_ffr in memo.items():
@@ -208,7 +211,7 @@ def app() -> None:
                     if rule_ffr > no_rule_ffr:
                         warnings.append(
                             {
-                                "LayerFab": layer_fab,
+                                "LayerFab": layer_site,
                                 "MaskType": mask_type,
                                 "LotID": lot_id,
                                 "NoRuleFFR": no_rule_ffr,
@@ -219,7 +222,7 @@ def app() -> None:
                     elif no_rule_ffr - rule_ffr >= 0.05:
                         warnings.append(
                             {
-                                "LayerFab": layer_fab,
+                                "LayerFab": layer_site,
                                 "MaskType": mask_type,
                                 "LotID": lot_id,
                                 "NoRuleFFR": no_rule_ffr,
@@ -233,17 +236,17 @@ def app() -> None:
 
     elif mode == "Rule only":
         if "r_only" not in st.session_state:
-            prefixes = [f"{w}_{lf}" for lf, w in itertools.product(RULE_LAYERS_FABS, rule_weeks)]
+            prefixes = [f"{w}_{lf}" for lf, w in itertools.product(layer_site_filter, rule_weeks)]
             st.session_state.r_only = api_helper.get_regression_result(
                 regression_testcases, prefixes, regression_result_dir, mode
             )["regression_result"]
         headers_weeks = [f"{week}{mode}" for week in rule_weeks]
-        summary_p_fab, layer_p_fab = get_summary_p_fab(
+        summary_p_site, layer_p_site = get_summary_p_site(
             layer_filter, st.session_state.r_only, RULE_TABLE_COLUMNS, headers_weeks
         )
         headers = [f"{week} {col}" for col in RULE_TABLE_COLUMNS for week in headers_weeks]
-        st.subheader("RULE ONLY Regression Results Summary (Per FAB):")
-        st.dataframe(pd.DataFrame(summary_p_fab, columns=headers, index=layer_p_fab))
+        st.subheader("RULE ONLY Regression Results Summary (Per SITE):")
+        st.dataframe(pd.DataFrame(summary_p_site, columns=headers, index=layer_p_site))
 
     elif mode == "Holdout":
         holdout_test_cases = defaultdict(list)
@@ -251,7 +254,7 @@ def app() -> None:
             key = "_".join(_dir.split("_")[:3])
             holdout_test_cases[key].append(_dir)
         if "holdout" not in st.session_state:
-            prefixes = [f"{w}_{lf}" for lf, w in itertools.product(LAYERS_FABS, weeks)]
+            prefixes = [f"{w}_{lf}" for lf, w in itertools.product(layer_site_filter, weeks)]
             st.session_state.holdout = api_helper.fetch_regression_result(
                 holdout_test_cases, prefixes, regression_result_dir + "_holdout", "Normal"
             )["regression_result"]
@@ -262,9 +265,9 @@ def app() -> None:
         summary = get_summary(holdout_layer_filter, st.session_state.holdout, weeks)
         st.subheader("Holdout Regression Results Summary")
         st.dataframe(pd.DataFrame(summary, columns=headers, index=holdout_layer_filter))
-        fab_headers = [f"{week} {col}" for col in RULE_TABLE_COLUMNS for week in weeks]
-        summary_per_fab, layer_per_fab = get_summary_p_fab(
+        site_headers = [f"{week} {col}" for col in RULE_TABLE_COLUMNS for week in weeks]
+        summary_per_site, layer_per_site = get_summary_p_site(
             holdout_layer_filter, st.session_state.holdout, RULE_TABLE_COLUMNS, weeks
         )
-        st.subheader("Holdout Regression Results Summary (Per FAB):")
-        st.dataframe(pd.DataFrame(summary_per_fab, columns=fab_headers, index=layer_per_fab))
+        st.subheader("Holdout Regression Results Summary (Per SITE):")
+        st.dataframe(pd.DataFrame(summary_per_site, columns=site_headers, index=layer_per_site))

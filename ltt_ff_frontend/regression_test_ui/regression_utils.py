@@ -20,6 +20,18 @@ def gen_lots_stats(data_lots: dict[str, Any]) -> pd.DataFrame:
     )
 
 
+def get_valid_lg_from_recipe(config_data: dict[str, Any]) -> list[str]:
+    return sorted(config_data.keys())
+
+
+def get_valid_site_from_recipe(config_data: dict[str, Any]) -> list[str]:
+    site_set = set()
+    for week_site_recipe in config_data.values():
+        for site_recipe in week_site_recipe.values():
+            site_set |= set(site_recipe.keys())
+    return sorted(site_set)
+
+
 def get_detailed_stats(stats: list[Any]) -> pd.DataFrame:
     stats_df = (
         pd.DataFrame.from_records(data=stats)

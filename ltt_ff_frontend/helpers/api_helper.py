@@ -1505,7 +1505,7 @@ def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
 # Regression Test                                                                                #
 #####################################################################################################
 
-@st.cache_data
+@st.cache_data(ttl="60s")
 def fetch_valid_lots(test_data: Any, gen_stats: bool) -> dict[str, Any]:
     data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
     r = requests.post(
@@ -1523,7 +1523,7 @@ def fetch_regression_result(
     prefixes: list[str],
     result_dir: str,
     mode: str
-) -> requests.Response:
+) -> dict[str, Any]:
     r = requests.post(
         API_ROOT + "fetch_regression_result",
         json={
@@ -1534,10 +1534,7 @@ def fetch_regression_result(
         },
         timeout=TIMEOUT,
     )
-    if r.json()["status"] == "completed":
-        logger.success(r.json()["message"])
-    else:
-        logger.error(r.json()["message"])
+
     return r.json()
 
 def request_regression_test(
@@ -1546,7 +1543,7 @@ def request_regression_test(
     recipe_config: dict[str, Any],
     run_layer: list[str],
     run_site: list[str],
-) -> requests.Response:
+) -> dict[str, Any]:
     r = requests.post(
         API_ROOT + "run_regression_test",
         json={
@@ -1559,12 +1556,5 @@ def request_regression_test(
         },
         timeout=TIMEOUT,
     )
-
-    status = r.json()["status"]
-
-    if status == "started":
-        logger.info("Regression Test started running successfully!")
-    else:
-        logger.error(f"Error occurred when calling Regression Test API: {r.json()['message']}")
-
-    return r
+    
+    return r.json()

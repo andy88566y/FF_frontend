@@ -10,8 +10,14 @@ from loguru import logger
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper, stop_job_button
 
-from .regression_constant import LAYERS, SITES
-from .regression_utils import gen_lots_stats, get_detailed_stats, update_config_by_txt, update_config_by_yaml
+from .regression_utils import (
+    gen_lots_stats,
+    get_detailed_stats,
+    get_valid_lg_from_recipe,
+    get_valid_site_from_recipe,
+    update_config_by_txt,
+    update_config_by_yaml,
+)
 
 
 DEFAULT_DATA_YAML = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/WXXX_data_XXX.yaml"
@@ -33,9 +39,9 @@ def app():
 
     # Recipe config section
     r2_col1, _, r2_col2 = st.columns([10, 1, 10])
-    with r2_col1:
+    if recipe_file:
         recipe_config = {}
-        if recipe_file:
+        with r2_col1:
             st.subheader("📄 Recipe Preview")
             recipe_config = json.load(recipe_file)
             with st.expander("Original Recipe Config", expanded=False):
@@ -58,6 +64,13 @@ def app():
                     file_name="updated_recipe_config.json",
                     mime="application/json",
                 )
+        layers = get_valid_lg_from_recipe(recipe_config)
+        sites = get_valid_site_from_recipe(recipe_config)
+        r3_col1, _, r3_col3 = st.columns([10, 1, 10])
+        with r3_col1:
+            layer_filter = st.multiselect("Run Layers", layers, default=layers)
+        with r3_col3:
+            site_filter = st.multiselect("Run Sites", sites, default=sites)
 
     # Test data section
     valid_data_lots = None
@@ -69,8 +82,8 @@ def app():
             valid_data_lots = api_helper.fetch_valid_lots(test_data, show_detaild_stats)
             if valid_data_lots["status"] != "completed":
                 st.error(valid_data_lots["message"])
-                logger.error(valid_data_lots["message"])
                 return
+
             if show_lot_stats:
                 with st.expander("Lots Statistics", expanded=False):
                     st.dataframe(gen_lots_stats(valid_data_lots["valid_lots"]))
@@ -79,12 +92,10 @@ def app():
                     st.dataframe(get_detailed_stats(valid_data_lots["stats"]))
 
     # Filters
-    r3_col1, _, r3_col3 = st.columns([10, 1, 10])
-    with r3_col1:
-        layer_filter = st.multiselect("Run Layers", LAYERS, default=LAYERS)
+    r4_col1, _, r4_col3 = st.columns([10, 1, 10])
+    with r4_col1:
         output_dir = st.text_input("Output Directory", value=DEFAULT_OUTPUT_PATH)
-    with r3_col3:
-        site_filter = st.multiselect("Run Sites", SITES, default=SITES)
+    with r4_col3:
         run_holdout = st.toggle("Run additional holdout datasets", value=True)
         holdout_valid_data_lots = None
 
@@ -109,6 +120,7 @@ def app():
                     with st.expander("Detailed Lots Statistics", expanded=False):
                         st.dataframe(get_detailed_stats(holdout_valid_data_lots["stats"]))
 
+    generate_yaml = st.toggle("Generate Experiment YAML", value=True)
     # Run button
     if st.button("Run Regression Test", type="primary"):
         if not helper.is_valid_output_dir(output_dir):
@@ -125,14 +137,26 @@ def app():
             reg_output_dir, valid_data_lots["valid_lots"], recipe_config, layer_filter, site_filter
         )
 
-        if request.json().get("status") == "error":
-            code = request.json().get("code")
-            message = request.json().get("message")
-            st.error(f"Error code: {code}\nMessage: {message}")
-            logger.error(f"[Regression Test Error] Code: {code}, Message: {message}")
+        if request["status"] == "error":
+            st.error(f"Error \nMessage: {request['message']}")
         else:
             st.success("Regression test started successfully!")
-            st.session_state.testcase_inference_map = request.json().get("testcase_inference_map")
+            st.session_state.testcase_inference_map = request["testcase_inference_map"]
+
+            if generate_yaml:
+                regression_config = {
+                    "data_yaml_path": data_yaml.name,
+                    "holdout_data_yaml_path": holdout_data_yaml.name if run_holdout and holdout_data_yaml else None,
+                    "layers": layer_filter,
+                    "sites": sites,
+                    "weeks": list(list(recipe_config.values())[0].keys()),
+                    # "recipe_config": recipe_config
+                }
+
+                yaml_path = os.path.join(reg_output_dir, "regression_config.yaml")
+                with open(yaml_path, "w") as f:
+                    yaml.dump(regression_config, f)
+                st.success(f"Test config saved to: {yaml_path}")
 
         if holdout_valid_data_lots:
             logger.info("[Regression Test] Starting holdout test...")
@@ -143,13 +167,12 @@ def app():
                 layer_filter,
                 site_filter,
             )
-            if holdout_request.json().get("status") == "error":
-                code = holdout_request.json().get("code")
-                message = holdout_request.json().get("message")
-                st.error(f"Holdout Error code: {code}\nMessage: {message}")
-                logger.error(f"[Holdout Test Error] Code: {code}, Message: {message}")
+            if holdout_request["status"] == "error":
+                st.error(f"Holdout test Error \nMessage: {request['message']}")
             else:
                 st.success("Holdout regression test started successfully!")
+        elif run_holdout:
+            st.error("Holdout test Error \nMissing required inputs.")
 
     st.divider()
 
