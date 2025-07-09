@@ -66,7 +66,7 @@ def app():
             show_lot_stats = st.toggle("Show Lot Statistics", value=True)
             show_detaild_stats = st.toggle("Show Detailed Lot Statistics", value=False)
             test_data = yaml.safe_load(data_yaml)
-            valid_data_lots = api_helper.get_valid_lots(test_data, show_detaild_stats)
+            valid_data_lots = api_helper.fetch_valid_lots(test_data, show_detaild_stats)
             if valid_data_lots["status"] != "completed":
                 st.error(valid_data_lots["message"])
                 logger.error(valid_data_lots["message"])

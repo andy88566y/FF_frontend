@@ -153,7 +153,7 @@ def app() -> None:
             current_page = 1
             st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
                 page_size, current_page
-            ).drop(columns=["output_dir"])
+            )
 
     progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
 
@@ -163,7 +163,7 @@ def app() -> None:
         current_page = st.number_input("Page number", min_value=1, value=1, step=1, key="multilot_page")
         st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
             page_size, current_page
-        ).drop(columns=["output_dir"])
+        )
 
     st.header("All multilot inference jobs") if not st.session_state.status_df_multi_inf.empty else st.write("")
 

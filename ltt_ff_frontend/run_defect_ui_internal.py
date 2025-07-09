@@ -80,6 +80,8 @@ if __name__ == "__main__":
             page_comparison,
             page_defect_diff_viewer,
             page_defect_review_gui,
+            page_regression_result_viewer,
+            page_regression_test,
             page_training,
             page_training_by_config,
             page_model_converter,

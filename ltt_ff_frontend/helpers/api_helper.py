@@ -1506,16 +1506,38 @@ def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
 #####################################################################################################
 
 @st.cache_data
-def get_valid_lots(test_data: Any, gen_stats: bool) -> dict[str, Any]:
+def fetch_valid_lots(test_data: Any, gen_stats: bool) -> dict[str, Any]:
     data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
     r = requests.post(
-        API_ROOT + "get_valid_lots",
+        API_ROOT + "fetch_valid_lots",
         json={
             "data_lots": data_lots,
             "gen_stats": gen_stats
         },
         timeout=TIMEOUT,
     )
+    return r.json()
+
+def fetch_regression_result(
+    test_cases: dict[str, list],
+    prefixes: list[str],
+    result_dir: str,
+    mode: str
+) -> requests.Response:
+    r = requests.post(
+        API_ROOT + "fetch_regression_result",
+        json={
+            "test_cases": test_cases,
+            "prefixes": prefixes,
+            "result_dir": result_dir,
+            "mode": mode
+        },
+        timeout=TIMEOUT,
+    )
+    if r.json()["status"] == "completed":
+        logger.success(r.json()["message"])
+    else:
+        logger.error(r.json()["message"])
     return r.json()
 
 def request_regression_test(
@@ -1525,23 +1547,6 @@ def request_regression_test(
     run_layer: list[str],
     run_site: list[str],
 ) -> requests.Response:
-    """
-    Calls FalseFilter API to run Regression Test.
-
-    Args:
-        output_dir: Directory to store the generated database file and filtered .lrf file.
-        multilot_config: Dict containing lot info (lot id, lrf path, image dir)
-        recipe: Inference recipe containing models names and thresholds.
-        base_model: Name of inference model.
-        confidence_threshold: Images with defect probability higher than confidence threshold is considered defective.
-        inference_batch_size: Inference batch size. Higher batch size: faster but requires more memory.
-        overwrite: If overwrite=False and the result directory contains anything, the inference job will be stopped.
-                   If overwrite=True, the entire result directory will be cleared.
-        gen_optimized_recipe: If set to True, generate a new recipe with optimized threshold by threshold picker.
-
-    Returns the reponse of the API request.
-    """
-
     r = requests.post(
         API_ROOT + "run_regression_test",
         json={
