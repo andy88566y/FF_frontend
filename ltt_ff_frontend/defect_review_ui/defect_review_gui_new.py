@@ -1,10 +1,11 @@
 import base64
 import os
+import re
 
 import streamlit as st
 from loguru import logger
 
-from ltt_ff_frontend.defect_review_ui import list_view
+from ltt_ff_frontend.defect_review_ui import list_view_new
 
 
 def app() -> None:
@@ -20,147 +21,86 @@ def app() -> None:
 
     col1, col2 = st.columns([1, 4])
     with col1:
-        st.markdown("""
-            <div style="
-                border: 2px solid #4CAF50;
-                padding: 10px;
-                border-radius: 5px;
-                width: 400px;
-                height: 300px;
-                overflow: auto;
-            ">
-                <h4>This is a Mask info</h4>
-            </div>
-        """, unsafe_allow_html=True)
+        with st.container():
+            st.write("Row 1: This is the first row.")
+            if "result_dir" not in st.session_state:
+                st.session_state.result_dir = ""
+            if "image_dir" not in st.session_state:
+                st.session_state.image_dir = ""
+            encoded_result_dir_as_str = st.query_params.get("result_dir", None)
+            encoded_image_dir_as_str = st.query_params.get("image_dir", None)
+
+            decoded_result_dir_as_str, decoded_image_dir_as_str = "", ""
+            if isinstance(encoded_result_dir_as_str, str):
+                encoded_result_dir_as_bytes = str.encode(encoded_result_dir_as_str)
+                decoded_result_dir_as_bytes = base64.urlsafe_b64decode(encoded_result_dir_as_bytes)
+                decoded_result_dir_as_str = decoded_result_dir_as_bytes.decode()
+            if isinstance(encoded_image_dir_as_str, str):
+                encoded_image_dir_as_bytes = str.encode(encoded_image_dir_as_str)
+                decoded_image_dir_as_bytes = base64.urlsafe_b64decode(encoded_image_dir_as_bytes)
+                decoded_image_dir_as_str = decoded_image_dir_as_bytes.decode()
+
+            text_input_result_dir = st.text_input(label="Result Directory", value=st.session_state.result_dir)
+            if text_input_result_dir:
+                text_input_result_dir = os.path.normpath(text_input_result_dir)
+                st.query_params.result_dir = base64.urlsafe_b64encode(str.encode(text_input_result_dir)).decode()
+            text_input_image_dir = st.text_input(label="Image Directory", value=st.session_state.image_dir)
+            if text_input_image_dir:
+                text_input_image_dir = os.path.normpath(text_input_image_dir)
+                st.query_params.image_dir = base64.urlsafe_b64encode(str.encode(text_input_image_dir)).decode()
+            if not text_input_result_dir or not text_input_image_dir:
+                st.caption("Please input an Result Directory and Image Directory to begin reviewing defects.")
+            
+            lots = [file.split(".")[0] for file in os.listdir(text_input_result_dir) if ".db" in file]
+
+            if len(lots) > 1:
+                selected_lot_id = st.selectbox(label="Select a Lot ID", options=lots)
+            else:
+                selected_lot_id = lots[0]
+            logger.info(f"Lot selected: {selected_lot_id}")
+
+            # Ensure selected Lot ID matches Image Directory
+            if re.search(re.escape(selected_lot_id), text_input_image_dir) is None:
+                logger.error(f"Mismatch between Lot ID ({selected_lot_id}) and image directory ({text_input_image_dir}).")
+                st.error(f"Mismatch between Lot ID ({selected_lot_id}) and image directory ({text_input_image_dir}).")
+                return
+
     
-        st.markdown("""
-            <div style="
-                border: 2px solid #2196F3;
-                padding: 10px;
-                border-radius: 5px;
-                width: 400px;
-                height: 100px;
-            ">
-            <h4>This is lable mapping</h4>
-            </div>
-        """, unsafe_allow_html=True)
-        st.markdown("""
-            <div style="
-                border: 2px solid #2196F3;
-                padding: 10px;
-                border-radius: 5px;
-                width: 400px;
-                height: 500px;
-            ">
-            <h4>This is Mask defect location</h4>
-            </div>
-        """, unsafe_allow_html=True)
+        with st.container():
+            st.write("Row 1: This is the first row.")
+        with st.container():
+            st.write("Row 2: This is the first row.")
 
     with col2:
-        st.markdown("""
-            <div style="
-                border: 2px solid #4CAF50;
-                padding: 10px;
-                border-radius: 5px;
-                width: 1200px;
-                height: 400px;
-                overflow: auto;
-            ">
-                <h4>This is Image Area</h4>
-            </div>
-        """, unsafe_allow_html=True)
+        with st.container():
+            pass
+        with st.container():
+            pass
+        with st.container():
+            if text_input_result_dir and text_input_image_dir:
+                if not os.path.isdir(text_input_result_dir):
+                    raise ValueError(f"Input Result directory in text field is invalid: {text_input_result_dir}")
+
+                if not os.path.isdir(text_input_image_dir):
+                    raise ValueError(f"Input Image directory in text field is invalid: {text_input_image_dir}")
+
+                logger.info("Input field params encoded and stored in URL.")
+                list_view_new.app(text_input_result_dir, text_input_image_dir, selected_lot_id)
+            elif text_input_result_dir or text_input_image_dir:
+                pass
+
+            elif decoded_result_dir_as_str and decoded_image_dir_as_str:
+                if not os.path.exists(decoded_result_dir_as_str):
+                    raise ValueError(f"Result directory in URL is invalid: {decoded_result_dir_as_str}")
+
+                if not os.path.isdir(decoded_image_dir_as_str):
+                    raise ValueError(f"Image directory in URL is invalid: {decoded_image_dir_as_str}")
+
+                logger.info("URL params successfully parsed.")
+                st.session_state.result_dir = decoded_result_dir_as_str
+                st.session_state.image_dir = decoded_image_dir_as_str
+                st.rerun()
+
+            else:
+                pass
     
-        st.markdown("""
-            <div style="
-                border: 2px solid #2196F3;
-                padding: 10px;
-                border-radius: 5px;
-                width: 1200px;
-                height: 200px;
-            ">
-            <h4>This is Receipe area</h4>
-            </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-            <div style="
-                border: 2px solid #2196F3;
-                padding: 10px;
-                border-radius: 5px;
-                width: 1200px;
-                height: 300px;
-            ">
-            <h4>This is List View area</h4>
-            </div>
-        """, unsafe_allow_html=True)
-
-    # TODO: Remove image_dir once our own image generation process is done
-    # Initialize session state for result_dir and image_dir inputs
-    if "result_dir" not in st.session_state:
-        st.session_state.result_dir = ""
-    if "image_dir" not in st.session_state:
-        st.session_state.image_dir = ""
-
-    # Parse URL to get the encoded 'result_dir' and 'image_dir' parameters
-    # They must have already been encoded using urlsafe_b64encode, then coverted to str.
-    encoded_result_dir_as_str = st.query_params.get("result_dir", None)
-    encoded_image_dir_as_str = st.query_params.get("image_dir", None)
-
-    # Decode result_dir and image_dir if they are strings.
-    # Decoding flow: encoded path as str > encoded path as bytes > decoded path as bytes > decoded path as str
-    decoded_result_dir_as_str, decoded_image_dir_as_str = "", ""
-    if isinstance(encoded_result_dir_as_str, str):
-        encoded_result_dir_as_bytes = str.encode(encoded_result_dir_as_str)
-        decoded_result_dir_as_bytes = base64.urlsafe_b64decode(encoded_result_dir_as_bytes)
-        decoded_result_dir_as_str = decoded_result_dir_as_bytes.decode()
-    if isinstance(encoded_image_dir_as_str, str):
-        encoded_image_dir_as_bytes = str.encode(encoded_image_dir_as_str)
-        decoded_image_dir_as_bytes = base64.urlsafe_b64decode(encoded_image_dir_as_bytes)
-        decoded_image_dir_as_str = decoded_image_dir_as_bytes.decode()
-
-    # If text input fields are not empty, assign values to url params
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        text_input_result_dir = st.text_input(label="Result Directory", value=st.session_state.result_dir)
-        if text_input_result_dir:
-            text_input_result_dir = os.path.normpath(text_input_result_dir)
-            st.query_params.result_dir = base64.urlsafe_b64encode(str.encode(text_input_result_dir)).decode()
-    with col2:
-        text_input_image_dir = st.text_input(label="Image Directory", value=st.session_state.image_dir)
-        if text_input_image_dir:
-            text_input_image_dir = os.path.normpath(text_input_image_dir)
-            st.query_params.image_dir = base64.urlsafe_b64encode(str.encode(text_input_image_dir)).decode()
-
-    if not text_input_result_dir or not text_input_image_dir:
-        st.caption("Please input an Result Directory and Image Directory to begin reviewing defects.")
-
-    # Use input from text fields if they exist
-    # Otherwise, assign URL params to session state and refresh
-    if text_input_result_dir and text_input_image_dir:
-        if not os.path.isdir(text_input_result_dir):
-            raise ValueError(f"Input Result directory in text field is invalid: {text_input_result_dir}")
-
-        if not os.path.isdir(text_input_image_dir):
-            raise ValueError(f"Input Image directory in text field is invalid: {text_input_image_dir}")
-
-        logger.info("Input field params encoded and stored in URL.")
-        list_view.app(text_input_result_dir, text_input_image_dir)
-
-    # hotfix for endless rerun bug
-    elif text_input_result_dir or text_input_image_dir:
-        pass
-
-    elif decoded_result_dir_as_str and decoded_image_dir_as_str:
-        if not os.path.exists(decoded_result_dir_as_str):
-            raise ValueError(f"Result directory in URL is invalid: {decoded_result_dir_as_str}")
-
-        if not os.path.isdir(decoded_image_dir_as_str):
-            raise ValueError(f"Image directory in URL is invalid: {decoded_image_dir_as_str}")
-
-        logger.info("URL params successfully parsed.")
-        st.session_state.result_dir = decoded_result_dir_as_str
-        st.session_state.image_dir = decoded_image_dir_as_str
-        st.rerun()
-
-    else:
-        pass
