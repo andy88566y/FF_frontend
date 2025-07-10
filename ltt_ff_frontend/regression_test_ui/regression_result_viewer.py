@@ -187,7 +187,7 @@ def app() -> None:
             st.session_state.rule = {"regression_result": defaultdict(list), "ffr_check_memo": defaultdict()}
             for m in ["Normal", "with Rule"]:
                 prefixes = [f"{w}_{lf}" for lf, w in itertools.product(layer_site_filter, rule_weeks)]
-                result = api_helper.get_regression_result(regression_testcases, prefixes, regression_result_dir, m)
+                result = api_helper.fetch_regression_result(regression_testcases, prefixes, regression_result_dir, m)
                 st.session_state.rule["regression_result"].update(result["regression_result"])
                 st.session_state.rule["ffr_check_memo"].update(result["ffr_check_memo"])
         regression_result = st.session_state.rule["regression_result"]
@@ -237,7 +237,7 @@ def app() -> None:
     elif mode == "Rule only":
         if "r_only" not in st.session_state:
             prefixes = [f"{w}_{lf}" for lf, w in itertools.product(layer_site_filter, rule_weeks)]
-            st.session_state.r_only = api_helper.get_regression_result(
+            st.session_state.r_only = api_helper.fetch_regression_result(
                 regression_testcases, prefixes, regression_result_dir, mode
             )["regression_result"]
         headers_weeks = [f"{week}{mode}" for week in rule_weeks]
