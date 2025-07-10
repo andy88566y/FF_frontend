@@ -89,37 +89,56 @@ def update_config_by_txt(config_data: dict, recipe_file: Any) -> None:
         for old, new in [("*new*", ""), ("TH: ", "TH:"), (" THC: ", "THC:"), (" \u200bTHC: ", "THC:")]:
             filter_line = filter_line.replace(old, new)
 
-        recipe = []
+        site = None
+        recipe: list[dict] = []
         min_k = None
         top_k = None
+        model_id = None
 
         for item in filter_line.split():
-            if site_pattern.match(item):
-                site = site_pattern.search(item).group(1)
-            elif recipe_pattern.match(item):
+            site_matches = site_pattern.findall(item)
+            if site_matches:
+                if len(site_matches) == 2:
+                    current_layer, site = site_matches
+                else:
+                    site = site_matches[0]
+                continue
+
+            if recipe_pattern.match(item):
                 _, model_id = item.split("-")
-            elif item.startswith("RULE"):
+                continue
+
+            if item.startswith("RULE"):
                 model_id = item
-            elif threshold_pattern.match(item):
-                th_match = threshold_pattern.search(item)
-                if th_match:
-                    th = float(th_match.group(1))
-                    th_c = float(th_match.group(2)) if th_match.group(2) else None
-                    if model_id:
-                        if th_c is not None:
-                            recipe.append((model_id, th, th_c))
-                        else:
-                            recipe.append((model_id, th))
-                    else:
-                        raise ValueError("threshold should be come after model id!")
-            elif min_k_pattern.match(item):
-                min_k = int(min_k_pattern.search(item).group(1))
-            elif top_k_pattern.match(item):
-                top_k = int(top_k_pattern.search(item).group(1))
-            else:
-                raise ValueError(f"Can not parse line: {item}")
-        if current_layer == "OD" and config_data[current_layer][week].get(site, None) is not None:
-            current_layer = "PO"
+                continue
+
+            th_match = threshold_pattern.search(item)
+            if th_match:
+                th = float(th_match.group(1))
+                th_c = float(th_match.group(2)) if th_match.group(2) else None
+
+                if not model_id:
+                    raise ValueError("threshold should come after model id!")
+
+                setting = {"model_id": model_id, "threshold": th}
+                if th_c is not None:
+                    setting["threshold_c"] = th_c
+                recipe.append(setting)
+
+                continue
+
+            min_k_match = min_k_pattern.search(item)
+            if min_k_match:
+                min_k = int(min_k_match.group(1))
+                continue
+
+            top_k_match = top_k_pattern.search(item)
+            if top_k_match:
+                top_k = int(top_k_match.group(1))
+                continue
+
+            raise ValueError(f"Cannot parse line {line}, item: {item}")
+
         config_data[current_layer][week][site] = {"recipes": recipe}
         if min_k is not None:
             config_data[current_layer][week][site]["min_k"] = min_k
@@ -135,6 +154,4 @@ def update_config_by_yaml(config_data: dict, recipe_yaml: Any) -> None:
         raise ValueError(f"Invalid filename format: {file_name}. Expected format: WX_layer_site")
     week, layer, site = match.groups()
     update_week(config_data, week[1:])
-    update_data["recipes"] = [tuple(model.values()) for model in update_data["recipes"]]
-
     config_data.setdefault(layer, {}).setdefault(week, {})[site] = update_data

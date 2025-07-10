@@ -1,5 +1,4 @@
 # ruff: noqa: F841
-import json
 import os
 
 import pandas as pd
@@ -32,7 +31,7 @@ def app():
     # Upload section
     r1_col1, _, r1_col3 = st.columns([10, 1, 10])
     with r1_col1:
-        recipe_file = st.file_uploader("Upload Recipe Config (.json)")
+        recipe_file = st.file_uploader("Upload Recipe Config (.yaml)")
     with r1_col3:
         yaml_help_text = f"**Example:**\n```yaml\n{DEFAULT_DATA_YAML}\n```"
         data_yaml = st.file_uploader("Upload Test Data (.yaml)", type="yaml", help=yaml_help_text)
@@ -43,7 +42,7 @@ def app():
         recipe_config = {}
         with r2_col1:
             st.subheader("📄 Recipe Preview")
-            recipe_config = json.load(recipe_file)
+            recipe_config = yaml.safe_load(recipe_file)
             with st.expander("Original Recipe Config", expanded=False):
                 st.json(recipe_config)
 
@@ -57,13 +56,15 @@ def app():
                 with st.expander("🆕 Updated Recipe Config", expanded=True):
                     st.json(recipe_config)
 
-                updated_json_str = json.dumps(recipe_config, indent=2)
+                updated_yaml_str = yaml.dump(recipe_config, sort_keys=False)
+
                 st.download_button(
-                    label="💾 Download Updated Recipe Config",
-                    data=updated_json_str,
-                    file_name="updated_recipe_config.json",
-                    mime="application/json",
+                    label="📄 Download Updated Recipe Config (YAML)",
+                    data=updated_yaml_str,
+                    file_name="updated_recipe_config.yaml",
+                    mime="application/x-yaml",
                 )
+
         layers = get_valid_lg_from_recipe(recipe_config)
         sites = get_valid_site_from_recipe(recipe_config)
         r3_col1, _, r3_col3 = st.columns([10, 1, 10])
