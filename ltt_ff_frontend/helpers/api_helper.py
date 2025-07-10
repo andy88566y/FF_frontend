@@ -109,6 +109,7 @@ def get_result_viewer_components(
     recipe: dict[str, Any] | None = None,
     required_input: Optional[dict[str, Any]] = None,
     secondary_inference_result_dir: str | None = None,  # only required for 2D Dist. Chart
+    read_children_dirs: bool = False,
 ) -> dict[str, Any]:
     params = {
         "inference_result_dir": inference_result_dir,
@@ -118,6 +119,7 @@ def get_result_viewer_components(
         "secondary_inference_result_dir": secondary_inference_result_dir
         if secondary_inference_result_dir is not None
         else "",
+        "read_children_dirs": read_children_dirs,
     }
     r = requests.post(API_ROOT + "result/get_result_viewer_components", json=params, timeout=TIMEOUT)
 
@@ -196,7 +198,7 @@ def get_particle_mode_only_defects(
 # DB functions                                                                                      #
 #####################################################################################################
 @st.cache_data(ttl="10s")
-def get_db_metadata_lists(output_dir: str, lot_id: str = "") -> list[dict[str, Any]]:
+def get_db_metadata_lists(output_dir: str, lot_id: str = "", read_children_dirs: bool = False) -> list[dict[str, Any]]:
     """
     Get Result DB metadata.
 
@@ -208,7 +210,9 @@ def get_db_metadata_lists(output_dir: str, lot_id: str = "") -> list[dict[str, A
             A dictionary of result database metadata
     """
     r = requests.get(
-        API_ROOT + "result/get_db_metadata_lists", params={"output_dir": output_dir, "lot_id": lot_id}, timeout=TIMEOUT
+        API_ROOT + "result/get_db_metadata_lists",
+        params={"output_dir": output_dir, "lot_id": lot_id, "read_children_dirs": read_children_dirs},
+        timeout=TIMEOUT,
     )
 
     if r.json()["status"] == "completed":

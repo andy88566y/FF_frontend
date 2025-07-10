@@ -27,19 +27,25 @@ def app() -> None:
     st.title("False Filter Result Viewer Summary")
     st.caption("Quick overview of False Filter Result")
 
-    r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
+    result_dir_col, gen_lrf_button_col = st.columns([6, 2])
 
-    with r1_col1:
+    recipe_mode_col, read_children_dirs_toggle_col, _ = st.columns([3, 3, 2])
+
+    with result_dir_col:
         inference_result_dir = st.text_input("Inference Result Directory", value=INFERENCE_DEFAULT_RESULT_DIR)
-    with r1_col2:
+    with recipe_mode_col:
         st_recipe_type = st.segmented_control("Recipe UI", RECIPE_INPUT_MODES, default=DB_MODE)
         if st_recipe_type is None:
             st.error("Recipe UI Option can not be None!")
             return
+    with read_children_dirs_toggle_col:
+        read_children_dirs = st.toggle(label="Read .db in children directories", value=False)
 
     if helper.is_valid_output_dir(inference_result_dir):
         try:
-            db_metadata_list = api_helper.get_db_metadata_lists(output_dir=inference_result_dir)
+            db_metadata_list = api_helper.get_db_metadata_lists(
+                output_dir=inference_result_dir, read_children_dirs=read_children_dirs
+            )
         except ValueError as e:
             st.error(f"{e}\n\nError getting result data from {inference_result_dir}")
             return
@@ -60,7 +66,7 @@ def app() -> None:
         return
 
     if st_recipe_type in [YAML_MODE, CREATOR_MODE] and recipe and db_recipe:
-        new_lrf_button.gen(r1_col3, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
+        new_lrf_button.gen(gen_lrf_button_col, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
 
     # Show Total/Defect/Non-defect/unlabeled count
     with st.container():
@@ -81,6 +87,7 @@ def app() -> None:
             required_input={
                 "recipe_threshold": recipe["recipes"][0]["threshold"],
             },
+            read_children_dirs=read_children_dirs,
         )
     except ValueError as e:
         st.error(e)
