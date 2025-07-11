@@ -97,7 +97,7 @@ def get_summary_p_site(layer_filter: list[str], results: dict[str, list], column
                         formatted, prev_n1, prev_n2 = parse_ffr_value(n1, n2, prev_n1, prev_n2, d)
                     else:
                         continue  # or raise error
-                    row.append(f"{site} {formatted}")
+                    row.append(f"{site}  {formatted}")
             summary_per_site.append(row)
 
         layer_per_site.extend([layer] * site_len)

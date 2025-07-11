@@ -1,4 +1,3 @@
-import json
 from decimal import Decimal
 from typing import Any
 
@@ -6,25 +5,18 @@ import streamlit as st
 import yaml
 from loguru import logger
 
-from ltt_ff_frontend.constant import BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, ResultViewerComponents
+from ltt_ff_frontend.constant import BLANK_MODEL
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import (
-    class_type_component,
     helper,
-    missed_defects_component,
-    multi_lot_stats,
-    new_lrf_button,
-    oos_summary_component,
-    particle_mode_defects_component,
-    prob_distribution_fig,
-    roc_fig,
 )
 
 
 YAML_MODE = "Yaml"
 DB_MODE = "Database"
 CREATOR_MODE = "Creator"
-RECIPE_INPUT_MODES = [YAML_MODE, DB_MODE, CREATOR_MODE]
+CUSTOM_MODE = "Custom"
+RECIPE_INPUT_MODES = [YAML_MODE, DB_MODE, CREATOR_MODE, CUSTOM_MODE]
 
 
 def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
@@ -96,10 +88,54 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
                 )
         recipe = user_input_recipe
         recipe_to_preview = user_input_recipe
+    elif recipe_type == CUSTOM_MODE:
+        if not db_recipe:
+            return {}
+        custom_recipe: dict[str, Any] = {"recipes": []}
+        with st.form(key="custom_recipe_form"):
+            for i, r in enumerate(db_recipe["recipes"]):
+                col1, col2, col3, col4 = st.columns([3.5, 2, 2, 1])
+                with col1:
+                    st.text_input(
+                        label="model name:", value=r["model_name"], key=f"{r['model_name']}_{i}", disabled=True
+                    )
+                with col2:
+                    threshold = st.number_input(
+                        label="threshold:",
+                        value=r["threshold"],
+                        step=1e-5,
+                        format="%.5f",
+                        key=f"{r['model_name']}_{i}_threshold",
+                    )
+                with col3:
+                    threshold_c = st.number_input(
+                        label="threshold_c",
+                        value=r["threshold_c"],
+                        step=1e-5,
+                        format="%.5f",
+                        key=f"{r['model_name']}_{i}_threshold_c",
+                    )
+                with col4:
+                    disable = st.toggle("disabled:", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
+
+                # 暫存每筆輸入資料
+                custom_recipe["recipes"].append(
+                    {
+                        "model_name": r["model_name"],
+                        "threshold": threshold,
+                        "threshold_c": threshold_c,
+                        "disable": disable,
+                    }
+                )
+
+            if st.form_submit_button("Apply Custom Recipe"):
+                recipe = custom_recipe
+            else:
+                recipe = {}
     else:
         recipe, recipe_to_preview = {}, {}
 
-    if recipe and recipe["recipes"] != []:
+    if recipe and recipe["recipes"] != [] and recipe_type != CUSTOM_MODE:
         with st.expander(f"{recipe_type} Recipe preview:", expanded=True):
             st.code(yaml.dump(recipe_to_preview), language="yaml")
 

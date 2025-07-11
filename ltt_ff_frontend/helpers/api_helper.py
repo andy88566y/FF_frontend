@@ -846,15 +846,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
 
     # Change ordering
     sorted_paged_statuses_df = paged_statuses_df.reindex(
-        columns=[
-            "multilot_inference_id",
-            "status",
-            "progress",
-            "start_time",
-            "end_time",
-            "runtime",
-            "lot_info"
-        ]
+        columns=["multilot_inference_id", "status", "progress", "start_time", "end_time", "runtime", "lot_info"]
     )
 
     # For columns not included above, just add them to the back.
@@ -1504,37 +1496,29 @@ def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
 # Regression Test                                                                                #
 #####################################################################################################
 
+
 @st.cache_data(ttl="60s")
 def fetch_valid_lots(test_data: Any, gen_stats: bool) -> dict[str, Any]:
     data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
     r = requests.post(
         API_ROOT + "fetch_valid_lots",
-        json={
-            "data_lots": data_lots,
-            "gen_stats": gen_stats
-        },
+        json={"data_lots": data_lots, "gen_stats": gen_stats},
         timeout=TIMEOUT,
     )
     return r.json()
 
+
 def fetch_regression_result(
-    test_cases: dict[str, list],
-    prefixes: list[str],
-    result_dir: str,
-    mode: str
+    test_cases: dict[str, list], prefixes: list[str], result_dir: str, mode: str
 ) -> dict[str, Any]:
     r = requests.post(
         API_ROOT + "fetch_regression_result",
-        json={
-            "test_cases": test_cases,
-            "prefixes": prefixes,
-            "result_dir": result_dir,
-            "mode": mode
-        },
+        json={"test_cases": test_cases, "prefixes": prefixes, "result_dir": result_dir, "mode": mode},
         timeout=TIMEOUT,
     )
 
     return r.json()
+
 
 def request_regression_test(
     api_output_dir_root: str,
@@ -1555,5 +1539,5 @@ def request_regression_test(
         },
         timeout=TIMEOUT,
     )
-    
+
     return r.json()

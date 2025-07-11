@@ -19,7 +19,8 @@ from ltt_ff_frontend.shared_components import (
 YAML_MODE = "Yaml"
 DB_MODE = "Database"
 CREATOR_MODE = "Creator"
-RECIPE_INPUT_MODES = [YAML_MODE, DB_MODE, CREATOR_MODE]
+CUSTOM_MODE = "Custom"
+RECIPE_INPUT_MODES = [YAML_MODE, DB_MODE, CREATOR_MODE, CUSTOM_MODE]
 
 
 def app() -> None:
@@ -65,8 +66,13 @@ def app() -> None:
     if not recipe or recipe["recipes"] == []:
         return
 
+<<<<<<< HEAD:ltt_ff_frontend/result_viewer/result_viewer_summary.py
     if st_recipe_type in [YAML_MODE, CREATOR_MODE] and recipe and db_recipe:
         new_lrf_button.gen(gen_lrf_button_col, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
+=======
+    if st_recipe_type != DB_MODE and recipe and db_recipe:
+        new_lrf_button.gen(r1_col3, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
+>>>>>>> cbe8b37 (feat: add custom mode in Result view):ltt_ff_frontend/result_viewer/result_viewer_with_table.py
 
     # Show Total/Defect/Non-defect/unlabeled count
     with st.container():
