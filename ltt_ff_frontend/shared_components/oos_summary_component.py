@@ -19,7 +19,7 @@ def gen(oos_calculation: dict[str, Any]) -> None:
     smaller_150_summary = oos_calculation["<150"]
     particle_mode_count = oos_calculation["particle_mode_count"]
 
-    st.caption(f"As-is defects contains {particle_mode_count} particle mode defects.")
+    st.caption(f"As-is defects (ALL) contains {particle_mode_count} particle mode defects.")
 
     df = pd.DataFrame([all_summary, greater_equal_150_summary, smaller_150_summary])
     df = df[
