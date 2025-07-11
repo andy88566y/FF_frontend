@@ -70,13 +70,9 @@ def app() -> None:
     if not recipe or recipe["recipes"] == []:
         return
 
-<<<<<<< HEAD
-    if st_recipe_type in [YAML_MODE, CREATOR_MODE] and recipe and db_recipe:
-        new_lrf_button.gen(gen_lrf_button_col, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
-=======
     if st_recipe_type != DB_MODE and recipe and db_recipe:
-        new_lrf_button.gen(r1_col3, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
->>>>>>> cbe8b37 (feat: add custom mode in Result view)
+        new_lrf_button.gen(gen_lrf_button_col, inference_result_dir, recipe, helper.filter_recipe_columns(db_recipe))
+
 
     # Show Total/Defect/Non-defect/unlabeled count
     with st.container():
