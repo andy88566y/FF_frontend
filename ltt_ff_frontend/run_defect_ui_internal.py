@@ -7,22 +7,22 @@ from ltt_ff_frontend.defect_review_ui import defect_diff_viewer, defect_review_g
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
 from ltt_ff_frontend.model_converter import model_converter
-from ltt_ff_frontend.result_viewer import result_viewer, result_viewer_with_table
+from ltt_ff_frontend.result_viewer import result_viewer, result_viewer_summary
 from ltt_ff_frontend.training import training, training_by_config
 
 
 if __name__ == "__main__":
     logger.debug("Loading main UI ...")
 
-    page_result_viewer = st.Page(
-        result_viewer.app,
-        url_path="result_viewer",
+    page_result_viewer_summary = st.Page(
+        result_viewer_summary.app,
+        url_path="result_viewer_summary",
         title="Result Viewer Summary",
         icon=":material/search_check_2:",
     )
-    page_result_viewer_with_table = st.Page(
-        result_viewer_with_table.app,
-        url_path="result_viewer_with_table",
+    page_result_viewer = st.Page(
+        result_viewer.app,
+        url_path="result_viewer",
         title="Result Viewer",
         icon=":material/search_check_2:",
     )
@@ -61,9 +61,9 @@ if __name__ == "__main__":
 
     pg = st.navigation(
         [
-            page_result_viewer,
-            page_result_viewer_with_table,
+            page_result_viewer_summary,
             page_inference,
+            page_result_viewer,
             page_comparison,
             page_defect_diff_viewer,
             page_defect_review_gui,
