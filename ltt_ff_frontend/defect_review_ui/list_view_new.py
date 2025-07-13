@@ -170,7 +170,6 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
         st.session_state.result_dir = result_dir
         st.session_state.lot_id = selected_lot_id
 
-    # Create three columns (prob threshold, filter options, message to show filtered values)
     threshold_col, filter_options_col, filter_operators_col, filter_value_col, filter_message_col = st.columns([1, 1, 1, 2, 1])
 
     # Add threshold selection

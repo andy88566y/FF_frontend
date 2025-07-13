@@ -4,25 +4,18 @@ import re
 
 import streamlit as st
 from loguru import logger
+import pandas as pd
 
 from ltt_ff_frontend.defect_review_ui import list_view_new
-
+from ltt_ff_frontend.defect_review_ui.lrf_constant import lttswadc_map
 
 def app() -> None:
     st.title("Defect Review new")
     
-    st.markdown("""
-    <style>
-    [data-testid=stHorizontalBlock]{
-        gap: 0rem;
-    }
-    </style>
-    """,unsafe_allow_html=True)
-
     col1, col2 = st.columns([1, 4])
+    ###Mask info
     with col1:
         with st.container():
-            st.write("Row 1: This is the first row.")
             if "result_dir" not in st.session_state:
                 st.session_state.result_dir = ""
             if "image_dir" not in st.session_state:
@@ -65,17 +58,40 @@ def app() -> None:
                 st.error(f"Mismatch between Lot ID ({selected_lot_id}) and image directory ({text_input_image_dir}).")
                 return
 
-    
+        ###Label info
+        with st.container():            
+            indices = []
+            labels = []
+
+            for i in range(0, len(lttswadc_map), 8):
+                index_row = [
+                    f"<span style='color:red'>{j}</span>" if lttswadc_map[j][1] == 1 else str(j)
+                    for j in range(i, min(i + 8, len(lttswadc_map)))
+                ]
+                label_row = [lttswadc_map[j][0] for j in range(i, min(i + 8, len(lttswadc_map)))]
+                indices.append(index_row)
+                labels.append(label_row)
+
+            # Combine index and label rows into a single DataFrame
+            table_rows = []
+            for idx_row, lbl_row in zip(indices, labels):
+                table_rows.append(idx_row)
+                table_rows.append(lbl_row)
+
+            df = pd.DataFrame(table_rows)
+
+            # Display
+            st.title("LTTSWADC Map (4x8 Table)")
+            st.markdown(df.to_html(escape=False, index=False, header=False), unsafe_allow_html=True)
+
         with st.container():
-            st.write("Row 1: This is the first row.")
-        with st.container():
-            st.write("Row 2: This is the first row.")
+            st.write("This is the defect location")
 
     with col2:
         with st.container():
-            pass
+            st.write("This is the image area.")
         with st.container():
-            pass
+            st.write("This is the receipe area.")
         with st.container():
             if text_input_result_dir and text_input_image_dir:
                 if not os.path.isdir(text_input_result_dir):
