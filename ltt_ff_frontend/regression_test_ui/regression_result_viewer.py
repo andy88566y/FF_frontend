@@ -1,7 +1,6 @@
 import itertools
 import os
 from collections import defaultdict
-from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -9,109 +8,18 @@ import yaml
 from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper
+from ltt_ff_frontend.regression_test_ui.regression_result_utils import (
+    RULE_TABLE_COLUMNS,
+    TABLE_COLUMNS,
+    check_new_dir,
+    get_holdout_layer_filter,
+    get_summary,
+    get_summary_per_site,
+)
 
 
-CR_COL = "(CR OOS lots)"
-FFR_COL = "(FFR OOS lots) Exclude flush"
-AVG_FFR_COL = "avg ffr"
-TABLE_COLUMNS = [CR_COL, FFR_COL]
-RULE_TABLE_COLUMNS = [CR_COL, FFR_COL, AVG_FFR_COL]
 RUN_MODES = ["Normal", "with Rule", "Rule only", "Holdout"]
 CONFIG_NAME = "regression_config.yaml"
-
-
-def check_new_dir(result_dir: str) -> None:
-    if "regression_result_dir" not in st.session_state or result_dir != st.session_state.regression_result_dir:
-        logger.info("new result dir detected, clear old session_state value")
-        for key in [
-            "normal",
-            "rule",
-            "r_only",
-            "holdout",
-        ]:
-            if key in st.session_state:
-                del st.session_state[key]
-        st.session_state.regression_result_dir = result_dir
-
-
-def parse_cr_value(n1: int, prev_n1: int, d: int) -> tuple[str, int]:
-    mark = "🔺" if n1 > prev_n1 else ""
-    return f"{mark}{n1}/{d}", n1
-
-
-def parse_ffr_value(n1: int, n2: int, prev_n1: int, prev_n2: int, d: int) -> tuple[str, int, int]:
-    mark1 = "🔺" if n1 > prev_n1 else ""
-    mark2 = "🔸" if n2 > prev_n2 else ""
-    return f"{mark1}{n1}({mark2}{n2})/{d}", n1, n2
-
-
-def get_summary(layer_filter: list[str], results: dict[str, list], weeks: list) -> list:
-    summary = []
-    for layer in layer_filter:
-        row = []
-        for col in TABLE_COLUMNS:
-            prev_n1 = prev_n2 = 9999
-            for week in weeks:
-                total_n1, total_n2, denominator = 0, 0, 0
-                for info in results[f"{week}#{layer}#{col}"]:
-                    n, d = info.split()[-1].split("/")
-                    denominator += int(d)
-                    if col == CR_COL:
-                        total_n1 += int(n)
-                    else:
-                        assert col == FFR_COL
-                        n1, n2 = map(int, n[:-1].split("("))
-                        total_n1 += n1
-                        total_n2 += n2
-                if col == CR_COL:
-                    formatted, prev_n1 = parse_cr_value(total_n1, prev_n1, denominator)
-                else:
-                    assert col == FFR_COL
-                    formatted, prev_n1, prev_n2 = parse_ffr_value(total_n1, total_n2, prev_n1, prev_n2, denominator)
-                row.append(formatted)
-
-        summary.append(row)
-    return summary
-
-
-def get_summary_p_site(layer_filter: list[str], results: dict[str, list], columns: list, weeks: list) -> tuple:
-    summary_per_site = []
-    layer_per_site = []
-
-    for layer in layer_filter:
-        site_len = len(results[f"{weeks[0]}#{layer}#{columns[0]}"])
-        for i in range(site_len):
-            row = []
-            for col in columns:
-                prev_n1 = prev_n2 = 9999
-                for week in weeks:
-                    site, info = results[f"{week}#{layer}#{col}"][i].split()
-                    if "/" not in info:
-                        row.append(results[f"{week}#{layer}#{col}"][i])
-                        continue
-                    n, d = info.split("/")
-                    if col == CR_COL:
-                        formatted, prev_n1 = parse_cr_value(int(n), prev_n1, d)
-                    elif col == FFR_COL:
-                        n1, n2 = map(int, n[:-1].split("("))
-                        formatted, prev_n1, prev_n2 = parse_ffr_value(n1, n2, prev_n1, prev_n2, d)
-                    else:
-                        continue  # or raise error
-                    row.append(f"{site}  {formatted}")
-            summary_per_site.append(row)
-
-        layer_per_site.extend([layer] * site_len)
-
-    return summary_per_site, layer_per_site
-
-
-def get_holdout_layer_filter(layer_filter: list[str], results: dict[str, Any], w: str, c: str) -> list[str]:
-    holdout_layer_filter = []
-    for layer in layer_filter:
-        if f"{w}#{layer}#{c}" not in results:
-            continue
-        holdout_layer_filter.append(layer)
-    return holdout_layer_filter
 
 
 def app() -> None:
@@ -124,7 +32,7 @@ def app() -> None:
     with r1_col1:
         regression_result_parent_dir = st.text_input("Regression Result Directory", value=output_dir_default)
     with r1_col2:
-        specific_dir = st.selectbox("Choose Date", os.listdir(regression_result_parent_dir))
+        specific_dir = st.selectbox("Choose Date", sorted(os.listdir(regression_result_parent_dir), reverse=True))
         if regression_result_parent_dir and specific_dir:
             regression_result_dir = os.path.join(regression_result_parent_dir, specific_dir)
         check_new_dir(regression_result_dir)
@@ -176,7 +84,7 @@ def app() -> None:
             )["regression_result"]
         headers = [f"{week} {col}" for col in TABLE_COLUMNS for week in weeks]
         summary = get_summary(layer_filter, st.session_state.normal, weeks)
-        summary_p_site, layer_p_site = get_summary_p_site(layer_filter, st.session_state.normal, TABLE_COLUMNS, weeks)
+        summary_p_site, layer_p_site = get_summary_per_site(layer_filter, st.session_state.normal, TABLE_COLUMNS, weeks)
         st.subheader("Regression Results Summary")
         st.dataframe(pd.DataFrame(summary, columns=headers, index=layer_filter))
         st.subheader("Regression Results Summary (Per SITE):")
@@ -191,11 +99,12 @@ def app() -> None:
                 st.session_state.rule["regression_result"].update(result["regression_result"])
                 st.session_state.rule["ffr_check_memo"].update(result["ffr_check_memo"])
         regression_result = st.session_state.rule["regression_result"]
-        logger.info(regression_result.keys())
         ffr_check_memo = st.session_state.rule["ffr_check_memo"]
         headers_weeks = [rule_weeks[0], f"{rule_weeks[0]}with Rule"]
         headers = [f"{week} {col}" for col in TABLE_COLUMNS for week in headers_weeks]
-        summary_p_site, layer_p_site = get_summary_p_site(layer_filter, regression_result, TABLE_COLUMNS, headers_weeks)
+        summary_p_site, layer_p_site = get_summary_per_site(
+            layer_filter, regression_result, TABLE_COLUMNS, headers_weeks
+        )
         st.subheader("RULE Regression Results Summary (Per SITE):")
         st.dataframe(pd.DataFrame(summary_p_site, columns=headers, index=layer_p_site))
         # list out ffr drop > 5% lots
@@ -241,7 +150,7 @@ def app() -> None:
                 regression_testcases, prefixes, regression_result_dir, mode
             )["regression_result"]
         headers_weeks = [f"{week}{mode}" for week in rule_weeks]
-        summary_p_site, layer_p_site = get_summary_p_site(
+        summary_p_site, layer_p_site = get_summary_per_site(
             layer_filter, st.session_state.r_only, RULE_TABLE_COLUMNS, headers_weeks
         )
         headers = [f"{week} {col}" for col in RULE_TABLE_COLUMNS for week in headers_weeks]
@@ -266,7 +175,7 @@ def app() -> None:
         st.subheader("Holdout Regression Results Summary")
         st.dataframe(pd.DataFrame(summary, columns=headers, index=holdout_layer_filter))
         site_headers = [f"{week} {col}" for col in RULE_TABLE_COLUMNS for week in weeks]
-        summary_per_site, layer_per_site = get_summary_p_site(
+        summary_per_site, layer_per_site = get_summary_per_site(
             holdout_layer_filter, st.session_state.holdout, RULE_TABLE_COLUMNS, weeks
         )
         st.subheader("Holdout Regression Results Summary (Per SITE):")

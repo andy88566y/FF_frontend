@@ -24,6 +24,10 @@ def get_valid_lg_from_recipe(config_data: dict[str, Any]) -> list[str]:
     return sorted(config_data.keys())
 
 
+def get_valid_week_from_recipe(config_data: dict[str, Any]) -> list[str]:
+    return sorted(list(config_data.values())[0].keys())
+
+
 def get_valid_site_from_recipe(config_data: dict[str, Any]) -> list[str]:
     site_set = set()
     for week_site_recipe in config_data.values():
@@ -64,7 +68,10 @@ def update_week(config_data: dict, new_week: str) -> None:
 
 
 def update_config_by_txt(config_data: dict, recipe_file: Any) -> None:
-    raw_lines = recipe_file.getvalue().decode("utf-8").splitlines()
+    if isinstance(recipe_file, str):
+        raw_lines = recipe_file.splitlines()
+    else:
+        raw_lines = recipe_file.getvalue().decode("utf-8").splitlines()
     lines = [line.strip() for line in raw_lines if line.strip()]
     week = lines[0].strip()
     update_week(config_data, week)
