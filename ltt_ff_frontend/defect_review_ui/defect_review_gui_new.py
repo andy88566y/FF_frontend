@@ -5,9 +5,14 @@ import re
 import streamlit as st
 from loguru import logger
 import pandas as pd
+import pydeck as pdk
+from sklearn.cluster import DBSCAN
+
 
 from ltt_ff_frontend.defect_review_ui import list_view_new
+from ltt_ff_frontend.defect_review_ui.list_view_new import generate_colors, hex_to_rgb
 from ltt_ff_frontend.defect_review_ui.lrf_constant import lttswadc_map
+from ltt_ff_frontend.helpers import api_helper
 
 def app() -> None:
     st.title("Defect Review new")
@@ -84,8 +89,175 @@ def app() -> None:
             st.title("LTTSWADC Map (4x8 Table)")
             st.markdown(df.to_html(escape=False, index=False, header=False), unsafe_allow_html=True)
 
+        if "color_option" not in st.session_state:
+            st.session_state.color_option = "ClassType"
         with st.container():
-            st.write("This is the defect location")
+            col21, col22, col23 = st.columns([5, 2, 2])
+            with col21:
+                st.subheader("Map View")
+
+            # Add a toggle button for ColorType/Cluster
+            with col22:
+                if st.button("ClassType", key="color_type_button", use_container_width=True):
+                    st.session_state.color_option = "ClassType"
+
+            with col23:
+                if st.button("Cluster", key="cluster_button", use_container_width=True):
+                    st.session_state.color_option = "Cluster"
+
+            color_option = st.session_state.color_option
+            # Define a color mapping for each ClassType and Cluster
+            classType_mapping = {
+                "T": "#ff0000",  # red
+                "F": "#55ff7f",  # green
+                "UNK": "#808080",  # grey
+            }
+
+            defects = api_helper.get_lrf_data_lists(
+                output_dir=text_input_result_dir,
+                cols=["No", "UniqueID", "X", "Y", "ClassType"],
+                include_prob=True,
+                lot_id=selected_lot_id,
+            )[0]
+            db_metadata = api_helper.get_db_metadata_lists(output_dir=text_input_result_dir, lot_id=selected_lot_id)[0]
+
+            # Extract relevant columns and convert "X" and "Y" to floats
+            defect_data = [
+                {
+                    "No": defect["No"],
+                    "UniqueID": defect["UniqueID"],
+                    "X": float(defect["X"]),
+                    "Y": float(defect["Y"]),
+                    "ClassType": defect["ClassType"],
+                    "Ans": defect["Ans"],
+                    "Probability": defect["Probability"],
+                }
+                for defect in defects
+            ]
+
+            # Convert to DataFrame
+            df = pd.DataFrame(defect_data)
+
+            # Set the "No" column as the index
+            df.set_index("No", inplace=True)
+            df["No"] = df.index
+
+            # Ensure all columns have consistent data types
+            df["No"] = df["No"].astype(int)
+            df["UniqueID"] = df["UniqueID"].astype(str)
+            df["X"] = df["X"].astype(float)
+            df["Y"] = df["Y"].astype(float)
+            df["ClassType"] = df["ClassType"].astype(int)
+            df["Ans"] = df["Ans"].astype(int)
+            df["Probability"] = df["Probability"].astype(float)
+
+            # Initialize session state for selected index
+            if "selected_row_index" not in st.session_state:
+                st.session_state.selected_row_index = 0
+            if "selected_map_index" not in st.session_state:
+                st.session_state.selected_map_index = 0
+
+            # Initialize session state for selection source
+            if "selection_source" not in st.session_state:
+                st.session_state.selection_source = ""
+            # Initialize session state for selected folder
+            if "result_dir" not in st.session_state:
+                st.session_state.result_dir = ""
+            # Initialize session state for selected lot
+            if "lot_id" not in st.session_state:
+                st.session_state.lot_id = ""
+            # Initialize session state for probability threshold
+            if "prob_threshold" not in st.session_state:
+                st.session_state.prob_threshold = db_metadata.get("model_threshold", db_metadata.get("model_threshold_0", -1))
+            # Ensure color_option is set in session state
+            if "color_option" not in st.session_state:
+                st.session_state.color_option = "ClassType"
+
+            # Add "D/ND" column based on the threshold (Defect/Not defect)
+            df["D/ND"] = df["Probability"] >= st.session_state.prob_threshold
+            # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
+            df["C/NC"] = df[["Ans", "D/ND"]].apply(lambda x: -1 if x["Ans"] == -1 else x["Ans"] == x["D/ND"], axis=1)
+
+            # Convert "Ans" "D/ND" "C/NC" column to T/F
+            df["Ans"] = df["Ans"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
+            df["D/ND"] = df["D/ND"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
+            df["C/NC"] = df["C/NC"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
+
+            # Normalize coordinates
+            x_min, x_max = df["X"].min(), df["X"].max()
+            y_min, y_max = df["Y"].min(), df["Y"].max()
+            df["X_norm"] = (df["X"] - x_min) / (x_max - x_min)
+            df["Y_norm"] = (df["Y"] - y_min) / (y_max - y_min)
+
+            # Use DBScan to identify clusters
+            dbscan = DBSCAN(eps=50, min_samples=5)
+            df["Cluster"] = dbscan.fit_predict(df[["X", "Y"]])
+
+            # Count the total number of clusters
+            total_clusters = df["Cluster"].nunique()
+            cluster_colors = generate_colors(total_clusters)
+            selected_columns = [
+                "X",
+                "Y",
+                "UniqueID",
+                "X_norm",
+                "Y_norm",
+                "ClassType",
+                "Ans",
+                "Probability",
+                "D/ND",
+                "C/NC",
+                "No",
+                "Cluster",
+            ]
+            st.session_state.filtered_df = df[selected_columns]
+            # Apply the color mapping based on the selected option
+            if color_option == "ClassType":
+                st.session_state.filtered_df["color"] = st.session_state.filtered_df["Ans"].map(
+                    lambda x: hex_to_rgb(classType_mapping.get(x, "#808080"))
+                )
+            else:
+                st.session_state.filtered_df["color"] = st.session_state.filtered_df["Cluster"].map(
+                    lambda x: hex_to_rgb("#808080") if x == -1 else hex_to_rgb(cluster_colors[x % len(cluster_colors)])
+                )
+
+            # Define the scatter plot layer
+            layer = pdk.Layer(
+                "ScatterplotLayer",
+                id="defect-map",
+                data=st.session_state.filtered_df,
+                get_position=["X_norm", "Y_norm"],
+                get_fill_color="color",
+                pickable=True,
+                radius_scale=10,
+                radius_min_pixels=2,
+                radius_max_pixels=10,
+                auto_highlight=True,
+            )
+
+            # Define the deck.gl view
+            view_state = pdk.ViewState(latitude=0.5, longitude=0.5, controller=True, zoom=7, pitch=0)
+
+            # Render the deck.gl map without a base map
+            r = pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                map_provider=None,
+                tooltip={"text": "No: {No}\nClassType: {ClassType}\nX: {X}\nY: {Y}\nCluster: {Cluster}"},
+            )
+            event = st.pydeck_chart(r, height=300, on_select="rerun", selection_mode="single-object")
+
+            # Check if the map is selected
+            indices = event.selection.get("indices", {}).get("defect-map", [])
+            if indices:
+                previous_selected_map_index = st.session_state.get("selected_map_index", None)
+                # Iterate over the objects to find the corresponding 'No' value
+                for obj in event.selection.get("objects", {}).get("defect-map", []):
+                    st.session_state.selected_map_index = obj["No"]
+                    break
+
+                if previous_selected_map_index != st.session_state.selected_map_index:
+                    st.session_state.selection_source = "map"
 
     with col2:
         with st.container():
