@@ -9,7 +9,7 @@ from loguru import logger
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper, stop_job_button
 
-from .regression_utils import (
+from ltt_ff_frontend.regression_test_ui.test_utils import (
     gen_lots_stats,
     get_detailed_stats,
     get_valid_lg_from_recipe,

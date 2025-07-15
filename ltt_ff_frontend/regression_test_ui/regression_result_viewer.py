@@ -8,7 +8,7 @@ import yaml
 from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.regression_test_ui.regression_result_utils import (
+from ltt_ff_frontend.regression_test_ui.result_utils import (
     RULE_TABLE_COLUMNS,
     TABLE_COLUMNS,
     check_new_dir,
