@@ -7,8 +7,6 @@ import yaml
 from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.shared_components import helper, stop_job_button
-
 from ltt_ff_frontend.regression_test_ui.test_utils import (
     gen_lots_stats,
     get_detailed_stats,
@@ -18,6 +16,7 @@ from ltt_ff_frontend.regression_test_ui.test_utils import (
     update_config_by_txt,
     update_config_by_yaml,
 )
+from ltt_ff_frontend.shared_components import helper, stop_job_button
 
 
 DEFAULT_DATA_YAML = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/WXXX_data_XXX.yaml"
@@ -32,7 +31,7 @@ TEXT_EXAMPLE = """ODPO
                     """
 
 
-def app():
+def app() -> None:
     st.title("Regression Test Dashboard")
     st.caption("Configure and run regression tests")
 
@@ -90,7 +89,7 @@ def app():
     valid_data_lots = None
     if data_yaml:
         with r2_col2:
-            show_lot_stats = st.toggle("Show Lot Statistics", value=True)
+            show_lot_stats = st.toggle("Show Lot Statistics", value=False)
             show_detaild_stats = st.toggle("Show Detailed Lot Statistics", value=False)
             test_data = yaml.safe_load(data_yaml)
             valid_data_lots = api_helper.fetch_valid_lots(test_data, show_detaild_stats)
@@ -110,13 +109,13 @@ def app():
     with r4_col1:
         output_dir = st.text_input("Output Directory", value=DEFAULT_OUTPUT_PATH)
     with r4_col3:
-        run_holdout = st.toggle("Run additional holdout datasets", value=True)
+        run_holdout = st.toggle("Run additional holdout datasets", value=False)
         holdout_valid_data_lots = None
 
         if run_holdout:
             holdout_data_yaml = st.file_uploader("Upload Holdout Test Data (.yaml)", type="yaml", help=yaml_help_text)
             if holdout_data_yaml:
-                show_h_lot_stats = st.toggle("Show Holdout Lot Statistics", value=True)
+                show_h_lot_stats = st.toggle("Show Holdout Lot Statistics", value=False)
                 show_h_detaild_stats = st.toggle("Show Holdout Detailed Lot Statistics", value=False)
                 st.subheader("📊 Holdout Lot Statistics")
                 holdout_test_data = yaml.safe_load(holdout_data_yaml)

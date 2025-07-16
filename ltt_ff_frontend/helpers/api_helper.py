@@ -727,7 +727,7 @@ def request_paginated_inference_status(page_size: int, current_page: int) -> pd.
         logger.error(f"Error occurred when retrieving inference status from RedisDB: {r.json()['message']}")
         raise ValueError(f"Error occurred when retrieving inference status from RedisDB: {r.json()['message']}")
 
-    # logger.info(f"Status of inference request [{current_page}, {page_size}]: {paged_statuses}")
+    logger.info(f"Status of inference request [{current_page}, {page_size}]: {paged_statuses}")
 
     paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 
@@ -799,7 +799,7 @@ def request_paginated_multilot_inference_status(page_size: int, current_page: in
             f"Error occurred when retrieving multilot inference status from RedisDB: {r.json()['message']}"
         )
 
-    # logger.info(f"Status of multilot inference request [{current_page}, {page_size}]: {paged_statuses}")
+    logger.info(f"Status of multilot inference request [{current_page}, {page_size}]: {paged_statuses}")
 
     paged_statuses_df = pd.DataFrame.from_dict(paged_statuses["value"]).T
 
@@ -1498,7 +1498,7 @@ def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
 
 
 @st.cache_data(ttl="60s")
-def fetch_valid_lots(test_data: Any, gen_stats: bool) -> dict[str, Any]:
+def fetch_valid_lots(test_data: dict[str, Any], gen_stats: bool) -> dict[str, Any]:
     data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
     r = requests.post(
         API_ROOT + "fetch_valid_lots",
@@ -1529,7 +1529,7 @@ def fetch_regression_result(
 
 
 def request_regression_test(
-    api_output_dir_root: str,
+    output_dir_root: str,
     valid_data_lots: dict[str, Any],
     recipe_config: dict[str, Any],
     run_layer: list[str],
@@ -1537,10 +1537,9 @@ def request_regression_test(
     run_week: list[str],
 ) -> dict[str, Any]:
     r = requests.post(
-        API_ROOT + "run_regression_test",
+        API_ROOT + "request_regression_test",
         json={
-            "api_server": API_ROOT,
-            "api_output_dir_root": api_output_dir_root,
+            "output_dir_root": output_dir_root,
             "valid_data_lots": valid_data_lots,
             "recipe_config": recipe_config,
             "run_config": {"layers": run_layer, "sites": run_site, "weeks": run_week},
@@ -1548,7 +1547,7 @@ def request_regression_test(
         timeout=TIMEOUT,
     )
 
-    if r.json()["status"] == "completed":
+    if r.json()["status"] == "started":
         return r.json()
     else:
         logger.error(f"Error occurred when calling Request Regression API: {r.json()['message']}")
