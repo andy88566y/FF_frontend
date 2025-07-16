@@ -7,6 +7,7 @@ from ltt_ff_frontend.defect_review_ui import defect_diff_viewer, defect_review_g
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
 from ltt_ff_frontend.model_converter import model_converter
+from ltt_ff_frontend.regression_test_ui import regression_result_viewer, regression_test
 from ltt_ff_frontend.result_viewer import result_viewer, result_viewer_summary
 from ltt_ff_frontend.training import training, training_by_config
 
@@ -30,6 +31,18 @@ if __name__ == "__main__":
         inference.app,
         url_path="inference",
         title="Inference",
+        icon=":material/action_key:",
+    )
+    page_regression_result_viewer = st.Page(
+        regression_result_viewer.app,
+        url_path="regression_result_viewer",
+        title="Regression Result Viewer",
+        icon=":material/search_check_2:",
+    )
+    page_regression_test = st.Page(
+        regression_test.app,
+        url_path="regression_test",
+        title="Regression Test",
         icon=":material/action_key:",
     )
     page_comparison = st.Page(
@@ -67,6 +80,8 @@ if __name__ == "__main__":
             page_comparison,
             page_defect_diff_viewer,
             page_defect_review_gui,
+            page_regression_result_viewer,
+            page_regression_test,
             page_training,
             page_training_by_config,
             page_model_converter,
