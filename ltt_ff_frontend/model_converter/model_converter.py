@@ -5,7 +5,7 @@ from loguru import logger
 
 from ltt_ff_frontend.constant import LayerGroup, ModelArchitecture, ModelType, PixelSize, TechLayer, Tool
 from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.model_converter import convert_dualstream_cnn, convert_dualstream_cnn_v2
+from ltt_ff_frontend.model_converter import convert_config, convert_dualstream_cnn, convert_dualstream_cnn_v2
 from ltt_ff_frontend.shared_components import helper
 
 
@@ -20,7 +20,9 @@ def app() -> None:
     mode_select_col, model_type_select_col = st.columns(2)
     with mode_select_col:
         model_ui_mode = st.segmented_control(
-            "Converter mode / Inspector mode", options=["Converter", "Inspector"], default="Converter"
+            "Converter mode / Inspector mode",
+            options=["Converter", "Converter (Config)", "Inspector"],
+            default="Converter",
         )
         if model_ui_mode is None:
             st.error("Please select a mode.")
@@ -36,6 +38,9 @@ def app() -> None:
             convert_dualstream_cnn.app()
         elif model_architecture == "DUALSTREAMCNN_V2":
             convert_dualstream_cnn_v2.app()
+
+    elif model_ui_mode == "Converter (Config)":
+        convert_config.app()
 
     elif model_ui_mode == "Inspector":
         model_list = api_helper.get_base_models()

@@ -1452,11 +1452,11 @@ def generate_golden_set_from_data_yaml(
 #####################################################################################################
 # Model conversion                                                                                  #
 #####################################################################################################
-def convert_model(model_details: dict[str, Any]) -> dict[str, Any]:
+def convert_model(model_conversion_config: dict[str, list[dict]]) -> dict[str, Any]:
     r = requests.post(
         API_ROOT + "convert_model",
         json={
-            "model_details": model_details,
+            "model_conversion_config": model_conversion_config,
         },
         timeout=TIMEOUT,
     )
