@@ -21,7 +21,7 @@ from ltt_ff_frontend.shared_components import helper, stop_job_button
 
 DEFAULT_DATA_YAML = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/WXXX_data_XXX.yaml"
 DEFAULT_HOLDOUT_DATA_YAML = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/WXXX_data_XXX_holdout.yaml"
-DEFAULT_OUTPUT_PATH = "/mnt/fs0/MLE/ff_docker_output/mle_regression_test/"
+DEFAULT_OUTPUT_PATH = "/mnt/output/mle_regression_test/"
 UPLOAD_MODE = "Upload"
 EDIT_MODE = "Edit"
 UPDATE_MODE = [UPLOAD_MODE, EDIT_MODE]
@@ -38,7 +38,7 @@ def app() -> None:
     # Upload section
     r1_col1, _, r1_col3 = st.columns([10, 1, 10])
     with r1_col1:
-        recipe_file = st.file_uploader("Upload Recipe Config (.yaml)")
+        recipe_file = st.file_uploader("Upload Regression Config (.yaml)")
     with r1_col3:
         yaml_help_text = f"**Example:**\n```yaml\n{DEFAULT_DATA_YAML}\n```"
         data_yaml = st.file_uploader("Upload Test Data (.yaml)", type="yaml", help=yaml_help_text)
@@ -61,21 +61,21 @@ def app() -> None:
                     updated = True
             else:
                 code_input = st.text_area(
-                    label="Please paste  the newer recipe config...", height=300, placeholder=TEXT_EXAMPLE
+                    label="Please paste  the newer Regression config...", height=300, placeholder=TEXT_EXAMPLE
                 )
                 if code_input:
                     update_config_by_txt(recipe_config, code_input)
                     updated = True
             if updated:
-                st.success("Recipe config updated successfully")
+                st.success("Regression recipe config updated successfully")
                 updated_yaml_str = yaml.dump(recipe_config, sort_keys=False)
                 st.download_button(
-                    label="📄 Download Updated Recipe Config (YAML)",
+                    label="📄 Download Updated Regression Config (YAML)",
                     data=updated_yaml_str,
-                    file_name="updated_recipe_config.yaml",
+                    file_name="updated_regression_config.yaml",
                     mime="application/x-yaml",
                 )
-            with st.expander("Recipe Config", expanded=False):
+            with st.expander("Regression Config", expanded=False):
                 st.json(recipe_config)
             layers = get_valid_lg_from_recipe(recipe_config)
             sites = get_valid_site_from_recipe(recipe_config)
@@ -133,7 +133,7 @@ def app() -> None:
                     with st.expander("Holdout Detailed Lots Statistics", expanded=False):
                         st.dataframe(get_detailed_stats(holdout_valid_data_lots["stats"]))
 
-    generate_yaml = st.toggle("Generate Experiment YAML", value=True)
+    generate_yaml = st.toggle("download regression test settings", value=True)
 
     # Run button
     if st.button("Run Regression Test", type="primary"):
