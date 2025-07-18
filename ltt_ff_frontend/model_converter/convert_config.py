@@ -182,8 +182,18 @@ def app() -> None:
         r = api_helper.convert_model(model_conversion_config=model_conversion_config)
 
         if r["status"] == "completed":
-            st.success(r["message"])
-            logger.success(r["message"])
+            # format into something easy to copy-paste
+            message = (
+                r["message"]
+                .replace(" [", "\n\n")
+                .replace("('", "")
+                .replace("',", "  \n")
+                .replace("'", "")
+                .replace("),", "\n\n")
+                .replace(")]", "")
+            )
+            st.success(message)
+            logger.success(message)
         else:
             st.error(r["message"])
             logger.error(r["message"])
