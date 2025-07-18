@@ -103,6 +103,9 @@ config_previews = {
                         "backbone": "tf_efficientnetv2_s",
                         "fc_hidden_dims": FlowList([256, 32]),
                         "fc_dropout": 0.5,
+                        "use_conv3d": True,
+                        "conv3d_out_channels": 32,
+                        "conv3d_kernel_size": FlowList([2, 3, 3]),
                     },
                     "model_threshold": 0.0,
                     "model_threshold_c": 0.5,
@@ -154,7 +157,7 @@ def app() -> None:
         model_conversion_config = yaml.load(conversion_config_file, Loader=yaml.Loader)
 
         with st.expander(label="Model Conversion Config preview"):
-            # Show lists with inline brackets instead
+            # Show lists with inline brackets instead by wrapping lists in a FlowList
             for model_config in model_conversion_config["models"]:
                 for k, v in model_config["model_params"]["model_init_params"].items():
                     if isinstance(v, list):
