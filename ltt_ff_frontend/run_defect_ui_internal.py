@@ -62,7 +62,7 @@ if __name__ == "__main__":
     )
 
     page_model_converter = st.Page(
-        model_converter.app, url_path="model_converter", title="Model Converter", icon=":material/swap_horiz:"
+        model_converter.app, url_path="model_converter", title="Model Converter/Inspector", icon=":material/swap_horiz:"
     )
 
     page_lrf_processor = st.Page(
