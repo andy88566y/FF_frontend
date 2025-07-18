@@ -71,6 +71,6 @@ if __name__ == "__main__":
         initial_sidebar_state="collapsed",
     )
 
-    st.sidebar.markdown("###### FF-FE v0.11.0")
+    st.sidebar.markdown("###### FF-FE v0.12.0")
 
     pg.run()

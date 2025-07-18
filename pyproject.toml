@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ltt_ff_frontend"
-version = "0.11.0"
+version = "0.12.0"
 description = ""
 authors = ["Michael Hsieh <michael.hsieh@lasertectaiwan.com>"]
 readme = "README.md"
