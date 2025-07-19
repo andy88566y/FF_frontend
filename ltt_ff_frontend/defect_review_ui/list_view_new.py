@@ -218,14 +218,13 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
 
     # Add filter value text input, confirm button, and cancel button
     with filter_value_col:
-        filter_value_input_col, confirm_col, cancel_col = st.columns([2, 1, 1])
-        with filter_value_input_col:
+        with st.container():
+    
             st.session_state.filter_value = st.text_input(
                 label="Filter value",
                 value=st.session_state.filter_value,
             )
-        
-        with confirm_col:
+            
             if st.button(label="Apply Filter", use_container_width=True):
                 try:
                     col = st.session_state.filter_column
@@ -243,8 +242,7 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
                 except Exception as e:
                     st.warning(f"Could not apply filter: {e}")
 
-                # st.session_state.filtered_df.set_index("No", inplace=True)
-        with cancel_col:
+                    # st.session_state.filtered_df.set_index("No", inplace=True)
             if st.button(label="Remove Filter", icon=":material/close:", use_container_width=True):
                 st.session_state.filter_column = df.columns[0]
                 st.session_state.filter_value = ""
@@ -290,79 +288,6 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
 
                 if previous_selected_row_index != st.session_state.selected_row_index:
                     st.session_state.selection_source = "list"
-
-    # Map view
-    with col2:
-        # Create two columns
-        col21, col22, col23 = st.columns([5, 2, 2])
-        with col21:
-            st.subheader("Map View")
-
-        # Add a toggle button for ColorType/Cluster
-        with col22:
-            if st.button("ClassType", key="color_type_button", use_container_width=True):
-                st.session_state.color_option = "ClassType"
-
-        with col23:
-            if st.button("Cluster", key="cluster_button", use_container_width=True):
-                st.session_state.color_option = "Cluster"
-
-        color_option = st.session_state.color_option
-        # Define a color mapping for each ClassType and Cluster
-        classType_mapping = {
-            "T": "#ff0000",  # red
-            "F": "#55ff7f",  # green
-            "UNK": "#808080",  # grey
-        }
-        cluster_colors = generate_colors(total_clusters)
-
-        # Apply the color mapping based on the selected option
-        if color_option == "ClassType":
-            st.session_state.filtered_df["color"] = st.session_state.filtered_df["Ans"].map(
-                lambda x: hex_to_rgb(classType_mapping.get(x, "#808080"))
-            )
-        else:
-            st.session_state.filtered_df["color"] = st.session_state.filtered_df["Cluster"].map(
-                lambda x: hex_to_rgb("#808080") if x == -1 else hex_to_rgb(cluster_colors[x % len(cluster_colors)])
-            )
-
-        # Define the scatter plot layer
-        layer = pdk.Layer(
-            "ScatterplotLayer",
-            id="defect-map",
-            data=st.session_state.filtered_df,
-            get_position=["X_norm", "Y_norm"],
-            get_fill_color="color",
-            pickable=True,
-            radius_scale=10,
-            radius_min_pixels=2,
-            radius_max_pixels=10,
-            auto_highlight=True,
-        )
-
-        # Define the deck.gl view
-        view_state = pdk.ViewState(latitude=0.5, longitude=0.5, controller=True, zoom=7, pitch=0)
-
-        # Render the deck.gl map without a base map
-        r = pdk.Deck(
-            layers=[layer],
-            initial_view_state=view_state,
-            map_provider=None,
-            tooltip={"text": "No: {No}\nClassType: {ClassType}\nX: {X}\nY: {Y}\nCluster: {Cluster}"},
-        )
-        event = st.pydeck_chart(r, height=300, on_select="rerun", selection_mode="single-object")
-
-        # Check if the map is selected
-        indices = event.selection.get("indices", {}).get("defect-map", [])
-        if indices:
-            previous_selected_map_index = st.session_state.get("selected_map_index", None)
-            # Iterate over the objects to find the corresponding 'No' value
-            for obj in event.selection.get("objects", {}).get("defect-map", []):
-                st.session_state.selected_map_index = obj["No"]
-                break
-
-            if previous_selected_map_index != st.session_state.selected_map_index:
-                st.session_state.selection_source = "map"
 
     # Get the selected row based on the session state
     defect_number = 0

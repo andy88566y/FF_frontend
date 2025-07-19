@@ -12,12 +12,13 @@ from sklearn.cluster import DBSCAN
 from ltt_ff_frontend.defect_review_ui import list_view_new
 from ltt_ff_frontend.defect_review_ui.list_view_new import generate_colors, hex_to_rgb
 from ltt_ff_frontend.defect_review_ui.lrf_constant import lttswadc_map
+from ltt_ff_frontend.defect_review_ui.defect_diff_viewer import draw_diff_img
 from ltt_ff_frontend.helpers import api_helper
 
 def app() -> None:
     st.title("Defect Review new")
     
-    col1, col2 = st.columns([1, 4])
+    col1, col2 = st.columns([2, 3])
     ###Mask info
     with col1:
         with st.container():
@@ -37,7 +38,8 @@ def app() -> None:
                 encoded_image_dir_as_bytes = str.encode(encoded_image_dir_as_str)
                 decoded_image_dir_as_bytes = base64.urlsafe_b64decode(encoded_image_dir_as_bytes)
                 decoded_image_dir_as_str = decoded_image_dir_as_bytes.decode()
-
+            
+            default_input_result_dir = "/mnt/fs0/MLE/ff_docker_output/michael/0623/test_rule_cut"
             text_input_result_dir = st.text_input(label="Result Directory", value=st.session_state.result_dir)
             if text_input_result_dir:
                 text_input_result_dir = os.path.normpath(text_input_result_dir)
@@ -47,6 +49,7 @@ def app() -> None:
                 text_input_image_dir = os.path.normpath(text_input_image_dir)
                 st.query_params.image_dir = base64.urlsafe_b64encode(str.encode(text_input_image_dir)).decode()
             if not text_input_result_dir or not text_input_image_dir:
+                text_input_result_dir = default_input_result_dir
                 st.caption("Please input an Result Directory and Image Directory to begin reviewing defects.")
             
             lots = [file.split(".")[0] for file in os.listdir(text_input_result_dir) if ".db" in file]
@@ -63,232 +66,274 @@ def app() -> None:
                 st.error(f"Mismatch between Lot ID ({selected_lot_id}) and image directory ({text_input_image_dir}).")
                 return
 
-        ###Label info
-        with st.container():            
-            indices = []
-            labels = []
+        ###Label info           
+        indices = []
+        labels = []
 
-            for i in range(0, len(lttswadc_map), 8):
-                index_row = [
-                    f"<span style='color:red'>{j}</span>" if lttswadc_map[j][1] == 1 else str(j)
-                    for j in range(i, min(i + 8, len(lttswadc_map)))
-                ]
-                label_row = [lttswadc_map[j][0] for j in range(i, min(i + 8, len(lttswadc_map)))]
-                indices.append(index_row)
-                labels.append(label_row)
+        for i in range(0, len(lttswadc_map), 8):
+            index_row = [
+                f"<span style='color:red'>{j}</span>" if lttswadc_map[j][1] == 1 else str(j)
+                for j in range(i, min(i + 8, len(lttswadc_map)))
+            ]
+            label_row = [lttswadc_map[j][0] for j in range(i, min(i + 8, len(lttswadc_map)))]
+            indices.append(index_row)
+            labels.append(label_row)
 
-            # Combine index and label rows into a single DataFrame
-            table_rows = []
-            for idx_row, lbl_row in zip(indices, labels):
-                table_rows.append(idx_row)
-                table_rows.append(lbl_row)
+        # Combine index and label rows into a single DataFrame
+        table_rows = []
+        for idx_row, lbl_row in zip(indices, labels):
+            table_rows.append(idx_row)
+            table_rows.append(lbl_row)
 
-            df = pd.DataFrame(table_rows)
+        df = pd.DataFrame(table_rows)
 
-            # Display
-            st.title("LTTSWADC Map (4x8 Table)")
-            st.markdown(df.to_html(escape=False, index=False, header=False), unsafe_allow_html=True)
+        # Display
+        st.title("LTTSWADC Map (4x8 Table)")
+        # st.markdown(df.to_html(escape=False, index=False, header=False), unsafe_allow_html=True)
+        
+        
+        st.markdown(
+            f"""
+            <div style="max-width: 100%; overflow-x: auto;">
+                <style>
+                    table {{
+                        border-collapse: collapse;
+                        width: 100%;
+                        table-layout: fixed;
+                    }}
+                    th, td {{
+                        text-align: center;
+                        padding: 6px;
+                        border: 1px solid #ccc;
+                        word-wrap: break-word;
+                        font-size: 14px;
+                    }}
+                    span {{
+                        font-weight: bold;
+                        color: red;
+                    }}
+                </style>
+                {df.to_html(escape=False, index=False, header=False)}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
+
+        # MapView
         if "color_option" not in st.session_state:
             st.session_state.color_option = "ClassType"
-        with st.container():
-            col21, col22, col23 = st.columns([5, 2, 2])
-            with col21:
-                st.subheader("Map View")
+        colHeader, colClassType, colCluster = st.columns([5, 2, 2])
+        with colHeader:
+            st.subheader("Map View")
 
-            # Add a toggle button for ColorType/Cluster
-            with col22:
-                if st.button("ClassType", key="color_type_button", use_container_width=True):
-                    st.session_state.color_option = "ClassType"
-
-            with col23:
-                if st.button("Cluster", key="cluster_button", use_container_width=True):
-                    st.session_state.color_option = "Cluster"
-
-            color_option = st.session_state.color_option
-            # Define a color mapping for each ClassType and Cluster
-            classType_mapping = {
-                "T": "#ff0000",  # red
-                "F": "#55ff7f",  # green
-                "UNK": "#808080",  # grey
-            }
-
-            defects = api_helper.get_lrf_data_lists(
-                output_dir=text_input_result_dir,
-                cols=["No", "UniqueID", "X", "Y", "ClassType"],
-                include_prob=True,
-                lot_id=selected_lot_id,
-            )[0]
-            db_metadata = api_helper.get_db_metadata_lists(output_dir=text_input_result_dir, lot_id=selected_lot_id)[0]
-
-            # Extract relevant columns and convert "X" and "Y" to floats
-            defect_data = [
-                {
-                    "No": defect["No"],
-                    "UniqueID": defect["UniqueID"],
-                    "X": float(defect["X"]),
-                    "Y": float(defect["Y"]),
-                    "ClassType": defect["ClassType"],
-                    "Ans": defect["Ans"],
-                    "Probability": defect["Probability"],
-                }
-                for defect in defects
-            ]
-
-            # Convert to DataFrame
-            df = pd.DataFrame(defect_data)
-
-            # Set the "No" column as the index
-            df.set_index("No", inplace=True)
-            df["No"] = df.index
-
-            # Ensure all columns have consistent data types
-            df["No"] = df["No"].astype(int)
-            df["UniqueID"] = df["UniqueID"].astype(str)
-            df["X"] = df["X"].astype(float)
-            df["Y"] = df["Y"].astype(float)
-            df["ClassType"] = df["ClassType"].astype(int)
-            df["Ans"] = df["Ans"].astype(int)
-            df["Probability"] = df["Probability"].astype(float)
-
-            # Initialize session state for selected index
-            if "selected_row_index" not in st.session_state:
-                st.session_state.selected_row_index = 0
-            if "selected_map_index" not in st.session_state:
-                st.session_state.selected_map_index = 0
-
-            # Initialize session state for selection source
-            if "selection_source" not in st.session_state:
-                st.session_state.selection_source = ""
-            # Initialize session state for selected folder
-            if "result_dir" not in st.session_state:
-                st.session_state.result_dir = ""
-            # Initialize session state for selected lot
-            if "lot_id" not in st.session_state:
-                st.session_state.lot_id = ""
-            # Initialize session state for probability threshold
-            if "prob_threshold" not in st.session_state:
-                st.session_state.prob_threshold = db_metadata.get("model_threshold", db_metadata.get("model_threshold_0", -1))
-            # Ensure color_option is set in session state
-            if "color_option" not in st.session_state:
+        # Add a toggle button for ColorType/Cluster
+        with colClassType:
+            if st.button("ClassType", key="color_type_button", use_container_width=True):
                 st.session_state.color_option = "ClassType"
 
-            # Add "D/ND" column based on the threshold (Defect/Not defect)
-            df["D/ND"] = df["Probability"] >= st.session_state.prob_threshold
-            # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
-            df["C/NC"] = df[["Ans", "D/ND"]].apply(lambda x: -1 if x["Ans"] == -1 else x["Ans"] == x["D/ND"], axis=1)
+        with colCluster:
+            if st.button("Cluster", key="cluster_button", use_container_width=True):
+                st.session_state.color_option = "Cluster"
 
-            # Convert "Ans" "D/ND" "C/NC" column to T/F
-            df["Ans"] = df["Ans"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
-            df["D/ND"] = df["D/ND"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
-            df["C/NC"] = df["C/NC"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
+        color_option = st.session_state.color_option
+        # Define a color mapping for each ClassType and Cluster
+        classType_mapping = {
+            "T": "#ff0000",  # red
+            "F": "#55ff7f",  # green
+            "UNK": "#808080",  # grey
+        }
 
-            # Normalize coordinates
-            x_min, x_max = df["X"].min(), df["X"].max()
-            y_min, y_max = df["Y"].min(), df["Y"].max()
-            df["X_norm"] = (df["X"] - x_min) / (x_max - x_min)
-            df["Y_norm"] = (df["Y"] - y_min) / (y_max - y_min)
+        defects = api_helper.get_lrf_data_lists(
+            output_dir=text_input_result_dir,
+            cols=["No", "UniqueID", "X", "Y", "ClassType"],
+            include_prob=True,
+            lot_id=selected_lot_id,
+        )[0]
+        db_metadata = api_helper.get_db_metadata_lists(output_dir=text_input_result_dir, lot_id=selected_lot_id)[0]
 
-            # Use DBScan to identify clusters
-            dbscan = DBSCAN(eps=50, min_samples=5)
-            df["Cluster"] = dbscan.fit_predict(df[["X", "Y"]])
+        # Extract relevant columns and convert "X" and "Y" to floats
+        defect_data = [
+            {
+                "No": defect["No"],
+                "UniqueID": defect["UniqueID"],
+                "X": float(defect["X"]),
+                "Y": float(defect["Y"]),
+                "ClassType": defect["ClassType"],
+                "Ans": defect["Ans"],
+                "Probability": defect["Probability"],
+            }
+            for defect in defects
+        ]
 
-            # Count the total number of clusters
-            total_clusters = df["Cluster"].nunique()
-            cluster_colors = generate_colors(total_clusters)
-            selected_columns = [
-                "X",
-                "Y",
-                "UniqueID",
-                "X_norm",
-                "Y_norm",
-                "ClassType",
-                "Ans",
-                "Probability",
-                "D/ND",
-                "C/NC",
-                "No",
-                "Cluster",
-            ]
-            st.session_state.filtered_df = df[selected_columns]
-            # Apply the color mapping based on the selected option
-            if color_option == "ClassType":
-                st.session_state.filtered_df["color"] = st.session_state.filtered_df["Ans"].map(
-                    lambda x: hex_to_rgb(classType_mapping.get(x, "#808080"))
-                )
-            else:
-                st.session_state.filtered_df["color"] = st.session_state.filtered_df["Cluster"].map(
-                    lambda x: hex_to_rgb("#808080") if x == -1 else hex_to_rgb(cluster_colors[x % len(cluster_colors)])
-                )
+        # Convert to DataFrame
+        df = pd.DataFrame(defect_data)
 
-            # Define the scatter plot layer
-            layer = pdk.Layer(
-                "ScatterplotLayer",
-                id="defect-map",
-                data=st.session_state.filtered_df,
-                get_position=["X_norm", "Y_norm"],
-                get_fill_color="color",
-                pickable=True,
-                radius_scale=10,
-                radius_min_pixels=2,
-                radius_max_pixels=10,
-                auto_highlight=True,
+        # Set the "No" column as the index
+        df.set_index("No", inplace=True)
+        df["No"] = df.index
+
+        # Ensure all columns have consistent data types
+        df["No"] = df["No"].astype(int)
+        df["UniqueID"] = df["UniqueID"].astype(str)
+        df["X"] = df["X"].astype(float)
+        df["Y"] = df["Y"].astype(float)
+        df["ClassType"] = df["ClassType"].astype(int)
+        df["Ans"] = df["Ans"].astype(int)
+        df["Probability"] = df["Probability"].astype(float)
+
+        # Initialize session state for selected index
+        if "selected_row_index" not in st.session_state:
+            st.session_state.selected_row_index = 0
+        if "selected_map_index" not in st.session_state:
+            st.session_state.selected_map_index = 0
+
+        # Initialize session state for selection source
+        if "selection_source" not in st.session_state:
+            st.session_state.selection_source = ""
+        # Initialize session state for selected folder
+        if "result_dir" not in st.session_state:
+            st.session_state.result_dir = ""
+        # Initialize session state for selected lot
+        if "lot_id" not in st.session_state:
+            st.session_state.lot_id = ""
+        # Initialize session state for probability threshold
+        if "prob_threshold" not in st.session_state:
+            st.session_state.prob_threshold = db_metadata.get("model_threshold", db_metadata.get("model_threshold_0", -1))
+        # Ensure color_option is set in session state
+        if "color_option" not in st.session_state:
+            st.session_state.color_option = "ClassType"
+
+        # Add "D/ND" column based on the threshold (Defect/Not defect)
+        df["D/ND"] = df["Probability"] >= st.session_state.prob_threshold
+        # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
+        df["C/NC"] = df[["Ans", "D/ND"]].apply(lambda x: -1 if x["Ans"] == -1 else x["Ans"] == x["D/ND"], axis=1)
+
+        # Convert "Ans" "D/ND" "C/NC" column to T/F
+        df["Ans"] = df["Ans"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
+        df["D/ND"] = df["D/ND"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
+        df["C/NC"] = df["C/NC"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
+
+        # Normalize coordinates
+        x_min, x_max = df["X"].min(), df["X"].max()
+        y_min, y_max = df["Y"].min(), df["Y"].max()
+        df["X_norm"] = (df["X"] - x_min) / (x_max - x_min)
+        df["Y_norm"] = (df["Y"] - y_min) / (y_max - y_min)
+
+        # Use DBScan to identify clusters
+        dbscan = DBSCAN(eps=50, min_samples=5)
+        df["Cluster"] = dbscan.fit_predict(df[["X", "Y"]])
+
+        # Count the total number of clusters
+        total_clusters = df["Cluster"].nunique()
+        cluster_colors = generate_colors(total_clusters)
+        selected_columns = [
+            "X",
+            "Y",
+            "UniqueID",
+            "X_norm",
+            "Y_norm",
+            "ClassType",
+            "Ans",
+            "Probability",
+            "D/ND",
+            "C/NC",
+            "No",
+            "Cluster",
+        ]
+        st.session_state.filtered_df = df[selected_columns]
+        # Apply the color mapping based on the selected option
+        if color_option == "ClassType":
+            st.session_state.filtered_df["color"] = st.session_state.filtered_df["Ans"].map(
+                lambda x: hex_to_rgb(classType_mapping.get(x, "#808080"))
+            )
+        else:
+            st.session_state.filtered_df["color"] = st.session_state.filtered_df["Cluster"].map(
+                lambda x: hex_to_rgb("#808080") if x == -1 else hex_to_rgb(cluster_colors[x % len(cluster_colors)])
             )
 
-            # Define the deck.gl view
-            view_state = pdk.ViewState(latitude=0.5, longitude=0.5, controller=True, zoom=7, pitch=0)
+        # Define the scatter plot layer
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            id="defect-map",
+            data=st.session_state.filtered_df,
+            get_position=["X_norm", "Y_norm"],
+            get_fill_color="color",
+            pickable=True,
+            radius_scale=10,
+            radius_min_pixels=2,
+            radius_max_pixels=10,
+            auto_highlight=True,
+        )
 
-            # Render the deck.gl map without a base map
-            r = pdk.Deck(
-                layers=[layer],
-                initial_view_state=view_state,
-                map_provider=None,
-                tooltip={"text": "No: {No}\nClassType: {ClassType}\nX: {X}\nY: {Y}\nCluster: {Cluster}"},
-            )
-            event = st.pydeck_chart(r, height=300, on_select="rerun", selection_mode="single-object")
+        # Define the deck.gl view
+        view_state = pdk.ViewState(latitude=0.5, longitude=0.5, controller=True, zoom=7, pitch=0)
 
-            # Check if the map is selected
-            indices = event.selection.get("indices", {}).get("defect-map", [])
-            if indices:
-                previous_selected_map_index = st.session_state.get("selected_map_index", None)
-                # Iterate over the objects to find the corresponding 'No' value
-                for obj in event.selection.get("objects", {}).get("defect-map", []):
-                    st.session_state.selected_map_index = obj["No"]
-                    break
+        # Render the deck.gl map without a base map
+        r = pdk.Deck(
+            layers=[layer],
+            initial_view_state=view_state,
+            map_provider=None,
+            tooltip={"text": "No: {No}\nClassType: {ClassType}\nX: {X}\nY: {Y}\nCluster: {Cluster}"},
+        )
+        event = st.pydeck_chart(r, height=300, on_select="rerun", selection_mode="single-object")
 
-                if previous_selected_map_index != st.session_state.selected_map_index:
-                    st.session_state.selection_source = "map"
+        # Check if the map is selected
+        indices = event.selection.get("indices", {}).get("defect-map", [])
+        if indices:
+            previous_selected_map_index = st.session_state.get("selected_map_index", None)
+            # Iterate over the objects to find the corresponding 'No' value
+            for obj in event.selection.get("objects", {}).get("defect-map", []):
+                st.session_state.selected_map_index = obj["No"]
+                break
+
+            if previous_selected_map_index != st.session_state.selected_map_index:
+                st.session_state.selection_source = "map"
 
     with col2:
-        with st.container():
-            st.write("This is the image area.")
-        with st.container():
-            st.write("This is the receipe area.")
-        with st.container():
-            if text_input_result_dir and text_input_image_dir:
-                if not os.path.isdir(text_input_result_dir):
-                    raise ValueError(f"Input Result directory in text field is invalid: {text_input_result_dir}")
+        default_data_yaml_path = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/W529_data_20250717.yaml"
+        data_yaml_path = st.text_input("Data Yaml Path", default_data_yaml_path)
+        data_lots = api_helper.list_yaml_lots(data_yaml_path)
 
-                if not os.path.isdir(text_input_image_dir):
-                    raise ValueError(f"Input Image directory in text field is invalid: {text_input_image_dir}")
+        r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
 
-                logger.info("Input field params encoded and stored in URL.")
-                list_view_new.app(text_input_result_dir, text_input_image_dir, selected_lot_id)
-            elif text_input_result_dir or text_input_image_dir:
-                pass
+        with r1_col1:
+            lot_id = st.selectbox("Lot ID", [""] + list(data_lots.keys()))
+        with r1_col2:
+            defect_id = st.text_input("Defect ID")
+        with r1_col3:
+            norm = st.toggle("Normalize", value=True)
 
-            elif decoded_result_dir_as_str and decoded_image_dir_as_str:
-                if not os.path.exists(decoded_result_dir_as_str):
-                    raise ValueError(f"Result directory in URL is invalid: {decoded_result_dir_as_str}")
+        if lot_id != "" and defect_id != "":
+            draw_diff_img(data_yaml_path, lot_id, defect_id, norm, diff_clip=0.3)
+        
+        ### Receipe area
+        st.write("This is the receipe area.")
+        ### List view
+        if text_input_result_dir and text_input_image_dir:
+            if not os.path.isdir(text_input_result_dir):
+                raise ValueError(f"Input Result directory in text field is invalid: {text_input_result_dir}")
 
-                if not os.path.isdir(decoded_image_dir_as_str):
-                    raise ValueError(f"Image directory in URL is invalid: {decoded_image_dir_as_str}")
+            if not os.path.isdir(text_input_image_dir):
+                raise ValueError(f"Input Image directory in text field is invalid: {text_input_image_dir}")
 
-                logger.info("URL params successfully parsed.")
-                st.session_state.result_dir = decoded_result_dir_as_str
-                st.session_state.image_dir = decoded_image_dir_as_str
-                st.rerun()
+            logger.info("Input field params encoded and stored in URL.")
+            list_view_new.app(text_input_result_dir, text_input_image_dir, selected_lot_id)
+        elif text_input_result_dir or text_input_image_dir:
+            pass
 
-            else:
-                pass
+        elif decoded_result_dir_as_str and decoded_image_dir_as_str:
+            if not os.path.exists(decoded_result_dir_as_str):
+                raise ValueError(f"Result directory in URL is invalid: {decoded_result_dir_as_str}")
+
+            if not os.path.isdir(decoded_image_dir_as_str):
+                raise ValueError(f"Image directory in URL is invalid: {decoded_image_dir_as_str}")
+
+            logger.info("URL params successfully parsed.")
+            st.session_state.result_dir = decoded_result_dir_as_str
+            st.session_state.image_dir = decoded_image_dir_as_str
+            st.rerun()
+
+        else:
+            pass
     
