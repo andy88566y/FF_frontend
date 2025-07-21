@@ -15,8 +15,8 @@ def app() -> None:
         except ValueError as e:
             st.error(f"Invalid Regression Recipe: {e}")
             return
-    with st.expander("Regression Recipe Config", expanded=False):
-        st.json(regression_recipe.recipe)
+        with st.expander("Regression Recipe Config", expanded=False):
+            st.json(regression_recipe.recipe)
     recipe_output_dir = st.text_input("Output Directory")
 
     if st.button("Convert", type="primary"):
