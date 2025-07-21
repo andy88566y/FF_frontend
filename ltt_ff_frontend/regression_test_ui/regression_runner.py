@@ -25,9 +25,6 @@ UPDATE_MODE = [UPLOAD_MODE, EDIT_MODE]
 
 
 def app() -> None:
-    st.title("Regression Runner")
-    st.caption("Configure and run regression tests")
-
     # Upload section
     r1_col1, _, r1_col3 = st.columns([10, 1, 10])
     with r1_col1:

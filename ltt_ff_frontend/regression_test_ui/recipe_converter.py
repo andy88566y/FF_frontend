@@ -7,8 +7,6 @@ from ltt_ff_frontend.shared_components.helper import is_valid_output_dir
 
 
 def app() -> None:
-    st.title("Regression Recipe Converter")
-    st.caption("Convert regression recipe config to multiple inference recipes")
     recipe_file = st.file_uploader("Upload Regression Recipe Config (.yaml)", help=RECIPE_HELP_TEXT)
     if recipe_file:
         recipe_config = yaml.safe_load(recipe_file)
