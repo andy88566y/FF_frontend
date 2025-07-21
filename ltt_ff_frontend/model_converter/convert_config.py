@@ -1,3 +1,4 @@
+import ast
 from datetime import date
 from typing import Any
 
@@ -182,18 +183,20 @@ def app() -> None:
         r = api_helper.convert_model(model_conversion_config=model_conversion_config)
 
         if r["status"] == "completed":
-            # format into something easy to copy-paste
-            message = (
-                r["message"]
-                .replace(" [", "\n\n")
-                .replace("('", "")
-                .replace("',", "  \n")
-                .replace("'", "")
-                .replace("),", "\n\n")
-                .replace(")]", "")
-            )
-            st.success(message)
-            logger.success(message)
+            try:
+                # format into something easy to copy-paste
+                message = ast.literal_eval(r["message"].split(":")[-1])
+                for converted_model in message:
+                    st.success(f"{converted_model[0]}  \n{converted_model[1]}")
+                    logger.success(f"{converted_model[0]}  \n{converted_model[1]}")
+            except ValueError:
+                logger.error("Encountered ValueError when formatting response message. Showing original message.")
+                st.success(r["message"])
+                logger.success(r["message"])
+            except SyntaxError:
+                logger.error("Encountered SyntaxError when formatting response message. Showing original message.")
+                st.success(r["message"])
+                logger.success(r["message"])
         else:
             st.error(r["message"])
             logger.error(r["message"])
