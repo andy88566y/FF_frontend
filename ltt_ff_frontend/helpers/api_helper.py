@@ -1401,6 +1401,7 @@ def generate_golden_set_from_data_yaml(
     output_suffix: str,
     copy_images: bool,
     remove_existing_image_dir: bool = False,
+    missed_defect_list: list[dict[str, list[str]]] | None = None,
     inference_result_dir: str = "",
 ) -> dict[str, Any]:
     r = requests.post(
@@ -1412,6 +1413,7 @@ def generate_golden_set_from_data_yaml(
             "output_suffix": output_suffix,
             "copy_images": copy_images,
             "remove_existing_image_dir": remove_existing_image_dir,
+            "missed_defect_list": missed_defect_list,
             "inference_result_dir": inference_result_dir,
         },
         timeout=TIMEOUT,
