@@ -10,9 +10,8 @@ from ltt_ff_frontend.shared_components import helper
 
 
 def gen(
-    model_name: str,
+    model: dict[str, Any],
     roc_data: dict[str, Any],
-    threshold: float,
     selected_lot_id_list: Optional[list[str]] = None,
 ) -> None:
     if selected_lot_id_list is None:
@@ -24,8 +23,8 @@ def gen(
     else:
         st.plotly_chart(
             plot_multilot_roc(
-                model_name,
-                threshold,
+                model["model_hash"],
+                model["threshold"],
                 roc_data["curve_data_list"],
                 roc_data["lot_id_list"],
                 roc_data["model_default_threshold_list"],
@@ -51,7 +50,6 @@ def plot_multilot_roc(
     fig = go.Figure()
 
     # TODO: use Model hash as model name
-    model_name = "Model 1"
 
     for lot_data, lot_id, model_threshold, selected_threshold_coord, inference_threshold_coord in zip(
         curve_data_list,
@@ -106,9 +104,9 @@ def plot_multilot_roc(
                 x=[tnr[highest_fr_idx]],
                 y=[tpr[highest_fr_idx]],
                 legendgroup=f"{model_name}: {lot_id}",
-                text=f"{model_name} Threshold = {threshold[highest_fr_idx]:.6f} <br>"
-                + f"Capture Rate: {tpr[highest_fr_idx]:.4f} <br>"
-                + f"False Filter Rate: {tnr[highest_fr_idx]:.4f}",
+                text=f"Th: {threshold[highest_fr_idx]:.6f}<br>"
+                + f"CR: {tpr[highest_fr_idx]:.4f}<br>"
+                + f"FFR: {tnr[highest_fr_idx]:.4f}",
                 mode="markers+text",
                 textposition="bottom center",
                 cliponaxis=False,  # ensures annotation does not get clipped when exceeding boundary
@@ -131,9 +129,9 @@ def plot_multilot_roc(
                 x=[selected_threshold_coord[0]],
                 y=[selected_threshold_coord[1]],
                 legendgroup=f"{model_name}: {lot_id}",
-                text=f"{model_name} Threshold = {selected_threshold:.6f} <br>"
-                + f"Capture Rate: {selected_threshold_coord[1]:.4f} <br>"
-                + f"False Filter Rate: {selected_threshold_coord[0]:.4f}",
+                text=f"TH: {selected_threshold:.6f}<br>"
+                + f"CR: {selected_threshold_coord[1]:.4f}<br>"
+                + f"FFR: {selected_threshold_coord[0]:.4f}",
                 mode="markers+text",
                 textposition="top center",
                 cliponaxis=False,  # ensures annotation does not get clipped when exceeding boundary
@@ -157,7 +155,7 @@ def plot_multilot_roc(
                     x=[inference_threshold_coord[0]],
                     y=[inference_threshold_coord[1]],
                     legendgroup=f"{model_name}: {lot_id}",
-                    text=f"{model_name} Inference threshold = {inference_threshold:.6f} <br>"
+                    text=f"Inference threshold = {inference_threshold:.6f} <br>"
                     + f"Capture Rate: {inference_threshold_coord[1]:.4f} <br>"
                     + f"False Filter Rate: {inference_threshold_coord[0]:.4f}",
                     mode="markers+text",
@@ -177,7 +175,7 @@ def plot_multilot_roc(
     fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode="lines", line={"dash": "dash", "color": "grey"}, name="Random"))
 
     fig.update_layout(
-        title="Capture Rate / False Filter Rate Curve",
+        title=f"{model_name} Capture Rate / False Filter Rate Curve",
         xaxis_title="False Filter Rate",
         yaxis_title="Capture Rate",
         legend_title="Legends",

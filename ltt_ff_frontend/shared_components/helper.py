@@ -25,6 +25,13 @@ def format_model_name(name: str | None) -> str:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
 
+def get_model_hash(name: str) -> str:
+    if name.startswith("base"):
+        return name.split("#", maxsplit=-1)[-1].split(".", maxsplit=1)[0]
+    else:
+        return name
+
+
 def filter_recipe_columns(recipe: dict[str, Any]) -> dict[str, Any]:
     column_white_list = ["model_name", "threshold", "threshold_c", "threshold_d"]
     filtered_recipe = {"recipes": [{k: v for k, v in r.items() if k in column_white_list} for r in recipe["recipes"]]}

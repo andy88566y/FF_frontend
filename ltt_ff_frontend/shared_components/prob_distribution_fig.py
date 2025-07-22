@@ -5,8 +5,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from ltt_ff_frontend.shared_components import helper
-
 
 DEFECT_COLOR_MAPPING = {
     "D": "darkred",
@@ -31,8 +29,8 @@ def get_color_map(legends_list: list[str]) -> dict[str, Any]:
 
 
 def gen(
-    aggregated_lists: tuple[list[str], list[float], list[int], list[str]],
-    selected_threshold: float,
+    aggregated_lists: tuple[list[str], list[list[float]], list[int], list[str]],
+    selected_model: dict[str, Any],
     selected_lot_id_list: Optional[list[str]] = None,
 ) -> go.Figure:
     """
@@ -42,7 +40,7 @@ def gen(
     aggregated_lists:
         A tuple containing four lists of lists:
         - list[list[str]]: List of defect No or UniqueID.
-        - list[list[float]]: List of probabilities.
+        - list[list[float]]: List of probabilities per models.
         - list[list[int]]: List of labels (0 for non-defect, 1 for defect, other values for unlabeled).
         - list[str]: List of Lot IDs
 
@@ -100,8 +98,8 @@ def gen(
     # Add threshold line
     fig.add_shape(
         type="line",
-        x0=selected_threshold,
-        x1=selected_threshold,
+        x0=selected_model["threshold"],
+        x1=selected_model["threshold"],
         y0=0,
         y1=1,
         xref="x",
@@ -113,7 +111,7 @@ def gen(
         barmode="stack",
         xaxis_title="Probabilities",
         yaxis_title="Frequency",
-        title="Defect Probability Distribution",
+        title=f"{selected_model['model_hash']} Defect Probability Distribution",
     )
 
     return fig
