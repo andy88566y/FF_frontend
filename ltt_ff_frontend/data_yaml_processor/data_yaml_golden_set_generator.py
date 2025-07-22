@@ -70,7 +70,7 @@ def app() -> None:
             output_suffix=output_suffix,
             copy_images=copy_images,
             remove_existing_image_dir=remove_existing_image_dir,
-            result_dir=result_dir,
+            inference_result_dir=result_dir,
         )
 
         if request.get("status") == "error":
