@@ -194,7 +194,7 @@ class Regression_Recipe:
                 week_root = os.path.join(layer_root, f"W{week}")
                 os.makedirs(week_root, exist_ok=True)
                 for site, recipes in site_config.items():
-                    recipe_path = os.path.join(week_root, f"{site}.yaml")
+                    recipe_path = os.path.join(week_root, f"W{week}_{layer_group}_{site}.yaml")
                     with open(recipe_path, "w") as f:
                         yaml.dump(recipes, f, sort_keys=True)
 

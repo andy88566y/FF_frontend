@@ -24,6 +24,6 @@ def app() -> None:
             st.error("Please enter a valid output directory.")
         try:
             regression_recipe.make_recipe_dir(recipe_output_dir)
-            st.success("Recipe Convert Completed")
+            st.success("Regression Recipe Convert Completed")
         except:
-            st.error("Recipe Convert Failed")
+            st.error("Regression Recipe Convert Failed")

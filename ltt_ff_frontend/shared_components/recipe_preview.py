@@ -118,7 +118,6 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
                 # with col4:
                 #     disable = st.toggle("disabled:", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
 
-                # 暫存每筆輸入資料
                 custom_recipe["recipes"].append(
                     {
                         "model_name": r["model_name"],
