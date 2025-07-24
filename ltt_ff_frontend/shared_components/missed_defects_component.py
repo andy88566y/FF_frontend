@@ -8,12 +8,15 @@ from loguru import logger
 from ltt_ff_frontend.helpers import api_helper
 
 
-def gen(missed_defects: list[dict[str, Any]]) -> None:
-    df = pd.DataFrame(columns=["Lot ID", "Missed defects"])
+def gen(missed_defect_info: dict[str, Any]) -> None:
+    df = pd.DataFrame(columns=["Lot ID", "Missed defects", "LRF Path"])
 
-    for missed_defect_per_lot in missed_defects:
+    missed_defect_lists = missed_defect_info["missed_defect_list"]
+    lrf_paths = missed_defect_info["lrf_path_list"]
+
+    for missed_defect_per_lot, lrf_path in zip(missed_defect_lists, lrf_paths):
         for k, v in missed_defect_per_lot.items():
-            df.loc[len(df)] = pd.Series({"Lot ID": k, "Missed defects": v})
+            df.loc[len(df)] = pd.Series({"Lot ID": k, "Missed defects": v, "LRF Path": lrf_path})
 
     st.download_button(
         label="Download missed defect list as csv",
