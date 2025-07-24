@@ -506,11 +506,12 @@ def split_lrf(lrf_path: str, partitions: int, output_dir: str) -> requests.Respo
     return r
 
 
-def merge_lrf(output_dir: str) -> requests.Response:
+def merge_lrf(output_dir: str, remove_partitions: bool = False) -> requests.Response:
     r = requests.post(
         API_ROOT + "lrf_merge",
         json={
             "output_dir": output_dir,
+            "remove_partitions": remove_partitions,
         },
         timeout=TIMEOUT,
     )

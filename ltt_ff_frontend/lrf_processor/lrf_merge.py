@@ -12,6 +12,8 @@ def app() -> None:
         value="",
     )
 
+    remove_partitions = st.toggle(label="Remove partition LRF files after merging", value=False)
+
     if not output_dir:
         st.error("Please enter Directory containing split LRF files")
         return
@@ -20,8 +22,8 @@ def app() -> None:
     try:
         files_found = sorted(files_found, key=lambda x: int(x.split("_")[0]))
     except ValueError as e:
-        st.error(f"Invalid file name found: {str(e)}.")
-        logger.error(f"Invalid file name found: {str(e)}.")
+        st.error(f"Invalid file name found: {str(e)}.  \nReminder: Directory must only contain split LRF files.")
+        logger.error(f"Invalid file name found: {str(e)}.  \nReminder: Directory must only contain split LRF files.")
         return
 
     if files_found:
@@ -31,8 +33,11 @@ def app() -> None:
         st.error(f"No files found in {output_dir}")
         return
 
+    if remove_partitions:
+        st.warning("The files listed above will be deleted after merging!")
+
     if st.button(label="Merge LRF", type="primary"):
-        request = api_helper.merge_lrf(output_dir=output_dir)
+        request = api_helper.merge_lrf(output_dir=output_dir, remove_partitions=remove_partitions)
 
         if request.json().get("status") == "error":
             message = request.json().get("message")
