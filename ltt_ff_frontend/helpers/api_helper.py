@@ -35,37 +35,6 @@ def get_base_models(include_blank: bool = False) -> list[str]:
         return base_model_list if not include_blank else [BLANK_MODEL] + base_model_list
 
 
-@st.cache_data(ttl="10s")
-def get_ds_model_dirs() -> list[str]:
-    """
-    Returns a list of all directories found in DS_models. This will be used to filter the DS models list.
-    """
-    r = requests.get(f"{API_ROOT}get_ds_model_dirs", timeout=TIMEOUT)
-
-    if r.json()["status"] == "error":
-        logger.error(r.json()["message"])
-        return []
-    else:
-        ds_model_dirs = r.json()["ds_model_dirs"]
-        return [""] + ds_model_dirs
-
-
-@st.cache_data(ttl="10s")
-def get_ds_models(filter_week: str = "") -> list[str]:
-    """
-    Returns a list of DS models, filtered by week of release.
-    """
-    params = {"filter_week": filter_week}
-    r = requests.get(f"{API_ROOT}get_ds_model_list", params=params, timeout=TIMEOUT)
-
-    if r.json()["status"] == "error":
-        logger.error(r.json()["message"])
-        return []
-    else:
-        ds_model_list = r.json()["ds_model_list"]
-        return ds_model_list
-
-
 @st.cache_data(ttl="300s")
 def get_model_threshold(model_name: str) -> float:
     """
@@ -1452,11 +1421,11 @@ def generate_golden_set_from_data_yaml(
 #####################################################################################################
 # Model conversion                                                                                  #
 #####################################################################################################
-def convert_model(model_details: dict[str, Any]) -> dict[str, Any]:
+def convert_model(model_conversion_config: dict[str, list[dict]]) -> dict[str, Any]:
     r = requests.post(
         API_ROOT + "convert_model",
         json={
-            "model_details": model_details,
+            "model_conversion_config": model_conversion_config,
         },
         timeout=TIMEOUT,
     )
