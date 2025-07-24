@@ -3,6 +3,17 @@ from typing import Annotated, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class AugmentParams(BaseModel):
+    rotation: Annotated[float, Field(default=90.0, description="v2.RandomRotation")]
+    h_flip_prob: Annotated[float, Field(default=0.25, description="v2.RandomHorizontalFlip")]
+    v_flip_prob: Annotated[float, Field(default=0.25, description="v2.RandomVerticalFlip")]
+    scale: Annotated[list[float], Field(default=[0.7, 1.3], description="v2.RandomAffine")]
+    brightness: Annotated[float, Field(default=0.2, description="v2.ColorJitter")]
+    contrast: Annotated[float, Field(default=0.2, description="v2.ColorJitter")]
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class EarlyStoppingParams(BaseModel):
     monitor: Annotated[
         str,
@@ -81,6 +92,10 @@ class HyperParams(BaseModel):
     tool: Annotated[str, Field(default="x9u", description="Training tool.")]
     early_stopping_params: Annotated[
         EarlyStoppingParams | None, Field(default=None, description="Parameters for early stopping callback.")
+    ]
+    augment_params: Annotated[
+        dict[str, Any] | None,
+        Field(default=None, description="Parameters required for the selected sampler type."),
     ]
 
     model_config = ConfigDict(extra="forbid")
