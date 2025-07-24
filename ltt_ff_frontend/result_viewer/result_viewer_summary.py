@@ -101,13 +101,12 @@ def app() -> None:
 
         if "missed_defect_list" in required_components:
             with st.expander(label="Missed defects"):
-                missed_defects_component.gen(missed_defects=result_viewer_components["missed_defect_list"])
+                missed_defects_component.gen(missed_defect_info=result_viewer_components["missed_defect_info"])
 
         if "particle_mode_only_defect_list" in required_components:
             with st.expander(label="ParticleMode defects"):
-                particle_mode_defects_component.gen(
-                    particle_mode_only_defects=result_viewer_components["particle_mode_only_defect_list"]
-                )
+                particle_mode_defects_component.gen(particle_mode_info=result_viewer_components["particle_mode_info"])
+
         if "classtype_count" in required_components:
             with st.expander(label="LRF ClassType count"):
                 class_type_component.gen(classtype_count_list=result_viewer_components["classtype_count"])
