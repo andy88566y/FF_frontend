@@ -28,6 +28,16 @@ def app() -> None:
     with output_suffix_col:
         output_suffix = st.text_input(label="Output LRF suffix", value="", placeholder="Optional")
 
+    # Automatically grab missed defects by reading result .db?
+    auto_grab_missed_defects = st.toggle(label="Automatically grab missed defects from inference results", value=False)
+    if auto_grab_missed_defects:
+        result_dir = st.text_input(
+            label="Inference Result Directory",
+            help="To automatically retrieve missed defects, access to .db files is required",
+        )
+    else:
+        result_dir = ""
+
     copy_images = st.toggle(
         label="Copy Image Directory to Output Directory and generate updated Data Yaml",
         value=False,
@@ -60,6 +70,7 @@ def app() -> None:
             output_suffix=output_suffix,
             copy_images=copy_images,
             remove_existing_image_dir=remove_existing_image_dir,
+            inference_result_dir=result_dir,
         )
 
         if request.get("status") == "error":
