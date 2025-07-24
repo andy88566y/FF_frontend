@@ -78,7 +78,7 @@ class HyperParams(BaseModel):
     ]
     sampler_params: Annotated[
         dict[str, Any] | None,
-        Field(description="Parameters required for the selected sampler type."),
+        Field(default=None, description="Parameters required for the selected sampler type."),
     ]
     batch_size: Annotated[int, Field(default=32, description="Training batch size.")]
     epochs: Annotated[int, Field(default=30, description="Number of training epochs.")]
