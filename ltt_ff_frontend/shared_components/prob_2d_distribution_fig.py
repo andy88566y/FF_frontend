@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -6,27 +7,37 @@ from ltt_ff_frontend.shared_components.prob_distribution_fig import get_color_ma
 
 
 def gen(
-    aggregated_model_data_1: tuple[list[str], list[float], list[int], list[str]],
-    aggregated_model_data_2: tuple[list[str], list[float], list[int], list[str]],
+    aggregated_model_data: list[tuple[list[str], list[float], list[int], list[str]]],
+    m1_name: str,
+    m2_name: str,
     m1_threshold: float,
     m2_threshold: float,
+    split_lot: bool,
 ) -> go.Figure:
-    m1_defect_ids, m1_probs, m1_ans, m1_lot_ids = aggregated_model_data_1
-    m2_defect_ids, m2_probs, m2_ans, m2_lot_ids = aggregated_model_data_2
-    assert sorted(m1_lot_ids) == sorted(m2_lot_ids), "Lot IDs Mismatch!"
-    assert sorted(m1_defect_ids) == sorted(m2_defect_ids), "Defect IDs Count Mismatch!"
+    if len(aggregated_model_data) == 1:
+        defect_ids, model_probs, ans, lot_ids = aggregated_model_data[0]
+        classifications = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in ans]
+        m1_probs = np.array(model_probs)[:, 0]
+        m2_probs = np.array(model_probs)[:, 1]
+    else:
+        defect_ids, m1_probs, m1_ans, lot_ids = aggregated_model_data[0]
+        m2_defect_ids, m2_probs, m2_ans, m2_lot_ids = aggregated_model_data[1]
+        assert sorted(lot_ids) == sorted(m2_lot_ids), "Lot IDs Mismatch!"
+        assert sorted(defect_ids) == sorted(m2_defect_ids), "Defect IDs Count Mismatch!"
 
-    classifications = [
-        "Defect" if a1 == 1 and a2 == 1 else "Non-defect" if a1 == 0 and a2 == 0 else "No-Label"
-        for a1, a2 in zip(m1_ans, m2_ans)
-    ]
-    legends = [f"{classification} {lot_id}" for classification, lot_id in zip(classifications, m1_lot_ids)]
-
+        classifications = [
+            "Defect" if (a1 * a2) == 1 else "Non-defect" if (a1 + a2) == 0 else "No-Label"
+            for a1, a2 in zip(m1_ans, m2_ans)
+        ]
+    if split_lot:
+        legends = [f"{classification} {lot_id}" for classification, lot_id in zip(classifications, lot_ids)]
+    else:
+        legends = classifications
     df = pd.DataFrame(
         data={
-            "Defect_ID": m1_defect_ids,
-            "Probability_M1": m1_probs,
-            "Probability_M2": m2_probs,
+            "Defect_ID": defect_ids,
+            f"Probability_{m1_name}": m1_probs,
+            f"Probability_{m2_name}": m2_probs,
             "Classification": classifications,
             "Legends": legends,
         }
@@ -50,8 +61,8 @@ def gen(
 
     fig = px.scatter(
         df,
-        x="Probability_M1",
-        y="Probability_M2",
+        x=f"Probability_{m1_name}",
+        y=f"Probability_{m2_name}",
         range_x=[0.0, 1.0],
         range_y=[0.0, 1.0],
         marginal_x="histogram",
@@ -108,14 +119,14 @@ def gen(
     fig.add_shape(type="path", path="M 0 0 L 1 0 L 1 1 Z", line_width=0, fillcolor="palegreen", opacity=0.3)
 
     fig.update_layout(
-        title="Model Comparision Chart",
-        xaxis={"zeroline": False, "showgrid": False, "title": "Model 1 (Base)"},
-        yaxis={"zeroline": False, "showgrid": False, "title": "Model 2 (Candidate)"},
-        xaxis2={"zeroline": False, "showgrid": False, "title": "Model 2 Histogram"},
+        title=f"{m1_name} & {m2_name} Comparision Chart",
+        xaxis={"zeroline": False, "showgrid": False, "title": f"{m1_name} (Base)"},
+        yaxis={"zeroline": False, "showgrid": False, "title": f"{m2_name} (Candidate)"},
+        xaxis2={"zeroline": False, "showgrid": False, "title": f"{m2_name}  Histogram"},
         yaxis2={"zeroline": False, "showgrid": False},
         xaxis3={"zeroline": False, "showgrid": False},
-        yaxis3={"zeroline": False, "showgrid": False, "title": "Model 1 Histogram"},
-        height=600,
+        yaxis3={"zeroline": False, "showgrid": False, "title": f"{m1_name} Histogram"},
+        height=800,
         width=800,
         bargap=0,
         barmode="stack",

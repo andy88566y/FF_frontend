@@ -1,5 +1,5 @@
 import re
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import plotly.express as px
@@ -31,7 +31,7 @@ def get_color_map(legends_list: list[str]) -> dict[str, Any]:
 def gen(
     aggregated_lists: tuple[list[str], list[list[float]], list[int], list[str]],
     selected_model: dict[str, Any],
-    selected_lot_id_list: Optional[list[str]] = None,
+    split_lot: bool,
 ) -> go.Figure:
     """
     Generates a 1D plot for defect probability distribution across multiple lots.
@@ -48,28 +48,26 @@ def gen(
         The threshold value for classification.
         Used to draw red dot line.
 
-    selected_lot_id_list (list[str], optional):
-        A list of lot IDs to filter the data. Defaults to an empty list.
-
     Returns:
     go.Figure:
         Plotly figure object with the defect probability distribution histogram.
     """
-
-    if selected_lot_id_list is None:
-        selected_lot_id_list = []
 
     id_list, prob_list, ans_list, lot_id_list = aggregated_lists
 
     df = pd.DataFrame(
         data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
     )
-    df = df[df["Lot ID"].isin(selected_lot_id_list)] if selected_lot_id_list else df
+
     df["Classification"] = [
         "Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]
     ]
-    df["Legends"] = [f"{classification} {lot_id}" for classification, lot_id in zip(df["Classification"], df["Lot ID"])]
-
+    if split_lot:
+        df["Legends"] = [
+            f"{classification} {lot_id}" for classification, lot_id in zip(df["Classification"], df["Lot ID"])
+        ]
+    else:
+        df["Legends"] = df["Classification"]
     # Add histogram
     # hover_data defines which df columns will appear on the hover message
     # label changes the column name on the hover message
