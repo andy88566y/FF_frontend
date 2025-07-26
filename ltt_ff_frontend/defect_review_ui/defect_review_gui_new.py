@@ -18,7 +18,7 @@ from ltt_ff_frontend.helpers import api_helper
 def app() -> None:
     st.title("Defect Review new")
     
-    col1, col2 = st.columns([2, 3])
+    col1, col2 = st.columns([1, 3])
     ###Mask info
     with col1:
         with st.container():
@@ -66,29 +66,30 @@ def app() -> None:
                 st.error(f"Mismatch between Lot ID ({selected_lot_id}) and image directory ({text_input_image_dir}).")
                 return
 
-        ###Label info           
+        ###Label info  
+         
         indices = []
-        labels = []
-
+        
+        
         for i in range(0, len(lttswadc_map), 8):
-            index_row = [
-                f"<span style='color:red'>{j}</span>" if lttswadc_map[j][1] == 1 else str(j)
-                for j in range(i, min(i + 8, len(lttswadc_map)))
-            ]
-            label_row = [lttswadc_map[j][0] for j in range(i, min(i + 8, len(lttswadc_map)))]
+            index_row = []
+            for col_offset, j in enumerate(range(i, min(i + 8, len(lttswadc_map)))):
+                edge_class = "left-edge" if col_offset == 0 else ""
+                if lttswadc_map[j][1] == 1:
+                    cell_html = f"""<div class='tooltip {edge_class}'><span style='color:red'>{j}</span><span class='tooltiptext'>{lttswadc_map[j][0]}</span></div>"""
+                else:
+                    cell_html = f"""<div class='tooltip {edge_class}'>{j}<span class='tooltiptext'>{lttswadc_map[j][0]}</span></div>"""
+                index_row.append(cell_html)
             indices.append(index_row)
-            labels.append(label_row)
 
-        # Combine index and label rows into a single DataFrame
-        table_rows = []
-        for idx_row, lbl_row in zip(indices, labels):
-            table_rows.append(idx_row)
-            table_rows.append(lbl_row)
 
-        df = pd.DataFrame(table_rows)
+        # Create DataFrame
+        df = pd.DataFrame(indices)
 
-        # Display
-        st.title("LTTSWADC Map (4x8 Table)")        
+        # Display title
+        st.title("LTTSWADC Map")
+
+        # Display styled table with tooltips
         
         st.markdown(
             f"""
@@ -105,10 +106,38 @@ def app() -> None:
                         border: 1px solid #ccc;
                         word-wrap: break-word;
                         font-size: 14px;
+                        overflow: visible; /* Allow tooltips to overflow */
                     }}
-                    span {{
-                        font-weight: bold;
-                        color: red;
+                    .tooltip {{
+                        position: relative;
+                        display: inline-block;
+                        cursor: pointer;
+                        overflow: visible; /* Ensure tooltip is not clipped */
+                    }}
+                    .tooltip .tooltiptext {{
+                        visibility: hidden;
+                        background-color: #555;
+                        color: #fff;
+                        text-align: center;
+                        border-radius: 6px;
+                        padding: 5px;
+                        position: absolute;
+                        z-index: 1;
+                        top: 100%;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        opacity: 0;
+                        transition: opacity 0.3s;
+                        white-space: nowrap;
+                        margin-top: 6px;
+                    }}
+                    .tooltip.left-edge .tooltiptext {{
+                        left: 0;
+                        transform: none;
+                    }}
+                    .tooltip:hover .tooltiptext {{
+                        visibility: visible;
+                        opacity: 1;
                     }}
                 </style>
                 {df.to_html(escape=False, index=False, header=False)}
