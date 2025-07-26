@@ -12,7 +12,7 @@ from sklearn.cluster import DBSCAN
 from ltt_ff_frontend.defect_review_ui import list_view_new
 from ltt_ff_frontend.defect_review_ui.list_view_new import generate_colors, hex_to_rgb
 from ltt_ff_frontend.defect_review_ui.lrf_constant import lttswadc_map
-from ltt_ff_frontend.defect_review_ui.defect_diff_viewer import draw_diff_img
+from ltt_ff_frontend.defect_review_ui.defect_diff_viewer import draw_diff_img_plotly
 from ltt_ff_frontend.helpers import api_helper
 
 def app() -> None:
@@ -88,9 +88,7 @@ def app() -> None:
         df = pd.DataFrame(table_rows)
 
         # Display
-        st.title("LTTSWADC Map (4x8 Table)")
-        # st.markdown(df.to_html(escape=False, index=False, header=False), unsafe_allow_html=True)
-        
+        st.title("LTTSWADC Map (4x8 Table)")        
         
         st.markdown(
             f"""
@@ -305,7 +303,7 @@ def app() -> None:
             norm = st.toggle("Normalize", value=True)
 
         if lot_id != "" and defect_id != "":
-            draw_diff_img(data_yaml_path, lot_id, defect_id, norm, diff_clip=0.3)
+            draw_diff_img_plotly(data_yaml_path, lot_id, defect_id, norm, diff_clip=0.3)
         
         ### Receipe area
         st.write("This is the receipe area.")

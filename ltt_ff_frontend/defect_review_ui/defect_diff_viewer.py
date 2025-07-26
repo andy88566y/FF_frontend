@@ -6,7 +6,8 @@ from loguru import logger
 from matplotlib.axes import Axes
 
 from ltt_ff_frontend.helpers import api_helper
-
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 
 # TODO: Change to Plotly
 def draw_diff_img(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, diff_clip: int = 0.3):
@@ -138,6 +139,91 @@ def draw_diff_img(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, 
     fig.tight_layout(pad=1.5, h_pad=2.2, w_pad=2.2)
 
     st.pyplot(fig)
+
+
+def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, diff_clip: float = 0.3):
+    # Load data
+    data_lots = api_helper.list_yaml_lots(data_yaml_path)
+    diff_img_data = api_helper.generate_diff_images(data_yaml_path, lot_id, defect_id, norm)
+
+    if diff_img_data["status"] == "error":
+        st.error(f"Error: {diff_img_data['message']}")
+        return
+
+    # Extract metadata and image tensors
+    defect_info = diff_img_data["defect_meta"]
+    image_data = diff_img_data["image_data"]
+    layer_name = data_lots[lot_id].get("layer_group", "")
+
+    # Convert image tensors to numpy arrays
+    for p in ["Rt", "T"]:
+        for k in ["aligned_ref", "aligned_test", "aligned_diff"]:
+            image_data[p][k] = np.array(image_data[p][k])
+
+    # Create Plotly subplots
+    fig = make_subplots(rows=2, cols=3, subplot_titles=[
+        "Reference [Rt]", "Test [Rt]", "Difference [Rt]",
+        "Reference [T]", "Test [T]", "Difference [T]"
+    ], horizontal_spacing=0.05, vertical_spacing=0.1)
+
+    
+    seismic_colorscale = [
+        [0.0, "blue"],
+        [0.5, "white"],
+        [1.0, "red"]
+    ]
+
+    # Loop through Rt and T images
+    for rid, ptype in enumerate(["Rt", "T"]):
+        ref_img = image_data[ptype]["aligned_ref"]
+        test_img = image_data[ptype]["aligned_test"]
+        diff_img = image_data[ptype]["aligned_diff"]
+
+        max_pos = np.unravel_index(diff_img.argmax(), diff_img.shape)
+        min_pos = np.unravel_index(diff_img.argmin(), diff_img.shape)
+        crop_size = 16
+
+        for cid, img, cmap, vmin, vmax in zip(
+            [1, 2, 3],
+            [ref_img, test_img, diff_img],
+            ["gray", "gray", seismic_colorscale],
+            [None, None, -diff_clip],
+            [None, None, diff_clip]
+        ):
+            fig.add_trace(go.Heatmap(
+                z=img,
+                colorscale=cmap,
+                zmin=vmin,
+                zmax=vmax,
+                showscale=(cid == 3)
+            ), row=rid + 1, col=cid)
+
+            # Add rectangles for defect positions
+            tool_x = image_data[ptype]["tool_defect_loc"][0] + round(image_data[ptype]["best_pos"][1]) - 16
+            tool_y = image_data[ptype]["tool_defect_loc"][1] + round(image_data[ptype]["best_pos"][0]) - 16
+
+            for pos, color in [(max_pos, "red"), (min_pos, "blue"), ((tool_y, tool_x), "green")]:
+                fig.add_shape(type="rect",
+                    x0=pos[1] - crop_size, y0=pos[0] - crop_size,
+                    x1=pos[1] + crop_size, y1=pos[0] + crop_size,
+                    line=dict(color=color, width=1),
+                    row=rid + 1, col=cid
+                )
+
+    # Update layout
+    fig.update_layout(
+        title_text=(
+            f"[Defect Aligned Comparison] {layer_name} Lot: {lot_id} | Defect ID: {defect_id} | "
+            f"X: {defect_info['X']} | Y: {defect_info['Y']}<br>"
+            f"ClassType: {defect_info['ClassType']}, isDefect: {defect_info['isDefect']}, "
+            f"ParticleModeOnly: {defect_info['particleModeOnly']} "
+            f"(lrf-ORIG | pc: {defect_info['PixelCount']}, h: {defect_info['H']}, w: {defect_info['W']})"
+        ),
+        height=800,
+        width=1200
+    )
+
+    st.plotly_chart(fig)
 
 
 def app() -> None:

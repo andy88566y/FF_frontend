@@ -170,7 +170,7 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
         st.session_state.result_dir = result_dir
         st.session_state.lot_id = selected_lot_id
 
-    threshold_col, filter_options_col, filter_operators_col, filter_value_col, filter_message_col = st.columns([1, 1, 1, 2, 1])
+    threshold_col, filter_options_col, filter_operators_col, filter_value_col, filter_message_col, apply_col, remove_col = st.columns([1, 1, 1, 2, 1, 1, 1])
 
     # Add threshold selection
     with threshold_col:
@@ -217,37 +217,35 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
         )
 
     # Add filter value text input, confirm button, and cancel button
-    with filter_value_col:
-        with st.container():
-    
+    with filter_value_col:   
             st.session_state.filter_value = st.text_input(
                 label="Filter value",
                 value=st.session_state.filter_value,
             )
-            
-            if st.button(label="Apply Filter", use_container_width=True):
-                try:
-                    col = st.session_state.filter_column
-                    op = ops[st.session_state.filter_operator]
-                    val = st.session_state.filter_value
+    with apply_col:
+        if st.button(label="Apply Filter", use_container_width=True):
+            try:
+                col = st.session_state.filter_column
+                op = ops[st.session_state.filter_operator]
+                val = st.session_state.filter_value
 
-                    # Try to convert value to the same type as the column
-                    col_dtype = df[col].dtype
-                    if col_dtype.kind in "iuf": # numeric types
-                        val = float(val)
-                    elif col_dtype.kind == "b": # boolean
-                        val = val.lower() in ["true", "1", "yes"]
-                    # else keep as string
-                    st.session_state.filtered_df = df[op(df[col], val)]
-                except Exception as e:
-                    st.warning(f"Could not apply filter: {e}")
+                # Try to convert value to the same type as the column
+                col_dtype = df[col].dtype
+                if col_dtype.kind in "iuf": # numeric types
+                    val = float(val)
+                elif col_dtype.kind == "b": # boolean
+                    val = val.lower() in ["true", "1", "yes"]
+                # else keep as string
+                st.session_state.filtered_df = df[op(df[col], val)]
+            except Exception as e:
+                st.warning(f"Could not apply filter: {e}")
 
-                    # st.session_state.filtered_df.set_index("No", inplace=True)
-            if st.button(label="Remove Filter", icon=":material/close:", use_container_width=True):
-                st.session_state.filter_column = df.columns[0]
-                st.session_state.filter_value = ""
-                st.session_state.filtered_df = df
-                st.rerun()
+    with remove_col:
+        if st.button(label="Remove Filter", icon=":material/close:", use_container_width=True):
+            st.session_state.filter_column = df.columns[0]
+            st.session_state.filter_value = ""
+            st.session_state.filtered_df = df
+            st.rerun()
 
     # Add message box showing active filters
     with filter_message_col:
@@ -256,38 +254,34 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
         if len(defect_data) != len(st.session_state.filtered_df):
             st.warning(f"Active filter: {st.session_state.filter_column} = {st.session_state.filter_value}")
 
-    # Create two columns (list view, map view)
-    col1, col2 = st.columns([1, 1])
-
     # List view
-    with col1:
-        st.subheader("List View")
+    st.subheader("List View")
 
-        # Select only the columns I want to display
-        selected_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster"]
-        listview_df = st.session_state.filtered_df[selected_columns]
+    # Select only the columns I want to display
+    selected_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster"]
+    listview_df = st.session_state.filtered_df[selected_columns]
 
-        event = st.dataframe(
-            listview_df,
-            use_container_width=True,
-            height=300,
-            hide_index=False,
-            on_select="rerun",
-            selection_mode=["single-row"],
-        )
+    event = st.dataframe(
+        listview_df,
+        use_container_width=True,
+        height=300,
+        hide_index=False,
+        on_select="rerun",
+        selection_mode=["single-row"],
+    )
 
-        # Check if a row is selected
-        if event.selection and "rows" in event.selection:
-            if event.selection["rows"]:
-                previous_selected_row_index = st.session_state.get("selected_row_index", None)
-                st.session_state.selected_row_index = event.selection["rows"][0]
+    # Check if a row is selected
+    if event.selection and "rows" in event.selection:
+        if event.selection["rows"]:
+            previous_selected_row_index = st.session_state.get("selected_row_index", None)
+            st.session_state.selected_row_index = event.selection["rows"][0]
 
-                # Map the selected row index back to the original DataFrame index
-                original_index = st.session_state.filtered_df.iloc[st.session_state.selected_row_index].name
-                st.session_state.selected_row_index = original_index
+            # Map the selected row index back to the original DataFrame index
+            original_index = st.session_state.filtered_df.iloc[st.session_state.selected_row_index].name
+            st.session_state.selected_row_index = original_index
 
-                if previous_selected_row_index != st.session_state.selected_row_index:
-                    st.session_state.selection_source = "list"
+            if previous_selected_row_index != st.session_state.selected_row_index:
+                st.session_state.selection_source = "list"
 
     # Get the selected row based on the session state
     defect_number = 0
@@ -304,17 +298,17 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
     else:
         selected_data = df[df["No"] == df["No"].min()]
 
-    # Parse URL to get the 'lot' parameter
-    query_params = st.query_params
-    defect_number = query_params.get("defect_no", None)
+    # # Parse URL to get the 'lot' parameter
+    # query_params = st.query_params
+    # defect_number = query_params.get("defect_no", None)
 
-    # Find the index of the lot_name in filtered_folders
-    if defect_number:
-        defect_number = int(defect_number)
-        if defect_number not in df["No"].values:
-            defect_number = df["No"].min()
-        st.query_params.defect_no = defect_number
-        selected_data = df[df["No"] == defect_number]
+    # # Find the index of the lot_name in filtered_folders
+    # if defect_number:
+    #     defect_number = int(defect_number)
+    #     if defect_number not in df["No"].values:
+    #         defect_number = df["No"].min()
+    #     st.query_params.defect_no = defect_number
+    #     selected_data = df[df["No"] == defect_number]
 
-    if selected_data is not None:
-        detail_view.app(selected_data, image_dir, db_metadata["input_lrf_ext"])
+    # if selected_data is not None:
+    #     detail_view.app(selected_data, image_dir, db_metadata["input_lrf_ext"])
