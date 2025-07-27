@@ -80,7 +80,7 @@ def app() -> None:
     required_components = [
         ResultViewerComponents.OOS_SUMMARY.value,
         ResultViewerComponents.MISSED_DEFECT_LIST.value,
-        ResultViewerComponents.PARTICLE_MODE_ONLY_DEFECT_LIST.value,
+        ResultViewerComponents.PARTICLE_MODE_LIST.value,
         ResultViewerComponents.CLASSTYPE_COUNT.value,
         ResultViewerComponents.INFERENCE_RESULT_TABLE.value,
         ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value,
@@ -103,23 +103,23 @@ def app() -> None:
         return
 
     try:
-        if "oos_summary" in required_components:
+        if ResultViewerComponents.OOS_SUMMARY.value in required_components:
             with st.expander(label="OOS Summary"):
                 oos_summary_component.gen(oos_calculation=result_viewer_components["oos_summary"])
 
-        if "missed_defect_list" in required_components:
+        if ResultViewerComponents.MISSED_DEFECT_LIST.value in required_components:
             with st.expander(label="Missed defects"):
                 missed_defects_component.gen(missed_defect_info=result_viewer_components["missed_defect_info"])
 
-        if "particle_mode_only_defect_list" in required_components:
+        if ResultViewerComponents.PARTICLE_MODE_LIST.value in required_components:
             with st.expander(label="ParticleMode defects"):
                 particle_mode_defects_component.gen(particle_mode_info=result_viewer_components["particle_mode_info"])
 
-        if "classtype_count" in required_components:
+        if ResultViewerComponents.CLASSTYPE_COUNT.value in required_components:
             with st.expander(label="LRF ClassType count"):
                 class_type_component.gen(classtype_count_list=result_viewer_components["classtype_count"])
 
-        if "inference_result_table" in required_components:
+        if ResultViewerComponents.INFERENCE_RESULT_TABLE.value in required_components:
             with st.expander(label="Inference Result Table"):
                 selected_lot_id_list, df = multi_lot_stats.gen(
                     inference_data=result_viewer_components["inference_result_table"], key="recipe_stats_df"
@@ -143,7 +143,7 @@ def app() -> None:
 
         recipe_model_name = recipe["recipes"][0]["model_name"]
         recipe_threshold = recipe["recipes"][0]["threshold"]
-        if "one_d_defect_distribution_chart" in required_components:
+        if ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value in required_components:
             # Draw 1D comparison chart
             with col_1d_chart_column:
                 with st.expander(label="1D Prob Distribution Chart"):
@@ -155,7 +155,7 @@ def app() -> None:
                         )
                     )
 
-        if "cr_ffr_curve" in required_components:
+        if ResultViewerComponents.CR_FFR_CURVE.value in required_components:
             with col_roc_curve_column:
                 with st.expander(label="Roc Curve Chart"):
                     roc_fig.gen(
