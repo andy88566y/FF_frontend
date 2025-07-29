@@ -115,15 +115,15 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
                         format="%.5f",
                         key=f"{r['model_name']}_{i}_threshold_c",
                     )
-                # with col4:
-                #     disable = st.toggle("disabled:", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
+                with col4:
+                    disable = st.toggle("disabled:", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
 
                 custom_recipe["recipes"].append(
                     {
                         "model_name": r["model_name"],
                         "threshold": threshold,
                         "threshold_c": threshold_c,
-                        # "disable": disable,
+                        "disable": disable,
                     }
                 )
 
