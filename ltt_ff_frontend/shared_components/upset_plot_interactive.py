@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import streamlit as st
 from ltt_ff_frontend.shared_components.upset_plot_helper import plotting
 
 
@@ -26,39 +27,46 @@ def gen(
     tn_df = df[df["classification"] == "Non-defect"]
     tp_df.pop("classification")
     tn_df.pop("classification")
+    tp_col, _, tn_col = st.columns([4.5, 1, 4.5])
+    with tp_col:
+        if not (tp_df == 0).all().all():
+            fig = plotting.plot_upset(
+                dataframes=[tp_df],
+                exclude_zeros=True,
+                legendgroups=["test"],
+                sorted_x="d",
+                sorted_y="a",
+                column_widths=[0.2, 0.8],
+                horizontal_spacing=0.21,
+                marker_size=10,
+            )
 
-    fig = plotting.plot_upset(
-        dataframes=[tp_df],
-        exclude_zeros=True,
-        legendgroups=["test"],
-        sorted_x="d",
-        sorted_y="a",
-        column_widths=[0.2, 0.8],
-        horizontal_spacing=0.21,
-        marker_size=10,
-    )
+            fig.update_layout(
+                title=f"TP Upset Chart",
+                width=800,
+                font_family="Jetbrains Mono",
+            )
+        else:
+             st.markdown("no defects were predicted correct!")
+    with tn_col:
+        if not (tn_df == 0).all().all():
+            fig2 = plotting.plot_upset(
+                dataframes=[tn_df],
+                exclude_zeros=True,
+                legendgroups=["test"],
+                sorted_x="d",
+                sorted_y="a",
+                column_widths=[0.2, 0.8],
+                horizontal_spacing=0.21,
+                marker_size=10,
+            )
 
-    fig.update_layout(
-        title=f"TP Upset Chart",
-        width=800,
-        font_family="Jetbrains Mono",
-    )
-
-    fig2 = plotting.plot_upset(
-        dataframes=[tn_df],
-        exclude_zeros=True,
-        legendgroups=["test"],
-        sorted_x="d",
-        sorted_y="a",
-        column_widths=[0.2, 0.8],
-        horizontal_spacing=0.21,
-        marker_size=10,
-    )
-
-    fig2.update_layout(
-        title=f"TN Upset Chart",
-        width=800,
-        font_family="Jetbrains Mono",
-    )
+            fig2.update_layout(
+                title=f"TN Upset Chart",
+                width=800,
+                font_family="Jetbrains Mono",
+            )
+        else:
+            st.markdown("no non-defects were predicted correct!")
 
     return fig, fig2
