@@ -260,4 +260,5 @@ class ResultViewerComponents(Enum):
     INFERENCE_RESULT_TABLE = "inference_result_table"
     ONE_D_DEFECT_DISTRIBUTION_CHART = "one_d_defect_distribution_chart"
     TWO_D_DEFECT_DISTRIBUTION_CHART = "two_d_defect_distribution_chart"
+    MULTI_MODEL_PROBABILITIES = "multi_model_probabilities"
     CR_FFR_CURVE = "cr_ffr_curve"

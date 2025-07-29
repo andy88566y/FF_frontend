@@ -74,22 +74,21 @@ def get_model_details(model_name: str) -> dict[str, Any]:
 #####################################################################################################
 # Result Viewer components                                                                          #
 #####################################################################################################
+@st.cache_data(ttl="60s")
 def get_result_viewer_components(
     inference_result_dir: str,
     required_components: list[str],
     recipe: dict[str, Any] | None = None,
     required_input: Optional[dict[str, Any]] = None,
-    secondary_inference_result_dir: str | None = None,  # only required for 2D Dist. Chart
+    secondary_inference_result_dir: str = "",  # only required for 2D Dist. Chart
     read_children_dirs: bool = False,
 ) -> dict[str, Any]:
     params = {
         "inference_result_dir": inference_result_dir,
         "recipe": recipe,
         "required_components": required_components,
-        "required_input": required_input if required_input is not None else {},
-        "secondary_inference_result_dir": secondary_inference_result_dir
-        if secondary_inference_result_dir is not None
-        else "",
+        "required_input": required_input,
+        "secondary_inference_result_dir": secondary_inference_result_dir,
         "read_children_dirs": read_children_dirs,
     }
     r = requests.post(API_ROOT + "result/get_result_viewer_components", json=params, timeout=TIMEOUT)
