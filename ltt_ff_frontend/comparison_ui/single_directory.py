@@ -11,7 +11,6 @@ from ltt_ff_frontend.shared_components import (
     roc_fig,
     upset_plot,
     venn_diagram,
-    upset_plot_interactive
 )
 
 
@@ -89,52 +88,38 @@ def app() -> None:
         with col2:
             threeD_mode = st.selectbox(label="3D Mode", options=["Venn3", "Upset"])
         if threeD_mode == "Venn3":
-            venn_fig = venn_diagram.gen(
+            venn_diagram.gen(
                 aggregated_model_data=result_viewer_components["multi_model_probabilities"],
                 intersections=result_viewer_components["intersections"],
                 model_names=[model_map[select]["model_hash"] for select in selected],
                 split_lot=split_lot,
             )
-            _, venn_col, _ = st.columns([1, 8, 1])
-            with venn_col:
-                st.pyplot(venn_fig)
+
         else:
             with col3:
                 sort_by = st.selectbox(label="Sort By", options=UPSET_SORT_OPTIONS)
             with col4:
                 exclude_zero = st.toggle("Exclude Empty Subsets")
+
             upset_plot.gen(
                 aggregated_model_data=result_viewer_components["multi_model_probabilities"],
                 intersections=result_viewer_components["intersections"],
                 model_names=[model_map[select]["model_hash"] for select in selected],
                 split_lot=split_lot,
                 sort_by=sort_by,
-                exclude_zero=exclude_zero
+                exclude_zero=exclude_zero,
             )
     else:
         with col2:
             sort_by = st.selectbox(label="Sort By", options=UPSET_SORT_OPTIONS)
         with col3:
             exclude_zero = st.toggle("Exclude Empty Subsets")
-            
+
         upset_plot.gen(
             aggregated_model_data=result_viewer_components["multi_model_probabilities"],
             intersections=result_viewer_components["intersections"],
             model_names=[model_map[select]["model_hash"] for select in selected],
             split_lot=split_lot,
             sort_by=sort_by,
-            exclude_zero=exclude_zero
+            exclude_zero=exclude_zero,
         )
-        
-        # tp_fig3, tn_fig3 = upset_plot_interactive.gen(
-        #     aggregated_model_data=result_viewer_components["multi_model_probabilities"],
-        #     intersections=result_viewer_components["intersections"],
-        #     model_names=[model_map[select]["model_hash"] for select in selected],
-        #     split_lot=split_lot,
-        # )
-
-        # tp_col, _, tn_col = st.columns([4.5, 1, 4.5])
-        # with tp_col:
-        #     st.plotly_chart(tp_fig3)
-        # with tn_col:
-        #     st.plotly_chart(tn_fig3)

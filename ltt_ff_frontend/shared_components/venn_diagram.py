@@ -1,26 +1,23 @@
-import numpy as np
-import pandas as pd
-import plotly.graph_objects as go
-from matplotlib_venn import venn3
 import matplotlib.pyplot as plt
+import streamlit as st
+from matplotlib_venn import venn3
+from matplotlib_venn.layout.venn3 import DefaultLayoutAlgorithm
 
 
 COLORS = ("#0072B2", "#D55E00", "#009E73")
-##################################################################
-#                                                                #
-# Shared Components                                              #
-#                                                                #
-# This file stores components or charts                          #
-# That will be used in multiple viewers or components.           #
-#                                                                #
-##################################################################
 
 
-def get_venn_fig(sets, labels, title, ax):
-    ax.clear()
-    venn3(sets, set_labels=labels, set_colors=COLORS, ax=ax)
-    ax.set_title(title)
-    ax.set_axis_off()
+def get_venn_fig(sets, labels, title):
+    fig = plt.figure(figsize=(8, 6))
+    venn3(
+        sets,
+        set_labels=labels,
+        set_colors=COLORS,
+        layout_algorithm=DefaultLayoutAlgorithm(fixed_subset_sizes=(1, 1, 1, 1, 1, 1, 1)),
+    )
+    fig.tight_layout()
+    fig.suptitle(title)
+    return plt.gcf()
 
 
 def gen(
@@ -28,19 +25,15 @@ def gen(
     intersections: tuple[list[list[int]]],
     model_names: list[str],
     split_lot: bool,
-) -> tuple:
+) -> None:
     defect_ids, prob_lists, ans, lot_ids = aggregated_model_data
     classifications = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in ans]
     tp_datas, tn_datas, _ = intersections
     tp_sets = [set(model_correction) for model_correction in tp_datas]
     tn_sets = [set(model_correction) for model_correction in tn_datas]
 
-    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-    get_venn_fig(tp_sets, model_names, f"True Defects Venn Diagram (Total: {ans.count(1)})", axs[0])
-    get_venn_fig(tn_sets, model_names, f"None Defects Venn Diagram (Total: {ans.count(0)})", axs[1])
-
-    # Adjust layout for better spacing
-    fig.subplots_adjust(wspace=0.3)
-    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-
-    return fig
+    tp_col, tn_col = st.columns(2)
+    with tp_col:
+        st.pyplot(get_venn_fig(tp_sets, model_names, f"True Defects Venn Diagram (Total: {ans.count(1)})"))
+    with tn_col:
+        st.pyplot(get_venn_fig(tn_sets, model_names, f"None Defects Venn Diagram (Total: {ans.count(0)})"))
