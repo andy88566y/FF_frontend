@@ -1,10 +1,8 @@
-from datetime import datetime
-
-import pandas as pd
 import streamlit as st
 from loguru import logger
 
 from ltt_ff_frontend.data_yaml_processor import (
+    data_yaml_compiler,
     data_yaml_creator,
     data_yaml_filter,
     data_yaml_golden_set_generator,
@@ -18,7 +16,7 @@ def app() -> None:
     st.caption("Various utility tools for data yaml files!")
 
     processor_mode = st.segmented_control(
-        label="Mode", options=["Create", "Filter", "Parser", "Golden Set Generator"], default="Create"
+        label="Mode", options=["Create", "Filter", "Parser", "Golden Set Generator", "Compiler"], default="Create"
     )
     if processor_mode is None:
         st.error("Please select a mode!")
@@ -32,3 +30,5 @@ def app() -> None:
         data_yaml_parser.app()
     elif processor_mode == "Golden Set Generator":
         data_yaml_golden_set_generator.app()
+    elif processor_mode == "Compiler":
+        data_yaml_compiler.app()
