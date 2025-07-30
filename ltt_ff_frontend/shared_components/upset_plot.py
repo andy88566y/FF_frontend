@@ -59,8 +59,8 @@ def gen(
                     data=tn_set,
                     sort_by=sort_by,
                     exclude_zero=exclude_zero,
-                    title=f"None Defects Upset Chart (total: {ans.count(0)})",
+                    title=f"False Defects Upset Chart (total: {ans.count(0)})",
                 )
             )
         else:
-            st.markdown("No None Defects Were Predicted Correct!")
+            st.markdown("No False Defects Were Predicted Correct!")

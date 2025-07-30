@@ -36,4 +36,4 @@ def gen(
     with tp_col:
         st.pyplot(get_venn_fig(tp_sets, model_names, f"True Defects Venn Diagram (Total: {ans.count(1)})"))
     with tn_col:
-        st.pyplot(get_venn_fig(tn_sets, model_names, f"None Defects Venn Diagram (Total: {ans.count(0)})"))
+        st.pyplot(get_venn_fig(tn_sets, model_names, f"False Defects Venn Diagram (Total: {ans.count(0)})"))
