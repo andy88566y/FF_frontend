@@ -126,7 +126,7 @@ def get_nonzero_nodes_and_edges(t: tuple, f: tuple, edges: list, nonzero_indices
             temp_e = np.array(e).T
             temp_e[0] = [p] * 2
             temp_e = np.array(temp_e).T
-            temp_e = temp_e.to[]
+            temp_e = temp_e.tolist()
             _edges.append(temp_e)
 
     return (_xt, _yt), (_xf, _yf), _edges
@@ -153,7 +153,7 @@ def get_sorted_nodes_and_edges_x(t: tuple, f: tuple, edges: list, sorted_sequenc
             temp_e = np.array(e).T
             temp_e[0] = [p] * 2
             temp_e = np.array(temp_e).T
-            temp_e = temp_e.to[]
+            temp_e = temp_e.tolist()
             _edges.append(temp_e)
 
     return (_xt, yt), (_xf, yf), _edges
