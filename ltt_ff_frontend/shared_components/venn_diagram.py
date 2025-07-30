@@ -28,7 +28,7 @@ def gen(
 ) -> None:
     defect_ids, prob_lists, ans, lot_ids = aggregated_model_data
     classifications = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in ans]
-    tp_datas, tn_datas, _ = intersections
+    tp_datas, tn_datas, _, _ = intersections
     tp_sets = [set(model_correction) for model_correction in tp_datas]
     tn_sets = [set(model_correction) for model_correction in tn_datas]
 

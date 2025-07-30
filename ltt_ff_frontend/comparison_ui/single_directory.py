@@ -9,12 +9,12 @@ from ltt_ff_frontend.shared_components import (
     prob_2d_distribution_fig,
     prob_distribution_fig,
     roc_fig,
-    upset_plot,
+    upset_plot_interactive,
     venn_diagram,
 )
 
 
-UPSET_SORT_OPTIONS = ["cardinality", "degree", "-cardinality", "-degree", "input", "-input"]
+UPSET_SORT_OPTIONS = ["ascending", "descending"]
 
 
 def get_require_component_lists(length: int) -> list[str]:
@@ -101,21 +101,23 @@ def app() -> None:
             with col4:
                 exclude_zero = st.toggle("Exclude Empty Subsets")
 
-            upset_plot.gen(
+            upset_plot_interactive.gen(
                 aggregated_model_data=result_viewer_components["multi_model_probabilities"],
                 intersections=result_viewer_components["intersections"],
                 model_names=[model_map[select]["model_hash"] for select in selected],
-                split_lot=split_lot,
                 sort_by=sort_by,
+                split_lot=split_lot,
                 exclude_zero=exclude_zero,
             )
+
+
     else:
         with col2:
             sort_by = st.selectbox(label="Sort By", options=UPSET_SORT_OPTIONS)
         with col3:
             exclude_zero = st.toggle("Exclude Empty Subsets")
 
-        upset_plot.gen(
+        upset_plot_interactive.gen(
             aggregated_model_data=result_viewer_components["multi_model_probabilities"],
             intersections=result_viewer_components["intersections"],
             model_names=[model_map[select]["model_hash"] for select in selected],

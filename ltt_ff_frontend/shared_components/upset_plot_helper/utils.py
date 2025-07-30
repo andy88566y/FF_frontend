@@ -16,9 +16,8 @@ def possible_intersections(n_sets: int) -> tuple:
 
 
 def intersecting_set_size(df: pd.DataFrame) -> list:
-    intersection_sizes = list()
+    intersection_sizes = []
     _, intersections = possible_intersections(len(df.columns))
-
     for x in intersections:
         temp_df = df
         for i, v in enumerate(x):
@@ -67,7 +66,7 @@ def get_nodes_and_edges(n_sets: int):
     nodes = [[x, y] for (x, y) in sorted(xy)]
 
     # Edge Calculation
-    edges = list()
+    edges = []
     for i, [x, y] in enumerate(nodes):
         if i == 0:
             prev_node = [x, y]
@@ -91,9 +90,9 @@ def get_nonzero_nodes_and_edges(t: tuple, f: tuple, edges: list, nonzero_indices
     xf, yf = f
 
     # Non-Zero True Nodes
-    _xt, _yt = list(), list()
+    _xt, _yt = [], []
     for x, y in zip(xt, yt):
-        temp_x, temp_y = list(), list()
+        temp_x, temp_y = [], []
         for _x, _y in zip(x, y):
             if _x in nonzero_indices:
                 p = np.where(nonzero_indices == _x)
@@ -105,9 +104,9 @@ def get_nonzero_nodes_and_edges(t: tuple, f: tuple, edges: list, nonzero_indices
             _yt.append(temp_y)
 
     # Non-Zero False Nodes
-    _xf, _yf = list(), list()
+    _xf, _yf = [], []
     for x, y in zip(xf, yf):
-        temp_x, temp_y = list(), list()
+        temp_x, temp_y = [], []
         for _x, _y in zip(x, y):
             if _x in nonzero_indices:
                 p = np.where(nonzero_indices == _x)
@@ -119,7 +118,7 @@ def get_nonzero_nodes_and_edges(t: tuple, f: tuple, edges: list, nonzero_indices
             _yf.append(temp_y)
 
     # Non-Zero Edges
-    _edges = list()
+    _edges = []
     for e in edges:
         if e[0][0] in nonzero_indices:
             p = np.where(nonzero_indices == e[0][0])
@@ -127,13 +126,13 @@ def get_nonzero_nodes_and_edges(t: tuple, f: tuple, edges: list, nonzero_indices
             temp_e = np.array(e).T
             temp_e[0] = [p] * 2
             temp_e = np.array(temp_e).T
-            temp_e = temp_e.tolist()
+            temp_e = temp_e.to[]
             _edges.append(temp_e)
 
     return (_xt, _yt), (_xf, _yf), _edges
 
 
-def get_sorted_nodes_and_edges(t: tuple, f: tuple, edges: list, sorted_sequence: list):
+def get_sorted_nodes_and_edges_x(t: tuple, f: tuple, edges: list, sorted_sequence: list):
     xt, yt = t
     xf, yf = f
 
@@ -146,7 +145,7 @@ def get_sorted_nodes_and_edges(t: tuple, f: tuple, edges: list, sorted_sequence:
     _xf = _xf.reshape(xf.shape)
 
     #  Sorted Edges
-    _edges = list()
+    _edges = []
     for e in edges:
         if e[0][0] in sorted_sequence:
             p = np.where(sorted_sequence == e[0][0])
@@ -154,42 +153,23 @@ def get_sorted_nodes_and_edges(t: tuple, f: tuple, edges: list, sorted_sequence:
             temp_e = np.array(e).T
             temp_e[0] = [p] * 2
             temp_e = np.array(temp_e).T
-            temp_e = temp_e.tolist()
+            temp_e = temp_e.to[]
             _edges.append(temp_e)
 
     return (_xt, yt), (_xf, yf), _edges
 
+def get_sorted_nodes_and_edges_y(t, f, edges, sorted_sets, original_sets):
+    new_idx = {s:i for i,s in enumerate(sorted_sets)}
+    def remap_y(coords):
+        return [np.array([new_idx[original_sets[int(y)]] for y in row]) for row in coords]
+    t_new = [t[0], remap_y(t[1])]
+    f_new = [f[0], remap_y(f[1])]
+    new_edges = []
+    for e in edges:
+        x,y = np.array(e).T
+        y_new = [new_idx[original_sets[int(i)]] for i in y]
+        new_edges.append(np.array([x, y_new]).T)
+    return t_new, f_new, new_edges
 
-def get_xaxis_marginal_data(df, marginal_df, string_repr: list):
-    intersection_data = list()
-
-    for x in string_repr:
-        _df = df.copy(deep=True)
-        temp_list = list()
-        for i, v in enumerate(x):
-            _df = _df[_df.iloc[:, i] == int(v)]
-            temp_list = [marginal_df[i] for i in _df.index]
-
-        intersection_data.append(temp_list)
-
-    x, y = list(), list()
-
-    for i, a in enumerate(intersection_data):
-        for v in a:
-            x.append(string_repr[i])
-            y.append(v)
-
-    return x, y
-
-
-def get_yaxis_marginal_data(df, marginal_data, sets: list = None):
-    individual_data = [marginal_data[df.iloc[:, i] == 1] for i in range(len(df.columns))]
-
-    x, y = list(), list()
-
-    for i, a in enumerate(individual_data):
-        for v in a:
-            x.append(sets[i])
-            y.append(v)
-
-    return x, y
+def get_active_sets(string_expr, set_names):
+    return [name for b, name in zip(string_expr, set_names) if b == '1']

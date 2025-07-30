@@ -1,7 +1,6 @@
-import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
+
 from ltt_ff_frontend.shared_components.upset_plot_helper import plotting
 
 
@@ -10,63 +9,42 @@ def gen(
     intersections: tuple[list[list[int]]],
     model_names: list[str],
     split_lot: bool,
+    sort_by: str,
+    exclude_zero: bool,
 ) -> tuple:
     defect_ids, prob_lists, ans, lot_ids = aggregated_model_data
     classifications = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in ans]
-    tp_datas, tn_datas, corretions = intersections
+    tp_datas, tn_datas, tp_corrections, tn_corretions = intersections
 
-    metadata_df = pd.DataFrame(
-        {
-            "classification": classifications,
-        }
-    )
-    df = pd.DataFrame(corretions, columns=model_names)
-    df = pd.concat([metadata_df, df], axis=1)
+    tp_df = pd.DataFrame(tp_corrections, columns=model_names)
+    tn_df = pd.DataFrame(tn_corretions, columns=model_names)
 
-    tp_df = df[df["classification"] == "Defect"]
-    tn_df = df[df["classification"] == "Non-defect"]
-    tp_df.pop("classification")
-    tn_df.pop("classification")
-    tp_col, _, tn_col = st.columns([4.5, 1, 4.5])
+    tp_col, tn_col = st.columns(2)
     with tp_col:
         if not (tp_df == 0).all().all():
-            fig = plotting.plot_upset(
-                dataframes=[tp_df],
-                exclude_zeros=True,
-                legendgroups=["test"],
-                sorted_x="d",
-                sorted_y="a",
-                column_widths=[0.2, 0.8],
-                horizontal_spacing=0.21,
-                marker_size=10,
-            )
-
-            fig.update_layout(
-                title=f"TP Upset Chart",
-                width=800,
-                font_family="Jetbrains Mono",
+            st.plotly_chart(
+                plotting.plot_upset(
+                    dataframes=[tp_df],
+                    exclude_zeros=exclude_zero,
+                    legendgroups=["True Defect"],
+                    sorted_x=sort_by,
+                    sorted_y=sort_by,
+                    title=f"True Defects Upset Chart (Total: {ans.count(1)})",
+                )
             )
         else:
-             st.markdown("no defects were predicted correct!")
+            st.markdown("No True Defects Were Predicted Correct!")
     with tn_col:
         if not (tn_df == 0).all().all():
-            fig2 = plotting.plot_upset(
-                dataframes=[tn_df],
-                exclude_zeros=True,
-                legendgroups=["test"],
-                sorted_x="d",
-                sorted_y="a",
-                column_widths=[0.2, 0.8],
-                horizontal_spacing=0.21,
-                marker_size=10,
-            )
-
-            fig2.update_layout(
-                title=f"TN Upset Chart",
-                width=800,
-                font_family="Jetbrains Mono",
+            st.plotly_chart(
+                plotting.plot_upset(
+                    dataframes=[tn_df],
+                    exclude_zeros=exclude_zero,
+                    legendgroups=["False Defects"],
+                    sorted_x=sort_by,
+                    sorted_y=sort_by,
+                    title=f"False Defects Upset Chart (Total: {ans.count(0)})",
+                )
             )
         else:
-            st.markdown("no non-defects were predicted correct!")
-
-    return fig, fig2
+            st.markdown("No False Defects Were Predicted Correct!")
