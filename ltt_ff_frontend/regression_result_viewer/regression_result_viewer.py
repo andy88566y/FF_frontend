@@ -8,7 +8,7 @@ import yaml
 from loguru import logger
 
 from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.regression_test_ui.result_utils import (
+from ltt_ff_frontend.regression_result_viewer.result_utils import (
     RULE_TABLE_COLUMNS,
     TABLE_COLUMNS,
     check_new_dir,
@@ -28,7 +28,7 @@ def app() -> None:
     st.caption("Visualize Regression Test Result")
 
     r1_col1, r1_col2 = st.columns([1, 1])
-    output_dir_default = "/mnt/fs0/MLE/ff_docker_output/mle_regression_test"
+    output_dir_default = "/mnt/output/mle_regression_test"
     with r1_col1:
         regression_result_parent_dir = st.text_input("Regression Result Directory", value=output_dir_default)
     with r1_col2:
