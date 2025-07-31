@@ -1,5 +1,4 @@
 import json
-import time
 from datetime import datetime
 
 import streamlit as st
@@ -85,7 +84,7 @@ def app() -> None:
         ResultViewerComponents.CLASSTYPE_COUNT.value,
         ResultViewerComponents.INFERENCE_RESULT_TABLE.value,
     ]
-    time_for_main_component_before = time.perf_counter()
+
     rvc_setting = (inference_result_dir, recipe, read_children_dirs)
 
     if "rvc_result" not in st.session_state or st.session_state.rvc_result["setting"] != rvc_setting:
@@ -103,7 +102,7 @@ def app() -> None:
             st.error(e)
             return
     result_viewer_components = st.session_state.rvc_result["result"]
-    time_for_main_component = time.perf_counter()
+
     try:
         if ResultViewerComponents.OOS_SUMMARY.value in required_components:
             with st.expander(label="OOS Summary"):
@@ -138,7 +137,7 @@ def app() -> None:
     except KeyError as e:
         st.error(e)
         return
-    time_for_plot_main = time.perf_counter()
+
     # Columns for drawing distribution chart and ROC curve
     model_map = helper.get_model_map(recipe)
     selected_model = model_map[st.selectbox("Select Model", list(model_map.keys()))]
@@ -146,7 +145,7 @@ def app() -> None:
         ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value,
         ResultViewerComponents.CR_FFR_CURVE.value,
     ]
-    time_for_id_component_before = time.perf_counter()
+
     try:
         independent_components = api_helper.get_result_viewer_components(
             inference_result_dir=inference_result_dir,
@@ -162,7 +161,7 @@ def app() -> None:
     except ValueError as e:
         st.error(e)
         return
-    time_for_id_component_after = time.perf_counter()
+
     split_lot = st.toggle(label="Results split by lots", value=False)
     col_1d_chart_column, col_roc_curve_column = st.columns(2)
     if ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value in independent_components:
@@ -185,9 +184,3 @@ def app() -> None:
                     roc_data=independent_components["cr_ffr_curve"],
                     split_lot=split_lot,
                 )
-    time_for_roc = time.perf_counter()
-
-    st.write(f"time for call api (main): {time_for_main_component - time_for_main_component_before:.4f}")
-    st.write(f"time for draw (main): {time_for_plot_main - time_for_main_component:.4f}")
-    st.write(f"time for call api (id): {time_for_id_component_after - time_for_id_component_before:.4f}")
-    st.write(f"time for draw (id): {time_for_roc - time_for_id_component_after:.4f}")
