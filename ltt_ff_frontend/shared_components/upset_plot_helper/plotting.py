@@ -46,9 +46,9 @@ def plot_upset(
         raise Exception("Number of DataFrame Columns and Number of Set Names don't match.")
     elif marker_colors is not None and len(marker_colors) != len(dataframes):
         raise Exception("Number of DataFrames and Number of Marker Colors don't match.")
-    elif sorted_x is not None and (sorted_x.lower() not in ["a", "d", "ascending", "descending"]):
-        raise Exception("Unknown sorting order.")
-    elif sorted_y is not None and (sorted_y.lower() not in ["a", "d", "ascending", "descending"]):
+    elif sorted_x is not None and (sorted_x.lower() not in ["ascending", "descending"]):
+        raise Exception(f"Unknown sorting order: {sorted_x}.")
+    elif sorted_y is not None and (sorted_y.lower() not in ["ascending", "descending"]):
         raise Exception("Unknown sorting order.")
     elif (sorted_x is not None or sorted_x is not None) and len(dataframes) > 1:
         raise Exception("Sorting isn't available for multiple DataFrames.")
@@ -101,7 +101,7 @@ def plot_upset(
 
         if sorted_x is not None:
             a, b, c = int_ss, string_repr, np.arange(0, 2 ** len(sets))
-            order = False if sorted_x.lower() == "a" or sorted_x.lower() == "ascending" else True
+            order = False if sorted_x.lower() == "ascending" else True
             sorted_list = sorted(zip(a, b, c), reverse=order)
             transposed = np.array(sorted_list).T
 
@@ -113,7 +113,7 @@ def plot_upset(
 
         if sorted_y is not None:
             a, b = ind_ss, sets
-            order = False if sorted_y.lower() == "a" or sorted_y.lower() == "ascending" else True
+            order = False if sorted_y.lower() == "descending" else True
             sorted_list = sorted(zip(a, b), reverse=order)
             transposed = np.array(sorted_list).T
             a, b = transposed

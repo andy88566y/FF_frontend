@@ -27,8 +27,8 @@ def gen(
                     dataframes=[tp_df],
                     exclude_zeros=exclude_zero,
                     legendgroups=["True Defect"],
-                    sorted_x=sort_by,
-                    sorted_y=sort_by,
+                    sorted_x=sort_by if sort_by != "default" else None,
+                    sorted_y=sort_by if sort_by != "default" else None,
                     title=f"True Defects Upset Chart (Total: {ans.count(1)})",
                 )
             )
@@ -41,8 +41,8 @@ def gen(
                     dataframes=[tn_df],
                     exclude_zeros=exclude_zero,
                     legendgroups=["False Defects"],
-                    sorted_x=sort_by,
-                    sorted_y=sort_by,
+                    sorted_x=sort_by if sort_by != "default" else None,
+                    sorted_y=sort_by if sort_by != "default" else None,
                     title=f"False Defects Upset Chart (Total: {ans.count(0)})",
                 )
             )

@@ -14,7 +14,7 @@ from ltt_ff_frontend.shared_components import (
 )
 
 
-UPSET_SORT_OPTIONS = ["ascending", "descending"]
+UPSET_SORT_OPTIONS = ["default", "ascending", "descending"]
 
 
 def get_require_component_lists(length: int) -> list[str]:
@@ -33,6 +33,7 @@ def app() -> None:
     if not helper.is_valid_output_dir(result_dir):
         st.error(f"Inference Result Directory is invalid: {result_dir}")
         return
+    
     db_metadata_list = api_helper.get_db_metadata_lists(output_dir=result_dir)
     recipe_list = [metadata["recipe"] for metadata in db_metadata_list]
     if all(recipe == recipe_list[0] for recipe in recipe_list):
@@ -40,20 +41,35 @@ def app() -> None:
     else:
         st.error("Not all lots use same recipe.")
         return
+    select_col, start_col = st.columns([8,2])
     model_map = helper.get_model_map(db_recipe)
-    selected = st.multiselect("Select Models", model_map.keys())
+    with select_col:
+        selected = st.multiselect("Select Models", model_map.keys())
+    
     selected_count = len(selected)
     if selected_count == 0:
         return
-    try:
-        result_viewer_components = api_helper.get_result_viewer_components(
-            inference_result_dir=result_dir,
-            required_components=get_require_component_lists(selected_count),
-            required_input={"model_ids": [model_map[model]["id"] for model in selected]},
-        )
-    except ValueError as e:
-        st.error(e)
-        return
+    
+    rvc_setting = (result_dir, selected)
+    if "rvc_result" not in st.session_state or st.session_state.rvc_result["setting"] != rvc_setting:
+        with start_col:
+            st.markdown("<br>", unsafe_allow_html=True)  
+            if not st.button("Compare"):
+                return
+        try:
+            st.session_state.rvc_result = {
+                "result": api_helper.get_result_viewer_components(
+                    inference_result_dir=result_dir,
+                    required_components=get_require_component_lists(selected_count),
+                    required_input={"model_ids": [model_map[model]["id"] for model in selected]},
+                ),
+                "setting": rvc_setting
+            }
+        except ValueError as e:
+            st.error(e)
+            return
+    result_viewer_components = st.session_state.rvc_result["result"]
+    
     col1, col2, col3, col4, _ = st.columns([1, 1, 1, 1, 6])
     with col1:
         split_lot = st.toggle(label="Results split by lots", value=False)
