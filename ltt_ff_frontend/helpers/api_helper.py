@@ -1465,9 +1465,8 @@ def compile_data_yaml(
     output_dir: str,
     output_lot_id: str,
     compile_mode: str,
+    waive_particle_modes: dict[str, bool],
     max_count: int = 150,
-    waive_particle_mode: bool = True,
-    result_dir: str = "",
 ) -> dict[str, Any]:
     r = requests.post(
         API_ROOT + "compile_data_yaml",
@@ -1476,9 +1475,8 @@ def compile_data_yaml(
             "output_dir": output_dir,
             "output_lot_id": output_lot_id,
             "compile_mode": compile_mode,
+            "waive_particle_modes": waive_particle_modes,
             "max_count": max_count,
-            "waive_particle_mode": waive_particle_mode,
-            "result_dir": result_dir,
         },
         timeout=TIMEOUT,
     )

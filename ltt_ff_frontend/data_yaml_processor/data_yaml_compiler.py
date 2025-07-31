@@ -32,22 +32,31 @@ def app() -> None:
         compile_modes = api_helper.get_data_yaml_compile_modes().get("compile_modes", {})
         compile_mode = st.selectbox(label="Select compile mode", options=list(compile_modes.values()))
     with max_count_col:
-        max_count = st.number_input(label="Maximum defect count", value=150)
+        max_count = st.number_input(label="Maximum defect count", value=150, min_value=1)
 
-    waive_pmode = st.toggle(label="Waive particle mode defects?", value=True)
-
-    # Result directory is required to get defect probabilities
-    result_dir = st.text_input(label="Result directory (Not required for All true / All false)")
+    waive_p1_col, waive_p2_col, waive_p3_col, waive_p4_col = st.columns(4)
+    with waive_p1_col:
+        waive_p1 = st.toggle(label="Waive S particle mode defects?", value=True)
+    with waive_p2_col:
+        waive_p2 = st.toggle(label="Waive R particle mode defects?", value=True)
+    with waive_p3_col:
+        waive_p3 = st.toggle(label="Waive UL particle mode defects?", value=True)
+    with waive_p4_col:
+        waive_p4 = st.toggle(label="Waive RC particle mode defects?", value=True)
 
     if st.button(label="Compile data yaml"):
         request = api_helper.compile_data_yaml(
             data_yaml_lots=data_yaml["data_paths"],
             output_dir=output_dir,
             output_lot_id=output_lot_id,
-            compile_mode=compile_mode,
+            compile_mode=next(k for k, v in compile_modes.items() if v == compile_mode),
+            waive_particle_modes={
+                "waive_p1": waive_p1,
+                "waive_p2": waive_p2,
+                "waive_p3": waive_p3,
+                "waive_p4": waive_p4,
+            },
             max_count=max_count,
-            waive_particle_mode=waive_pmode,
-            result_dir=result_dir,
         )
 
         if request.get("status") == "error":
