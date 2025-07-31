@@ -110,7 +110,7 @@ def gen(
         barmode="stack",
         xaxis_title="Probabilities",
         yaxis_title="Frequency",
-        title=f"{selected_model['model_hash']} Defect Probability Distribution",
+        title= "Defect Probability Distribution",
     )
 
     return fig

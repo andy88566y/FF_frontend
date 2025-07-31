@@ -155,7 +155,7 @@ Threshold: {selected_threshold:.6f}""",
     fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode="lines", line={"dash": "dash", "color": "grey"}, name="Random"))
 
     fig.update_layout(
-        title=f"{model_name} Capture Rate / False Filter Rate Curve",
+        title=f"Capture Rate / False Filter Rate Curve",
         xaxis_title="False Filter Rate",
         yaxis_title="Capture Rate",
         legend_title="Legends",
@@ -184,7 +184,6 @@ def plot_multilot_roc(
     inference_threshold_coord_list: list[tuple[float, float]],
 ) -> go.Figure:
     fig = go.Figure()
-
     for lot_data, lot_id, model_threshold, selected_threshold_coord, inference_threshold_coord in zip(
         curve_data_list,
         lot_id_list,
@@ -305,7 +304,7 @@ def plot_multilot_roc(
     fig.add_trace(go.Scatter(x=[1, 0], y=[0, 1], mode="lines", line={"dash": "dash", "color": "grey"}, name="Random"))
 
     fig.update_layout(
-        title=f"{model_name} Capture Rate / False Filter Rate Curve",
+        title=f"Capture Rate / False Filter Rate Curve",
         xaxis_title="False Filter Rate",
         yaxis_title="Capture Rate",
         legend_title="Legends",

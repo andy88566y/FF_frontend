@@ -1,7 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
+from loguru import logger
 from ltt_ff_frontend.shared_components.upset_plot_helper.utils import (
     get_active_sets,
     get_nodes_and_edges,
@@ -183,38 +183,42 @@ def plot_upset(
 
         # <- Base ->
         # Scatter - True
-        xtf = np.concatenate(t[0], axis=None)
-        ytf = np.concatenate(t[1], axis=None)
-        fig.add_trace(
-            go.Scatter(
-                x=xtf,
-                y=ytf,
-                legendgroup="True",
-                name="True",
-                mode="markers",
-                marker=dict(line_width=0, color="#000000", line_color="#000000", symbol="circle", size=marker_size),
-                showlegend=False,
-            ),
-            row=tf_r,
-            col=tf_c,
-        )
+        
+        if t[0] and t[1]:
+            xtf = np.concatenate(t[0], axis=None)
+            ytf = np.concatenate(t[1], axis=None)
+            fig.add_trace(
+                go.Scatter(
+                    x=xtf,
+                    y=ytf,
+                    legendgroup="True",
+                    name="True",
+                    mode="markers",
+                    marker=dict(line_width=0, color="#000000", line_color="#000000", symbol="circle", size=marker_size),
+                    showlegend=False,
+                ),
+                row=tf_r,
+                col=tf_c,
+            )
+        
+        if f[0] and f[1]:
 
-        # Scatter - False
-        xff = np.concatenate(f[0], axis=None)
-        yff = np.concatenate(f[1], axis=None)
-        fig.add_trace(
-            go.Scatter(
-                x=xff,
-                y=yff,
-                legendgroup="False",
-                name="False",
-                mode="markers",
-                marker=dict(line_width=0, color="#C2C2C2", line_color="#000000", symbol="circle", size=marker_size),
-                showlegend=False,
-            ),
-            row=tf_r,
-            col=tf_c,
-        )
+            # Scatter - False
+            xff = np.concatenate(f[0], axis=None)
+            yff = np.concatenate(f[1], axis=None)
+            fig.add_trace(
+                go.Scatter(
+                    x=xff,
+                    y=yff,
+                    legendgroup="False",
+                    name="False",
+                    mode="markers",
+                    marker=dict(line_width=0, color="#C2C2C2", line_color="#000000", symbol="circle", size=marker_size),
+                    showlegend=False,
+                ),
+                row=tf_r,
+                col=tf_c,
+            )
 
         # Edges
         for e in edges:
