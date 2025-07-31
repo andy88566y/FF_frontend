@@ -22,37 +22,56 @@ def app() -> None:
     ###Mask info
     with col1:
         with st.container():
-            if "result_dir" not in st.session_state:
-                st.session_state.result_dir = ""
-            if "image_dir" not in st.session_state:
-                st.session_state.image_dir = ""
-            encoded_result_dir_as_str = st.query_params.get("result_dir", None)
-            encoded_image_dir_as_str = st.query_params.get("image_dir", None)
+            
+            query_params = st.query_params
+            encoded_result_dir = query_params.get("result_dir", "")
+            encoded_data_yaml = query_params.get("data_yaml", "")
+            # Decode base64 parameters
+            def decode_param(param):
+                try:
+                    return base64.urlsafe_b64decode(param.encode()).decode()
+                except Exception:
+                    return ""
 
-            decoded_result_dir_as_str, decoded_image_dir_as_str = "", ""
-            if isinstance(encoded_result_dir_as_str, str):
-                encoded_result_dir_as_bytes = str.encode(encoded_result_dir_as_str)
-                decoded_result_dir_as_bytes = base64.urlsafe_b64decode(encoded_result_dir_as_bytes)
-                decoded_result_dir_as_str = decoded_result_dir_as_bytes.decode()
-            if isinstance(encoded_image_dir_as_str, str):
-                encoded_image_dir_as_bytes = str.encode(encoded_image_dir_as_str)
-                decoded_image_dir_as_bytes = base64.urlsafe_b64decode(encoded_image_dir_as_bytes)
-                decoded_image_dir_as_str = decoded_image_dir_as_bytes.decode()
+            decoded_result_dir = decode_param(encoded_result_dir)
+            decoded_data_yaml = decode_param(encoded_data_yaml)
+
+            # Initialize session state
+            if "result_dir" not in st.session_state:
+                st.session_state.result_dir = decoded_result_dir
+            if "data_yaml" not in st.session_state:
+                st.session_state.data_yml = decoded_data_yaml
+
+            # Input fields
+            result_dir_input = st.text_input("Result Directory", value=st.session_state.result_dir)
+            data_yaml_input = st.text_input("Data Yaml Path",  value=st.session_state.data_yml)
+            r1_col1, r1_col2 = st.columns([2, 1])
+            with r1_col1:
+                defect_id = st.text_input("Defect ID")
+            with r1_col2:
+                norm = st.toggle("Normalize", value=True)
+            # Update query params if user changes input
+            if result_dir_input != st.session_state.result_dir:
+                st.session_state.result_dir = result_dir_input
+                st.query_params["result_dir"] = base64.urlsafe_b64encode(result_dir_input.encode()).decode()
+                st.rerun()
+
+            if data_yaml_input != st.session_state.data_yml:
+                st.session_state.data_yml = data_yaml_input
+                st.query_params["data_yaml"] = base64.urlsafe_b64encode(data_yaml_input.encode()).decode()
+                st.rerun()
+
+            # Validate directories
+            if not os.path.isdir(result_dir_input):
+                st.error(f"Invalid result directory: {result_dir_input}")
+                st.stop()
+
+            if not result_dir_input or not data_yaml_input:
+                st.caption("Please input an Result Directory and Data yml to begin reviewing defects.")
             
-            default_input_result_dir = "/mnt/fs0/MLE/ff_docker_output/michael/0623/test_rule_cut"
-            text_input_result_dir = st.text_input(label="Result Directory", value=st.session_state.result_dir)
-            if text_input_result_dir:
-                text_input_result_dir = os.path.normpath(text_input_result_dir)
-                st.query_params.result_dir = base64.urlsafe_b64encode(str.encode(text_input_result_dir)).decode()
-            text_input_image_dir = st.text_input(label="Image Directory", value=st.session_state.image_dir)
-            if text_input_image_dir:
-                text_input_image_dir = os.path.normpath(text_input_image_dir)
-                st.query_params.image_dir = base64.urlsafe_b64encode(str.encode(text_input_image_dir)).decode()
-            if not text_input_result_dir or not text_input_image_dir:
-                text_input_result_dir = default_input_result_dir
-                st.caption("Please input an Result Directory and Image Directory to begin reviewing defects.")
-            
-            lots = [file.split(".")[0] for file in os.listdir(text_input_result_dir) if ".db" in file]
+            else:
+                text_input_result_dir = result_dir_input
+            lots = [file.split(".")[0] for file in os.listdir(result_dir_input) if ".db" in file]
 
             if len(lots) > 1:
                 selected_lot_id = st.selectbox(label="Select a Lot ID", options=lots)
@@ -60,16 +79,9 @@ def app() -> None:
                 selected_lot_id = lots[0]
             logger.info(f"Lot selected: {selected_lot_id}")
 
-            # Ensure selected Lot ID matches Image Directory
-            if re.search(re.escape(selected_lot_id), text_input_image_dir) is None:
-                logger.error(f"Mismatch between Lot ID ({selected_lot_id}) and image directory ({text_input_image_dir}).")
-                st.error(f"Mismatch between Lot ID ({selected_lot_id}) and image directory ({text_input_image_dir}).")
-                return
-
         ###Label info  
          
-        indices = []
-        
+        indices = []     
         
         for i in range(0, len(lttswadc_map), 8):
             index_row = []
@@ -318,49 +330,20 @@ def app() -> None:
                 st.session_state.selection_source = "map"
 
     with col2:
-        default_data_yaml_path = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/W529_data_20250717.yaml"
-        data_yaml_path = st.text_input("Data Yaml Path", default_data_yaml_path)
-        data_lots = api_helper.list_yaml_lots(data_yaml_path)
+        # default_data_yaml_path = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/W529_data_20250717.yaml"
+        # data_yaml_path = st.text_input("Data Yaml Path", default_data_yaml_path)
+        # data_lots = api_helper.list_yaml_lots(data_yaml_path)        
 
-        r1_col1, r1_col2, r1_col3 = st.columns([3, 3, 1])
-
-        with r1_col1:
-            lot_id = st.selectbox("Lot ID", [""] + list(data_lots.keys()))
-        with r1_col2:
-            defect_id = st.text_input("Defect ID")
-        with r1_col3:
-            norm = st.toggle("Normalize", value=True)
-
-        if lot_id != "" and defect_id != "":
-            draw_diff_img_plotly(data_yaml_path, lot_id, defect_id, norm, diff_clip=0.3)
+        if defect_id != "":
+            draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
         
         ### Receipe area
         st.write("This is the receipe area.")
         ### List view
-        if text_input_result_dir and text_input_image_dir:
+        if text_input_result_dir:
             if not os.path.isdir(text_input_result_dir):
                 raise ValueError(f"Input Result directory in text field is invalid: {text_input_result_dir}")
 
-            if not os.path.isdir(text_input_image_dir):
-                raise ValueError(f"Input Image directory in text field is invalid: {text_input_image_dir}")
-
             logger.info("Input field params encoded and stored in URL.")
-            list_view_new.app(text_input_result_dir, text_input_image_dir, selected_lot_id)
-        elif text_input_result_dir or text_input_image_dir:
-            pass
-
-        elif decoded_result_dir_as_str and decoded_image_dir_as_str:
-            if not os.path.exists(decoded_result_dir_as_str):
-                raise ValueError(f"Result directory in URL is invalid: {decoded_result_dir_as_str}")
-
-            if not os.path.isdir(decoded_image_dir_as_str):
-                raise ValueError(f"Image directory in URL is invalid: {decoded_image_dir_as_str}")
-
-            logger.info("URL params successfully parsed.")
-            st.session_state.result_dir = decoded_result_dir_as_str
-            st.session_state.image_dir = decoded_image_dir_as_str
-            st.rerun()
-
-        else:
-            pass
+            list_view_new.app(text_input_result_dir, selected_lot_id)
     

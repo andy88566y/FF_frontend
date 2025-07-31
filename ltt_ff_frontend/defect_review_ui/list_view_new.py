@@ -63,7 +63,7 @@ def reload_data(df: pd.DataFrame):
     st.session_state.filtered_df = df[selected_columns]
 
 
-def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
+def app(result_dir: str, selected_lot_id: str) -> None:
     
     defects = api_helper.get_lrf_data_lists(
         output_dir=result_dir,
@@ -86,6 +86,7 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
         }
         for defect in defects
     ]
+    print (defects[0])
 
     # Convert to DataFrame
     df = pd.DataFrame(defect_data)
@@ -297,18 +298,3 @@ def app(result_dir: str, image_dir: str, selected_lot_id: str) -> None:
 
     else:
         selected_data = df[df["No"] == df["No"].min()]
-
-    # # Parse URL to get the 'lot' parameter
-    # query_params = st.query_params
-    # defect_number = query_params.get("defect_no", None)
-
-    # # Find the index of the lot_name in filtered_folders
-    # if defect_number:
-    #     defect_number = int(defect_number)
-    #     if defect_number not in df["No"].values:
-    #         defect_number = df["No"].min()
-    #     st.query_params.defect_no = defect_number
-    #     selected_data = df[df["No"] == defect_number]
-
-    # if selected_data is not None:
-    #     detail_view.app(selected_data, image_dir, db_metadata["input_lrf_ext"])

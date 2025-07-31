@@ -161,12 +161,13 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
             image_data[p][k] = np.array(image_data[p][k])
 
     # Create Plotly subplots
-    fig = make_subplots(rows=2, cols=3, subplot_titles=[
-        "Reference [Rt]", "Test [Rt]", "Difference [Rt]",
-        "Reference [T]", "Test [T]", "Difference [T]"
+    fig = make_subplots(rows=2, cols=4, subplot_titles=[
+        "Reference [Rt]", "Test [Rt]", "Difference [Rt]", "Placeholder",
+        "Reference [T]", "Test [T]", "Difference [T]", "Placeholder"
     ], horizontal_spacing=0.05, vertical_spacing=0.1)
-
     
+    placeholder_img = np.zeros((64, 64))
+
     seismic_colorscale = [
         [0.0, "blue"],
         [0.5, "white"],
@@ -209,6 +210,13 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
                     line=dict(color=color, width=1),
                     row=rid + 1, col=cid
                 )
+        
+        fig.add_trace(go.Heatmap(
+                z=placeholder_img,
+                colorscale="gray",
+                showscale=False
+            ), row=rid + 1, col=4)
+
 
     # Update layout
     fig.update_layout(
