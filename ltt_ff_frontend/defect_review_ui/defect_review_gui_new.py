@@ -26,6 +26,7 @@ def app() -> None:
             query_params = st.query_params
             encoded_result_dir = query_params.get("result_dir", "")
             encoded_data_yaml = query_params.get("data_yaml", "")
+            encoded_defect_id = query_params.get("defect_no", "")
             # Decode base64 parameters
             def decode_param(param):
                 try:
@@ -35,7 +36,7 @@ def app() -> None:
 
             decoded_result_dir = decode_param(encoded_result_dir)
             decoded_data_yaml = decode_param(encoded_data_yaml)
-
+            decoded_defect_id = decode_param(encoded_defect_id)
             # Initialize session state
             if "result_dir" not in st.session_state:
                 st.session_state.result_dir = decoded_result_dir
@@ -47,7 +48,15 @@ def app() -> None:
             data_yaml_input = st.text_input("Data Yaml Path",  value=st.session_state.data_yml)
             r1_col1, r1_col2 = st.columns([2, 1])
             with r1_col1:
-                defect_id = st.text_input("Defect ID")
+                if "defect_number" not in st.session_state:
+                    st.session_state.defect_number = decoded_defect_id            
+                selected_defect_id = st.session_state.get("defect_number", "")
+                print("this is defect id", selected_defect_id)
+                # Display the text input with the selected defect ID as the default value
+                
+                defect_id = st.text_input("Defect ID", value=st.session_state.defect_number)
+                print(defect_id)
+                
             with r1_col2:
                 norm = st.toggle("Normalize", value=True)
             # Update query params if user changes input
