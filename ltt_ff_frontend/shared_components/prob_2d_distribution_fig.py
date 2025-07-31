@@ -7,7 +7,7 @@ from ltt_ff_frontend.shared_components.prob_distribution_fig import get_color_ma
 
 
 def gen(
-    aggregated_model_data: list[tuple[list[str], list[float], list[int], list[str]]],
+    aggregated_model_data: list[tuple[list[str], list[list[float]], list[int], list[str]]],
     m1_name: str,
     m2_name: str,
     m1_threshold: float,
@@ -22,6 +22,8 @@ def gen(
     else:
         defect_ids, m1_probs, m1_ans, lot_ids = aggregated_model_data[0]
         m2_defect_ids, m2_probs, m2_ans, m2_lot_ids = aggregated_model_data[1]
+        m1_probs = np.array(m1_probs)[:, 0]
+        m2_probs = np.array(m2_probs)[:, 0]
         assert sorted(lot_ids) == sorted(m2_lot_ids), "Lot IDs Mismatch!"
         assert sorted(defect_ids) == sorted(m2_defect_ids), "Defect IDs Count Mismatch!"
 

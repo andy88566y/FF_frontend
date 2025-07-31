@@ -1,4 +1,5 @@
 import re
+import numpy as np
 from typing import Any
 
 import pandas as pd
@@ -56,7 +57,7 @@ def gen(
     id_list, prob_list, ans_list, lot_id_list = aggregated_lists
 
     df = pd.DataFrame(
-        data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
+        data={"Defect_ID": id_list, "Probability": np.array(prob_list)[:, 0], "LRF_Label": ans_list, "Lot ID": lot_id_list}
     )
 
     df["Classification"] = [
