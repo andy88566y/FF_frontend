@@ -7,8 +7,8 @@ from ltt_ff_frontend.defect_review_ui import defect_diff_viewer, defect_review_g
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
 from ltt_ff_frontend.model_converter import model_converter
-from ltt_ff_frontend.regression_test_ui import regression_test
 from ltt_ff_frontend.regression_result_viewer import regression_result_viewer
+from ltt_ff_frontend.regression_test_ui import regression_test
 from ltt_ff_frontend.result_viewer import result_viewer, result_viewer_summary
 from ltt_ff_frontend.training import training, training_by_config
 
@@ -98,6 +98,6 @@ if __name__ == "__main__":
         initial_sidebar_state="collapsed",
     )
 
-    st.sidebar.markdown("###### FF-FE v0.12.0 IH")
+    st.sidebar.markdown("###### FF-FE v0.12.1 IH")
 
     pg.run()
