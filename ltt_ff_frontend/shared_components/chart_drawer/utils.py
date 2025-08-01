@@ -158,18 +158,22 @@ def get_sorted_nodes_and_edges_x(t: tuple, f: tuple, edges: list, sorted_sequenc
 
     return (_xt, yt), (_xf, yf), _edges
 
+
 def get_sorted_nodes_and_edges_y(t, f, edges, sorted_sets, original_sets):
-    new_idx = {s:i for i,s in enumerate(sorted_sets)}
+    new_idx = {s: i for i, s in enumerate(sorted_sets)}
+
     def remap_y(coords):
         return [np.array([new_idx[original_sets[int(y)]] for y in row]) for row in coords]
+
     t_new = [t[0], remap_y(t[1])]
     f_new = [f[0], remap_y(f[1])]
     new_edges = []
     for e in edges:
-        x,y = np.array(e).T
+        x, y = np.array(e).T
         y_new = [new_idx[original_sets[int(i)]] for i in y]
         new_edges.append(np.array([x, y_new]).T)
     return t_new, f_new, new_edges
 
+
 def get_active_sets(string_expr, set_names):
-    return [name for b, name in zip(string_expr, set_names) if b == '1']
+    return [name for b, name in zip(string_expr, set_names) if b == "1"]

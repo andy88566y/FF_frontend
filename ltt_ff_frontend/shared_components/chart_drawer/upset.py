@@ -1,8 +1,8 @@
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from loguru import logger
-from ltt_ff_frontend.shared_components.upset_plot_helper.utils import (
+
+from ltt_ff_frontend.shared_components.chart_drawer.utils import (
     get_active_sets,
     get_nodes_and_edges,
     get_nonzero_nodes_and_edges,
@@ -183,8 +183,8 @@ def plot_upset(
 
         # <- Base ->
         # Scatter - True
-        
-        if t[0] and t[1]:
+
+        if t[0].any() and t[1].any():
             xtf = np.concatenate(t[0], axis=None)
             ytf = np.concatenate(t[1], axis=None)
             fig.add_trace(
@@ -200,9 +200,8 @@ def plot_upset(
                 row=tf_r,
                 col=tf_c,
             )
-        
-        if f[0] and f[1]:
 
+        if f[0].any() and f[1].any():
             # Scatter - False
             xff = np.concatenate(f[0], axis=None)
             yff = np.concatenate(f[1], axis=None)

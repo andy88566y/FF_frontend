@@ -9,7 +9,7 @@ from ltt_ff_frontend.shared_components import (
     prob_2d_distribution_fig,
     prob_distribution_fig,
     roc_fig,
-    upset_plot_interactive,
+    upset_plot,
     venn_diagram,
 )
 
@@ -117,7 +117,7 @@ def app() -> None:
             with col4:
                 exclude_zero = st.toggle("Exclude Empty Subsets")
 
-            upset_plot_interactive.gen(
+            upset_plot.gen(
                 aggregated_model_data=result_viewer_components["multi_model_probabilities"],
                 intersections=result_viewer_components["intersections"],
                 model_names=[model_map[select]["model_hash"] for select in selected],
@@ -133,7 +133,7 @@ def app() -> None:
         with col3:
             exclude_zero = st.toggle("Exclude Empty Subsets")
 
-        upset_plot_interactive.gen(
+        upset_plot.gen(
             aggregated_model_data=result_viewer_components["multi_model_probabilities"],
             intersections=result_viewer_components["intersections"],
             model_names=[model_map[select]["model_hash"] for select in selected],

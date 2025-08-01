@@ -194,7 +194,7 @@ def match_automation_results(
 #####################################################################################################
 # DB functions                                                                                      #
 #####################################################################################################
-@st.cache_data(ttl="10s")
+@st.cache_data(ttl="30s")
 def get_db_metadata_lists(output_dir: str, lot_id: str = "", read_children_dirs: bool = False) -> list[dict[str, Any]]:
     """
     Get Result DB metadata.
