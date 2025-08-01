@@ -27,12 +27,14 @@ def app() -> None:
     st.divider()
 
     # Options that apply for all modes
-    mode_col, max_count_col = st.columns(2)
+    mode_col, max_count_col, sampling_col = st.columns(3)
     with mode_col:
         compile_modes = api_helper.get_data_yaml_compile_modes().get("compile_modes", {})
         compile_mode = st.selectbox(label="Select compile mode", options=list(compile_modes.values()))
     with max_count_col:
         max_count = st.number_input(label="Maximum defect count", value=150, min_value=1)
+    with sampling_col:
+        sampling_per_lot = st.number_input(label="Sampling per lot (%)", value=0.1, min_value=0.0, max_value=1.0)
 
     waive_p1_col, waive_p2_col, waive_p3_col, waive_p4_col = st.columns(4)
     with waive_p1_col:
@@ -57,6 +59,7 @@ def app() -> None:
                 "waive_p4": waive_p4,
             },
             max_count=max_count,
+            sampling_per_lot=sampling_per_lot,
         )
 
         if request.get("status") == "error":
