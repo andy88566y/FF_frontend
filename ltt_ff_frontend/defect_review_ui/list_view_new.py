@@ -73,6 +73,11 @@ def app(result_dir: str, selected_lot_id: str) -> None:
     )[0]
     db_metadata = api_helper.get_db_metadata_lists(output_dir=result_dir, lot_id=selected_lot_id)[0]
 
+    defect_prob = api_helper.get_probabilities_per_model(output_dir=result_dir, lot_id=selected_lot_id)
+    print(len(defect_prob))
+    print(defect_prob["probability_list"][0][0])
+    print(type(defect_prob["probability_list"][0][0]))
+
     # Extract relevant columns and convert "X" and "Y" to floats
     defect_data = [
         {

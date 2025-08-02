@@ -269,6 +269,30 @@ def get_probability(output_dir: str, defect_id: list[list[int]]) -> list[list[fl
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
+@st.cache_data(ttl="10s")
+def get_probabilities_per_model(output_dir: str, lot_id: str) -> list[list[list[float]]]:
+    """
+    Read a list of the defect probabilities from a database.
+
+    Args:
+        output_dir: Root output directory where inference results were stored.
+        defect_id: ID of the defect images
+
+    Returns:
+        A list of the defect probabilities of a lot of images.
+    """
+    r = requests.get(
+        API_ROOT + "result/get_probabilities_per_model",
+        json={"output_dir": output_dir, "lot_id": lot_id},
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "completed":
+        return r.json()
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
 
 @st.cache_data(ttl="10s")
 def get_defect_id_lists(output_dir: str) -> list[list[str]]:
