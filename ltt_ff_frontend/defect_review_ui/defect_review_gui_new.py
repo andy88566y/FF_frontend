@@ -46,19 +46,7 @@ def app() -> None:
             # Input fields
             result_dir_input = st.text_input("Result Directory", value=st.session_state.result_dir)
             data_yaml_input = st.text_input("Data Yaml Path",  value=st.session_state.data_yml)
-            r1_col1, r1_col2 = st.columns([2, 1])
-            with r1_col1:
-                if "defect_number" not in st.session_state:
-                    st.session_state.defect_number = decoded_defect_id            
-                selected_defect_id = st.session_state.get("defect_number", "")
-                print("this is defect id", selected_defect_id)
-                # Display the text input with the selected defect ID as the default value
-                
-                defect_id = st.text_input("Defect ID", value=st.session_state.defect_number)
-                print(defect_id)
-                
-            with r1_col2:
-                norm = st.toggle("Normalize", value=True)
+            
             # Update query params if user changes input
             if result_dir_input != st.session_state.result_dir:
                 st.session_state.result_dir = result_dir_input
@@ -87,7 +75,15 @@ def app() -> None:
             else:
                 selected_lot_id = lots[0]
             logger.info(f"Lot selected: {selected_lot_id}")
-
+            r1_col1, r1_col2 = st.columns([2, 1])
+            with r1_col1:
+                if "defect_number" not in st.session_state:
+                    st.session_state.defect_number = decoded_defect_id            
+                
+                defect_id = st.text_input("Defect ID", value=st.session_state.defect_number)
+                
+            with r1_col2:
+                norm = st.toggle("Normalize", value=True)
         ###Label info  
          
         indices = []     
@@ -199,7 +195,7 @@ def app() -> None:
             lot_id=selected_lot_id,
         )[0]
         db_metadata = api_helper.get_db_metadata_lists(output_dir=text_input_result_dir, lot_id=selected_lot_id)[0]
-
+        defect_prob = api_helper.get_probabilities_per_model(output_dir=text_input_result_dir, lot_id=selected_lot_id)
         # Extract relevant columns and convert "X" and "Y" to floats
         defect_data = [
             {
@@ -347,7 +343,58 @@ def app() -> None:
             draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
         
         ### Receipe area
-        st.write("This is the receipe area.")
+        if defect_id != "":
+            models_threshold = []
+            models_name = []
+            for x in range(9):
+                thresholdName = "model_threshold_" + str(x)
+                modelName = "model_name_" + str(x)
+                models_threshold.append(db_metadata[thresholdName])
+                models_name.append(db_metadata[modelName])
+
+            selected_defect_prob = defect_prob["probability_list"][0][int(defect_id)]
+            print(selected_defect_prob)
+            model_num = len(selected_defect_prob)
+            
+            table_data = {
+                "Model Name": models_name[:model_num],
+                "Defect Probability / Threshold": [f"{selected_defect_prob[i]}/{models_threshold[i]}" for i in range(model_num)]
+            }
+
+            # Create DataFrame
+            df = pd.DataFrame(table_data)
+        
+            html_table = df.to_html(index=False)
+            html_table = f"""
+            <div style="display: flex; justify-content: center;">
+                <div>
+                    <style>
+                        table {{
+                            border-collapse: collapse;
+                            width: 100%;
+                        }}
+                        th, td {{
+                            border: 1px solid #ddd;
+                            padding: 8px;
+                            text-align: center;
+                        }}
+                        tr {{
+                            text-align: center;
+                        }}
+                        th {{
+                            background-color: #f2f2f2;
+                        }}
+                    </style>
+                    {html_table}
+                </div>
+            </div>
+            """
+
+
+        # Display using Streamlit HTML component
+        st.title("Defect Probability vs Threshold Table")      
+        st.markdown(html_table, unsafe_allow_html=True)
+
         ### List view
         if text_input_result_dir:
             if not os.path.isdir(text_input_result_dir):
