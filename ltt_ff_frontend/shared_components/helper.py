@@ -45,11 +45,6 @@ def filter_recipe_columns(recipe: dict[str, Any]) -> dict[str, Any]:
 
     return filtered_recipe
 
-
-def load_recipe(recipe: str):
-    pass
-
-
 def is_valid_output_dir(output_dir: str) -> bool:
     """
     Disallow:

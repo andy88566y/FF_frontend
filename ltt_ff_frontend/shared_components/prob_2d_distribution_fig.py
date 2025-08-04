@@ -149,7 +149,7 @@ def gen(
         type="rect",
         x0=model_1["threshold_c"],
         x1=1,
-        y0=max(0, model_2["threshold"]),
+        y0=max(0, model_2["threshold"]) if model_2["model_hash"].startswith("RULE") else 0,
         y1=1,
         xref="x",
         yref="y",
@@ -159,7 +159,7 @@ def gen(
     )
     fig.add_shape(
         type="rect",
-        x0=max(0, model_1["threshold"]),
+        x0=max(0, model_1["threshold"]) if model_1["model_hash"].startswith("RULE") else 0,
         x1=model_1["threshold_c"],
         y0=model_2["threshold_c"],
         y1=1,
@@ -187,7 +187,7 @@ def gen(
         x0=0,
         x1=model_1["threshold"],
         y0=0,
-        y1=1,
+        y1=model_2["threshold_c"] if model_2["model_hash"].startswith("RULE") else 1,
         xref="x",
         yref="y",
         fillcolor="palegreen",
@@ -197,7 +197,7 @@ def gen(
     fig.add_shape(
         type="rect",
         x0=model_1["threshold"],
-        x1=1,
+        x1=model_1["threshold_c"] if model_1["model_hash"].startswith("RULE") else 1,
         y0=0,
         y1=model_2["threshold"],
         xref="x",
