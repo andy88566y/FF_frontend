@@ -13,7 +13,6 @@ NAME_SPACE = ["First Inference (Base) ", "Second Inference (Candidate)"]
 def app() -> None:
     result_dirs = ["", ""]
     selected_models = [None, None]
-    selected_thresholds = [0.0, 0.0]
     for i in range(2):
         result_dir_col, recipe_choice_col, th_choice_col = st.columns([2, 1, 1])
         db_recipe = None
@@ -44,7 +43,7 @@ def app() -> None:
         with recipe_choice_col:
             selected_models[i] = model_map[st.selectbox(f"Select for Model {i + 1}", list(model_map.keys()))]
         with th_choice_col:
-            selected_thresholds[i] = st.number_input(
+            selected_models[i]["threshold"] = st.number_input(
                 label=f"Model {i + 1} threshold:",
                 value=selected_models[i]["threshold"],
                 step=1e-5,
@@ -77,10 +76,8 @@ def app() -> None:
         st.plotly_chart(
             prob_2d_distribution_fig.gen(
                 aggregated_model_data=aggregated_model_data,
-                m1_name=selected_models[0]["model_hash"],
-                m2_name=selected_models[1]["model_hash"],
-                m1_threshold=selected_thresholds[0],
-                m2_threshold=selected_thresholds[1],
+                model_1=selected_models[0],
+                model_2=selected_models[1],
                 split_lot=split_lot,
             )
         )

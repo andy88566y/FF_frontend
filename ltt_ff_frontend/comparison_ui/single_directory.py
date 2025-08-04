@@ -33,7 +33,7 @@ def app() -> None:
     if not helper.is_valid_output_dir(result_dir):
         st.error(f"Inference Result Directory is invalid: {result_dir}")
         return
-    
+
     db_metadata_list = api_helper.get_db_metadata_lists(output_dir=result_dir)
     recipe_list = [metadata["recipe"] for metadata in db_metadata_list]
     if all(recipe == recipe_list[0] for recipe in recipe_list):
@@ -41,19 +41,19 @@ def app() -> None:
     else:
         st.error("Not all lots use same recipe.")
         return
-    select_col, start_col = st.columns([8,2])
+    select_col, start_col = st.columns([8, 2])
     model_map = helper.get_model_map(db_recipe)
     with select_col:
         selected = st.multiselect("Select Models", model_map.keys())
-    
+
     selected_count = len(selected)
     if selected_count == 0:
         return
-    
+
     rvc_setting = (result_dir, selected)
     if "rvc_result" not in st.session_state or st.session_state.rvc_result["setting"] != rvc_setting:
         with start_col:
-            st.markdown("<br>", unsafe_allow_html=True)  
+            st.markdown("<br>", unsafe_allow_html=True)
             if not st.button("Compare"):
                 return
         try:
@@ -63,13 +63,13 @@ def app() -> None:
                     required_components=get_require_component_lists(selected_count),
                     required_input={"model_ids": [model_map[model]["id"] for model in selected]},
                 ),
-                "setting": rvc_setting
+                "setting": rvc_setting,
             }
         except ValueError as e:
             st.error(e)
             return
     result_viewer_components = st.session_state.rvc_result["result"]
-    
+
     col1, col2, col3, col4, _ = st.columns([1, 1, 1, 1, 6])
     with col1:
         split_lot = st.toggle(label="Results split by lots", value=False)
@@ -93,10 +93,8 @@ def app() -> None:
             st.plotly_chart(
                 prob_2d_distribution_fig.gen(
                     aggregated_model_data=[result_viewer_components["multi_model_probabilities"]],
-                    m1_name=model_map[selected[0]]["model_hash"],
-                    m2_name=model_map[selected[1]]["model_hash"],
-                    m1_threshold=model_map[selected[0]]["threshold"],
-                    m2_threshold=model_map[selected[1]]["threshold"],
+                    model_1=model_map[selected[0]],
+                    model_2=model_map[selected[1]],
                     split_lot=split_lot,
                 )
             )
@@ -107,7 +105,7 @@ def app() -> None:
             venn_diagram.gen(
                 aggregated_model_data=result_viewer_components["multi_model_probabilities"],
                 intersections=result_viewer_components["intersections"],
-                model_names=[model_map[select]["model_hash"] for select in selected],
+                model_names=selected,
                 split_lot=split_lot,
             )
 
@@ -120,12 +118,11 @@ def app() -> None:
             upset_plot.gen(
                 aggregated_model_data=result_viewer_components["multi_model_probabilities"],
                 intersections=result_viewer_components["intersections"],
-                model_names=[model_map[select]["model_hash"] for select in selected],
+                model_names=selected,
                 sort_by=sort_by,
                 split_lot=split_lot,
                 exclude_zero=exclude_zero,
             )
-
 
     else:
         with col2:

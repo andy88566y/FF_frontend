@@ -2,12 +2,11 @@ from typing import Any
 
 from loguru import logger
 
-from ltt_ff_frontend.constant import BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR
+from ltt_ff_frontend.constant import BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR, HIDE_CREDENTIAL, BASE_MODEL
 
 
 # put only codes like: format strings, aggregate data
 # for generating figure, extract to one seperate component file
-
 
 def format_model_name(name: str | None) -> str:
     if name is None:
@@ -35,7 +34,7 @@ def get_model_hash(name: str) -> str:
 def get_model_map(recipe: dict[str, Any]):
     model_map = {}
     for ridx, r in enumerate(recipe["recipes"]):
-        model_hash = get_model_hash(r["model_name"])
+        model_hash = get_model_hash(r["model_name"]) if not HIDE_CREDENTIAL else f"{BASE_MODEL} { ridx}"
         model_map[model_hash] = {**r, "id": ridx, "model_hash": model_hash}
     return model_map
 

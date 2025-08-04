@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -8,12 +10,12 @@ from ltt_ff_frontend.shared_components.prob_distribution_fig import get_color_ma
 
 def gen(
     aggregated_model_data: list[tuple[list[str], list[list[float]], list[int], list[str]]],
-    m1_name: str,
-    m2_name: str,
-    m1_threshold: float,
-    m2_threshold: float,
+    model_1: dict[str, Any],
+    model_2: dict[str, Any],
     split_lot: bool,
 ) -> go.Figure:
+    m1_name = model_1["model_hash"]
+    m2_name = model_2["model_hash"]
     if len(aggregated_model_data) == 1:
         defect_ids, model_probs, ans, lot_ids = aggregated_model_data[0]
         classifications = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in ans]
@@ -85,23 +87,46 @@ def gen(
     # Add in threshold lines
     fig.add_shape(
         type="line",
-        x0=m1_threshold,
-        x1=m1_threshold,
+        x0=model_1["threshold"],
+        x1=model_1["threshold"],
         y0=0,
         y1=1,
         xref="x",
         yref="paper",
         line={"color": "Red", "width": 2, "dash": "dash"},
     )
+
+    fig.add_shape(
+        type="line",
+        x0=model_1["threshold_c"],
+        x1=model_1["threshold_c"],
+        y0=0,
+        y1=1,
+        xref="x",
+        yref="paper",
+        line={"color": "Red", "width": 2, "dash": "longdash"},
+    )
+
     fig.add_shape(
         type="line",
         x0=0,
         x1=1,
-        y0=m2_threshold,
-        y1=m2_threshold,
+        y0=model_2["threshold"],
+        y1=model_2["threshold"],
         xref="paper",
         yref="y",
         line={"color": "Red", "width": 2, "dash": "dash"},
+    )
+
+    fig.add_shape(
+        type="line",
+        x0=0,
+        x1=1,
+        y0=model_2["threshold_c"],
+        y1=model_2["threshold_c"],
+        xref="paper",
+        yref="y",
+        line={"color": "Red", "width": 2, "dash": "longdash"},
     )
 
     # add diagonal dotted line
@@ -117,8 +142,70 @@ def gen(
     )
 
     # add performance hint (upper left: red, bottom right: green)
-    fig.add_shape(type="path", path="M 0 0 L 0 1 L 1 1 Z", line_width=0, fillcolor="lightpink", opacity=0.3)
-    fig.add_shape(type="path", path="M 0 0 L 1 0 L 1 1 Z", line_width=0, fillcolor="palegreen", opacity=0.3)
+    # fig.add_shape(type="path", path="M 0 0 L 0 1 L 1 1 Z", line_width=0, fillcolor="lightpink", opacity=0.3)
+    # fig.add_shape(type="path", path="M 0 0 L 1 0 L 1 1 Z", line_width=0, fillcolor="palegreen", opacity=0.3)
+
+    fig.add_shape(
+        type="rect",
+        x0=model_1["threshold_c"],
+        x1=1,
+        y0=max(0, model_2["threshold"]),
+        y1=1,
+        xref="x",
+        yref="y",
+        fillcolor="lightpink",
+        opacity=0.3,
+        line_width=0,
+    )
+    fig.add_shape(
+        type="rect",
+        x0=max(0, model_1["threshold"]),
+        x1=model_1["threshold_c"],
+        y0=model_2["threshold_c"],
+        y1=1,
+        xref="x",
+        yref="y",
+        fillcolor="lightpink",
+        opacity=0.3,
+        line_width=0,
+    )
+    fig.add_shape(
+        type="rect",
+        x0=max(0, model_1["threshold"]),
+        x1=model_1["threshold_c"],
+        y0=max(0, model_2["threshold"]),
+        y1=model_2["threshold_c"],
+        xref="x",
+        yref="y",
+        fillcolor="palegreen",
+        opacity=0.3,
+        line_width=0,
+    )
+
+    fig.add_shape(
+        type="rect",
+        x0=0,
+        x1=model_1["threshold"],
+        y0=0,
+        y1=1,
+        xref="x",
+        yref="y",
+        fillcolor="palegreen",
+        opacity=0.3,
+        line_width=0,
+    )
+    fig.add_shape(
+        type="rect",
+        x0=model_1["threshold"],
+        x1=1,
+        y0=0,
+        y1=model_2["threshold"],
+        xref="x",
+        yref="y",
+        fillcolor="palegreen",
+        opacity=0.3,
+        line_width=0,
+    )
 
     fig.update_layout(
         title=f"{m1_name} & {m2_name} Comparision Chart",

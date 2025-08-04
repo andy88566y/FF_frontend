@@ -34,8 +34,10 @@ else:  # FF_ENV == Env.DEV:
     API_ROOT = f"http://localhost:{8580 + int(os.environ.get('DEV_NUM', '0'))}/api/v1/"
     RESTRICT_OUTPUT_DIR = False
 
+HIDE_CREDENTIAL = 0
 
 BLANK_MODEL = "[UNUSED]"
+BASE_MODEL = "BASE MODEL"
 
 INFERENCE_DEFAULT_RESULT_DIR = "/mnt/dbpc/xxx"
 
