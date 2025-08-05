@@ -13,6 +13,7 @@ def gen(
     model_1: dict[str, Any],
     model_2: dict[str, Any],
     split_lot: bool,
+    mode: str,
 ) -> go.Figure:
     m1_name = model_1["model_hash"]
     m2_name = model_2["model_hash"]
@@ -140,72 +141,72 @@ def gen(
         yref="y",
         line={"color": "Gray", "width": 1, "dash": "dash"},
     )
+    if mode == "Finetuned":
+        # add performance hint (upper left: red, bottom right: green)
+        fig.add_shape(type="path", path="M 0 0 L 0 1 L 1 1 Z", line_width=0, fillcolor="lightpink", opacity=0.3)
+        fig.add_shape(type="path", path="M 0 0 L 1 0 L 1 1 Z", line_width=0, fillcolor="palegreen", opacity=0.3)
+    else:
+        fig.add_shape(
+            type="rect",
+            x0=model_1["threshold_c"],
+            x1=1,
+            y0=max(0, model_2["threshold"]) if model_2["model_hash"].startswith("RULE") else 0,
+            y1=1,
+            xref="x",
+            yref="y",
+            fillcolor="lightpink",
+            opacity=0.3,
+            line_width=0,
+        )
+        fig.add_shape(
+            type="rect",
+            x0=max(0, model_1["threshold"]) if model_1["model_hash"].startswith("RULE") else 0,
+            x1=model_1["threshold_c"],
+            y0=model_2["threshold_c"],
+            y1=1,
+            xref="x",
+            yref="y",
+            fillcolor="lightpink",
+            opacity=0.3,
+            line_width=0,
+        )
+        fig.add_shape(
+            type="rect",
+            x0=max(0, model_1["threshold"]),
+            x1=model_1["threshold_c"],
+            y0=max(0, model_2["threshold"]),
+            y1=model_2["threshold_c"],
+            xref="x",
+            yref="y",
+            fillcolor="palegreen",
+            opacity=0.3,
+            line_width=0,
+        )
 
-    # add performance hint (upper left: red, bottom right: green)
-    # fig.add_shape(type="path", path="M 0 0 L 0 1 L 1 1 Z", line_width=0, fillcolor="lightpink", opacity=0.3)
-    # fig.add_shape(type="path", path="M 0 0 L 1 0 L 1 1 Z", line_width=0, fillcolor="palegreen", opacity=0.3)
-
-    fig.add_shape(
-        type="rect",
-        x0=model_1["threshold_c"],
-        x1=1,
-        y0=max(0, model_2["threshold"]) if model_2["model_hash"].startswith("RULE") else 0,
-        y1=1,
-        xref="x",
-        yref="y",
-        fillcolor="lightpink",
-        opacity=0.3,
-        line_width=0,
-    )
-    fig.add_shape(
-        type="rect",
-        x0=max(0, model_1["threshold"]) if model_1["model_hash"].startswith("RULE") else 0,
-        x1=model_1["threshold_c"],
-        y0=model_2["threshold_c"],
-        y1=1,
-        xref="x",
-        yref="y",
-        fillcolor="lightpink",
-        opacity=0.3,
-        line_width=0,
-    )
-    fig.add_shape(
-        type="rect",
-        x0=max(0, model_1["threshold"]),
-        x1=model_1["threshold_c"],
-        y0=max(0, model_2["threshold"]),
-        y1=model_2["threshold_c"],
-        xref="x",
-        yref="y",
-        fillcolor="palegreen",
-        opacity=0.3,
-        line_width=0,
-    )
-
-    fig.add_shape(
-        type="rect",
-        x0=0,
-        x1=model_1["threshold"],
-        y0=0,
-        y1=model_2["threshold_c"] if model_2["model_hash"].startswith("RULE") else 1,
-        xref="x",
-        yref="y",
-        fillcolor="palegreen",
-        opacity=0.3,
-        line_width=0,
-    )
-    fig.add_shape(
-        type="rect",
-        x0=model_1["threshold"],
-        x1=model_1["threshold_c"] if model_1["model_hash"].startswith("RULE") else 1,
-        y0=0,
-        y1=model_2["threshold"],
-        xref="x",
-        yref="y",
-        fillcolor="palegreen",
-        opacity=0.3,
-        line_width=0,
-    )
+        fig.add_shape(
+            type="rect",
+            x0=0,
+            x1=model_1["threshold"],
+            y0=0,
+            y1=model_2["threshold_c"] if model_2["model_hash"].startswith("RULE") else 1,
+            xref="x",
+            yref="y",
+            fillcolor="palegreen",
+            opacity=0.3,
+            line_width=0,
+        )
+        fig.add_shape(
+            type="rect",
+            x0=model_1["threshold"],
+            x1=model_1["threshold_c"] if model_1["model_hash"].startswith("RULE") else 1,
+            y0=0,
+            y1=model_2["threshold"],
+            xref="x",
+            yref="y",
+            fillcolor="palegreen",
+            opacity=0.3,
+            line_width=0,
+        )
 
     fig.update_layout(
         title=f"{m1_name} & {m2_name} Comparision Chart",

@@ -184,7 +184,7 @@ def plot_upset(
         # <- Base ->
         # Scatter - True
 
-        if t[0].any() and t[1].any():
+        if len(t[0]) and len(t[1]):
             xtf = np.concatenate(t[0], axis=None)
             ytf = np.concatenate(t[1], axis=None)
             fig.add_trace(
@@ -201,7 +201,7 @@ def plot_upset(
                 col=tf_c,
             )
 
-        if f[0].any() and f[1].any():
+        if len(f[0]) and len(f[1]):
             # Scatter - False
             xff = np.concatenate(f[0], axis=None)
             yff = np.concatenate(f[1], axis=None)

@@ -14,7 +14,7 @@ def app() -> None:
     result_dirs = ["", ""]
     selected_models = [None, None]
     for i in range(2):
-        result_dir_col, recipe_choice_col, th_choice_col = st.columns([2, 1, 1])
+        result_dir_col, recipe_choice_col, th_choice_col, th_c_choice_col = st.columns([2, 1, 1, 1])
         db_recipe = None
         with result_dir_col:
             result_dirs[i] = st.text_input(f"{NAME_SPACE[i]} Result Directory", value=INFERENCE_DEFAULT_RESULT_DIR)
@@ -50,6 +50,14 @@ def app() -> None:
                 format="%.5f",
                 help="Probabilities below threshold will be considered as non-defects.",
             )
+        with th_c_choice_col:
+            selected_models[i]["threshold_c"] = st.number_input(
+                label=f"Model {i + 1} threshold_c:",
+                value=selected_models[i]["threshold_c"],
+                step=1e-5,
+                format="%.5f",
+                help="Probabilities above threshold will be considered as defects.",
+            )
 
     if "" in result_dirs or any(not model for model in selected_models):
         return
@@ -69,8 +77,12 @@ def app() -> None:
         st.error(e)
         return
     aggregated_model_data = list(result_viewer_components["two_d_defect_distribution_chart"].values())
-
-    split_lot = st.toggle(label="Results split by lots", value=False)
+    split_col, mode_col, _ = st.columns([1, 1, 8])
+    with split_col:
+        st.markdown("<br>", unsafe_allow_html=True)
+        split_lot = st.toggle(label="Results split by lots", value=False)
+    with mode_col:
+        twoD_mode = st.selectbox(label="2D Mode", options=["Finetuned", "Combined"])
     _, plot_container, _ = st.columns([1, 8, 1])
     with plot_container:
         st.plotly_chart(
@@ -79,5 +91,6 @@ def app() -> None:
                 model_1=selected_models[0],
                 model_2=selected_models[1],
                 split_lot=split_lot,
+                mode=twoD_mode
             )
         )

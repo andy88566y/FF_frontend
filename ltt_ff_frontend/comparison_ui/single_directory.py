@@ -70,10 +70,12 @@ def app() -> None:
             return
     result_viewer_components = st.session_state.rvc_result["result"]
 
-    col1, col2, col3, col4, _ = st.columns([1, 1, 1, 1, 6])
-    with col1:
-        split_lot = st.toggle(label="Results split by lots", value=False)
+    col1, col2, col3, _ = st.columns([1, 1, 1, 6])
+    
     if selected_count == 1:
+        with col1:
+            st.markdown("<br>", unsafe_allow_html=True)
+            split_lot = st.toggle(label="Results split by lots", value=False)
         col_1d_chart_column, col_roc_curve_column = st.columns(2)
         with col_1d_chart_column:
             st.plotly_chart(
@@ -88,6 +90,9 @@ def app() -> None:
                 model=model_map[selected[0]], roc_data=result_viewer_components["cr_ffr_curve"], split_lot=split_lot
             )
     elif selected_count == 2:
+        with col1:
+            st.markdown("<br>", unsafe_allow_html=True)
+            split_lot = st.toggle(label="Results split by lots", value=False)
         _, plot_container, _ = st.columns([1, 8, 1])
         with plot_container:
             st.plotly_chart(
@@ -96,23 +101,25 @@ def app() -> None:
                     model_1=model_map[selected[0]],
                     model_2=model_map[selected[1]],
                     split_lot=split_lot,
+                    mode="Combined"
                 )
             )
     elif selected_count == 3:
-        with col2:
+        with col1:
             threeD_mode = st.selectbox(label="3D Mode", options=["Venn3", "Upset"])
         if threeD_mode == "Venn3":
             venn_diagram.gen(
                 aggregated_model_data=result_viewer_components["multi_model_probabilities"],
                 intersections=result_viewer_components["intersections"],
                 model_names=selected,
-                split_lot=split_lot,
+                split_lot=False #temporally unused,
             )
 
         else:
-            with col3:
+            with col2:
                 sort_by = st.selectbox(label="Sort By", options=UPSET_SORT_OPTIONS)
-            with col4:
+            with col3:
+                st.markdown("<br>", unsafe_allow_html=True)
                 exclude_zero = st.toggle("Exclude Empty Subsets")
 
             upset_plot.gen(
@@ -120,21 +127,22 @@ def app() -> None:
                 intersections=result_viewer_components["intersections"],
                 model_names=selected,
                 sort_by=sort_by,
-                split_lot=split_lot,
+                split_lot=False, #temporally unused
                 exclude_zero=exclude_zero,
             )
 
     else:
-        with col2:
+        with col1:
             sort_by = st.selectbox(label="Sort By", options=UPSET_SORT_OPTIONS)
-        with col3:
+        with col2:
+            st.markdown("<br>", unsafe_allow_html=True)
             exclude_zero = st.toggle("Exclude Empty Subsets")
 
         upset_plot.gen(
             aggregated_model_data=result_viewer_components["multi_model_probabilities"],
             intersections=result_viewer_components["intersections"],
             model_names=[model_map[select]["model_hash"] for select in selected],
-            split_lot=split_lot,
+            split_lot=False, #temporally unused
             sort_by=sort_by,
             exclude_zero=exclude_zero,
         )
