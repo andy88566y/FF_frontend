@@ -42,6 +42,9 @@ def app() -> None:
         add_lrf_dir=labeled_lrf_dir, ff_result_dir=ff_result_dir, date_range=date_range
     )
 
+    with st.expander(label="Incomplete lots"):
+        st.dataframe(ui_components["incomplete_lots"])
+
     with st.expander(label="OOS Summary"):
         oos_summary_component.gen(oos_calculation=ui_components["oos_summary"])
 
