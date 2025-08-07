@@ -1332,7 +1332,7 @@ def format_training_job_records(training_job_records_df: pd.DataFrame) -> pd.Dat
             # "lr_scheduler_params",
             "hyper_params",
             "multilot_config",
-            "skip_particle_mode_defects",
+            "skip_particle_mode_list",
             "debug",
             "message",
             "error_message",
