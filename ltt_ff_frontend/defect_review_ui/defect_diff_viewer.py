@@ -1,3 +1,4 @@
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
@@ -20,7 +21,7 @@ def draw_diff_img(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, 
     image_data = diff_img_data["image_data"]
     layer_name = data_lots[lot_id].get("layer_group", "")
 
-    tensor_keys = ["aligned_ref", "aligned_test", "aligned_diff"]
+    tensor_keys = ["aligned_ref", "aligned_test", "aligned_diff", "feature_map"]
     for p in ["Rt", "T"]:
         for k in image_data[p]:
             if k in tensor_keys:
@@ -33,13 +34,14 @@ def draw_diff_img(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, 
 
     logger.debug(f"[{lot_id}:{defect_id}] Generating diff image...")
 
-    fig, axes = plt.subplots(2, 3, width_ratios=(0.8, 0.8, 1.0), figsize=(15, 10))
+    fig, axes = plt.subplots(2, 4, width_ratios=(0.8, 0.8, 1.0, 0.8), figsize=(18, 10))
     fig.suptitle(
-        f"[Defect Aligned Comparison] {layer_name} Lot: {lot_id} | Defect ID: {defect_id}"
+        f"[Defect View] {layer_name} Lot: {lot_id} | Defect ID: {defect_id}"
         f" | X: {defect_info['X']} | Y: {defect_info['Y']}\n"
         f"ClassType: {defect_info['ClassType']}, isDefect: {defect_info['isDefect']},"
-        f" ParticleModeOnly: {defect_info['particleModeOnly']} "
-        f"(lrf-ORIG | pc: {defect_info['PixelCount']}, h: {defect_info['H']}, w: {defect_info['W']})",
+        f" ParticleModeOnly: {defect_info['particleModeOnly']} {defect_info.get('relaxedParticleMode', False)} "
+        f"{defect_info.get('ulParticleMode', False)} {image_data['avail_refs'] == 0}"
+        f" (lrf-ORIG | pc: {defect_info['PixelCount']}, h: {defect_info['H']}, w: {defect_info['W']})",
         fontsize=14,
     )
 
@@ -66,11 +68,35 @@ def draw_diff_img(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, 
         set_ticks(axes[rid, 2])
         fig.colorbar(rt_diff_img, ax=axes[rid, 2], location="right", shrink=0.7, fraction=0.15, pad=0.05)
 
+        pt_mapping = {
+            -1: "UNK",
+            -2: "H1D",
+            -3: "V1D",
+            -4: "2D",
+        }
+
+        ft_color_mapping = {
+            0: ("UNK", "white"),
+            1: ("clear", "purple"),
+            2: ("opaque", "blue"),
+            3: ("edge", "yellow"),
+            4: ("non_edge", "lightsteelblue"),
+            5: ("defect_edge", "orange"),
+            6: ("pin_defect", "red"),
+        }
+
+        cmap = mcolors.ListedColormap([x[1] for x in ft_color_mapping.values()])
+        norm = mcolors.BoundaryNorm(list(range(6 + 1 + 1)), cmap.N)
+
+        axes[rid, 3].imshow(image_data[ptype]["feature_map"], cmap=cmap, norm=norm)
+        axes[rid, 3].set_title(f"Features [{ptype}]\nPattern [{pt_mapping[image_data['pattern_type']]}]")
+        set_ticks(axes[rid, 3])
+
         max_pos = np.unravel_index(image_data[ptype]["aligned_diff"].argmax(), image_data[ptype]["aligned_diff"].shape)
         min_pos = np.unravel_index(image_data[ptype]["aligned_diff"].argmin(), image_data[ptype]["aligned_diff"].shape)
 
         crop_size = 16
-        for ax_idx in range(3):
+        for ax_idx in range(4):
             # It is known that due to edges, MATRICS_DefectPoint is not always on 128, 128.
             # TODO: Dynamic crop size according to lrf info (H, W, PixelSize)
             # Tool Defect position (green box)
