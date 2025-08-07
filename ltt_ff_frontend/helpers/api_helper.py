@@ -166,6 +166,26 @@ def get_particle_mode_only_defects(
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
+def match_automation_results(add_lrf_dir: str, ff_result_dir: str) -> dict[str, Any]:
+    """
+    Get CR & FFR for each matching ADD.lrf add FF .lrf.
+    """
+    r = requests.post(
+        API_ROOT + "result/get_answer_matching_components",
+        json={
+            "add_lrf_dir": add_lrf_dir,
+            "ff_result_dir": ff_result_dir,
+        },
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "completed":
+        return r.json()["answer_matching_components"]
+    else:
+        logger.error(f"Error occurred when calling get_answer_matching_components API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling get_answer_matching_components API: {r.json()['message']}")
+
+
 #####################################################################################################
 # DB functions                                                                                      #
 #####################################################################################################

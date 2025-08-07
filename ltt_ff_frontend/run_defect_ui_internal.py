@@ -1,6 +1,7 @@
 import streamlit as st
 from loguru import logger
 
+from ltt_ff_frontend.automation_answer_matching import automation_answer_matching
 from ltt_ff_frontend.comparison_ui import comparison_viewer
 from ltt_ff_frontend.data_yaml_processor import data_yaml_processor
 from ltt_ff_frontend.defect_review_ui import defect_diff_viewer, defect_review_gui
@@ -72,6 +73,12 @@ if __name__ == "__main__":
     page_data_yaml_processor = st.Page(
         data_yaml_processor.app, url_path="data_yaml_processor", title="Data Yaml Processor", icon=":material/schema:"
     )
+    page_automation_answer_matching = st.Page(
+        automation_answer_matching.app,
+        url_path="automation_answer_matching",
+        title="Automation Answer Matching",
+        icon=":material/difference:",
+    )
 
     pg = st.navigation(
         [
@@ -88,6 +95,7 @@ if __name__ == "__main__":
             page_model_converter,
             page_lrf_processor,
             page_data_yaml_processor,
+            page_automation_answer_matching,
         ]
     )
 
