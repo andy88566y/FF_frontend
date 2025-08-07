@@ -1,4 +1,6 @@
+import json
 import typing
+from datetime import datetime
 from pprint import pformat
 from typing import Any, Literal, Optional
 
@@ -166,7 +168,9 @@ def get_particle_mode_only_defects(
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
 
-def match_automation_results(add_lrf_dir: str, ff_result_dir: str) -> dict[str, Any]:
+def match_automation_results(
+    add_lrf_dir: str, ff_result_dir: str, date_range: tuple[datetime.date, datetime.date]
+) -> dict[str, Any]:
     """
     Get CR & FFR for each matching ADD.lrf add FF .lrf.
     """
@@ -175,6 +179,8 @@ def match_automation_results(add_lrf_dir: str, ff_result_dir: str) -> dict[str, 
         json={
             "add_lrf_dir": add_lrf_dir,
             "ff_result_dir": ff_result_dir,
+            "start_date": json.dumps(date_range[0], default=str),
+            "end_date": json.dumps(date_range[1], default=str),
         },
         timeout=TIMEOUT,
     )
