@@ -1449,6 +1449,43 @@ def generate_golden_set_from_data_yaml(
     return r.json()
 
 
+@st.cache_data(ttl="1s")
+def get_data_yaml_compile_modes() -> Any:
+    r = requests.get(
+        API_ROOT + "get_data_yaml_compile_modes",
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
+
+
+@st.cache_data(ttl="1s")
+def compile_data_yaml(
+    data_yaml_lots: list[dict],
+    output_dir: str,
+    output_lot_id: str,
+    compile_mode: str,
+    waive_particle_modes: dict[str, bool],
+    max_count: int = 150,
+    sampling_per_lot: float = 0.1,
+) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "compile_data_yaml",
+        json={
+            "data_yaml_lots": data_yaml_lots,
+            "output_dir": output_dir,
+            "output_lot_id": output_lot_id,
+            "compile_mode": compile_mode,
+            "waive_particle_modes": waive_particle_modes,
+            "max_count": max_count,
+            "sampling_per_lot": sampling_per_lot,
+        },
+        timeout=TIMEOUT,
+    )
+
+    return r.json()
+
+
 #####################################################################################################
 # Model conversion                                                                                  #
 #####################################################################################################
