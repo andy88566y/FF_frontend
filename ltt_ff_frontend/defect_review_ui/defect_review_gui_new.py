@@ -77,6 +77,7 @@ def app() -> None:
             logger.info(f"Lot selected: {selected_lot_id}")
             r1_col1, r1_col2 = st.columns([2, 1])
             with r1_col1:
+                print(decoded_defect_id)
                 if "defect_number" not in st.session_state:
                     st.session_state.defect_number = decoded_defect_id            
                 
@@ -334,66 +335,51 @@ def app() -> None:
             if previous_selected_map_index != st.session_state.selected_map_index:
                 st.session_state.selection_source = "map"
 
-    with col2:
-        # default_data_yaml_path = "/mnt/dbpc/FalseFilterDataSet/WeeklyYaml/W529_data_20250717.yaml"
-        # data_yaml_path = st.text_input("Data Yaml Path", default_data_yaml_path)
-        # data_lots = api_helper.list_yaml_lots(data_yaml_path)        
+    with col2:     
 
-        if defect_id != "":
-            draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
+        # if defect_id != "":
+            # draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
         
         ### Receipe area
         if defect_id != "":
             models_threshold = []
+            models_threshold_c = []
             models_name = []
-            for x in range(9):
+            print(db_metadata.keys())
+            for x in range(10):
                 thresholdName = "model_threshold_" + str(x)
+                thresholdcName = "model_threshold_c_" + str(x)
                 modelName = "model_name_" + str(x)
                 models_threshold.append(db_metadata[thresholdName])
+                models_threshold_c.append(db_metadata[thresholdcName])
                 models_name.append(db_metadata[modelName])
 
-            selected_defect_prob = defect_prob["probability_list"][0][int(defect_id)]
-            print(selected_defect_prob)
+            selected_defect_prob = defect_prob["probability_list"][0][int(defect_id)-1]
             model_num = len(selected_defect_prob)
-            
             table_data = {
                 "Model Name": models_name[:model_num],
-                "Defect Probability / Threshold": [f"{selected_defect_prob[i]}/{models_threshold[i]}" for i in range(model_num)]
+                "Defect Probability / Threshold": [f"{selected_defect_prob[i]:.3f}/{models_threshold[i]}" for i in range(model_num)],
+                "Defect Probability / Threshold_C": [f"{selected_defect_prob[i]:.3f}/{models_threshold_c[i]}" for i in range(model_num)]
             }
-
-            # Create DataFrame
+            
             df = pd.DataFrame(table_data)
-        
-            html_table = df.to_html(index=False)
-            html_table = f"""
-            <div style="display: flex; justify-content: center;">
-                <div>
-                    <style>
-                        table {{
-                            border-collapse: collapse;
-                            width: 100%;
-                        }}
-                        th, td {{
-                            border: 1px solid #ddd;
-                            padding: 8px;
-                            text-align: center;
-                        }}
-                        tr {{
-                            text-align: center;
-                        }}
-                        th {{
-                            background-color: #f2f2f2;
-                        }}
-                    </style>
-                    {html_table}
-                </div>
-            </div>
-            """
+
+            # Apply styling and hide index
+            styled_df = df.style.set_table_styles(
+                [{'selector': 'th, td', 'props': [('text-align', 'center')]}]
+            ).hide(axis="index")
+
+            # Convert to HTML
+            html_table = styled_df.to_html()
+
+            # Display using Streamlit
+            st.title("Defect Probability vs Threshold Table")
+            st.markdown(html_table, unsafe_allow_html=True)
 
 
-        # Display using Streamlit HTML component
-        st.title("Defect Probability vs Threshold Table")      
-        st.markdown(html_table, unsafe_allow_html=True)
+            # Display using Streamlit HTML component
+            st.title("Defect Probability vs Threshold Table")      
+            st.markdown(html_table, unsafe_allow_html=True)
 
         ### List view
         if text_input_result_dir:
