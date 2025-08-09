@@ -311,10 +311,5 @@ def app(result_dir: str, selected_lot_id: str) -> None:
             st.query_params.defect_no = defect_number
             st.rerun()
 
-    elif st.session_state.selection_source == "map":
-        selected_data = df[df["No"] == st.session_state.selected_map_index]
-        st.query_params.defect_no = st.session_state.selected_map_index
-        defect_number = st.session_state.selected_map_index
-
     else:
         selected_data = df[df["No"] == df["No"].min()]

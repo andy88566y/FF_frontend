@@ -36,7 +36,7 @@ def app() -> None:
 
             decoded_result_dir = decode_param(encoded_result_dir)
             decoded_data_yaml = decode_param(encoded_data_yaml)
-            decoded_defect_id = decode_param(encoded_defect_id)
+            decoded_defect_id = int(encoded_defect_id)
             # Initialize session state
             if "result_dir" not in st.session_state:
                 st.session_state.result_dir = decoded_result_dir
@@ -78,7 +78,7 @@ def app() -> None:
             r1_col1, r1_col2 = st.columns([2, 1])
             with r1_col1:
                 print(decoded_defect_id)
-                if "defect_number" not in st.session_state:
+                if "defect_number" not in st.session_state or decoded_defect_id != None:
                     st.session_state.defect_number = decoded_defect_id            
                 
                 defect_id = st.text_input("Defect ID", value=st.session_state.defect_number)
@@ -326,14 +326,22 @@ def app() -> None:
         # Check if the map is selected
         indices = event.selection.get("indices", {}).get("defect-map", [])
         if indices:
-            previous_selected_map_index = st.session_state.get("selected_map_index", None)
+            # Iterate over the objects to find the corresponding 'No' value
+            previous_selected_map_index = st.session_state.get("defect_number", None)
             # Iterate over the objects to find the corresponding 'No' value
             for obj in event.selection.get("objects", {}).get("defect-map", []):
                 st.session_state.selected_map_index = obj["No"]
                 break
+            
+            print(previous_selected_map_index)
+            print(st.session_state.selected_map_index)
 
             if previous_selected_map_index != st.session_state.selected_map_index:
                 st.session_state.selection_source = "map"
+                defect_id = st.session_state.selected_map_index
+                print("map selected" + str(defect_id))
+                st.query_params.defect_no = defect_id
+                st.rerun()
 
     with col2:     
 
@@ -353,6 +361,8 @@ def app() -> None:
                 models_threshold.append(db_metadata[thresholdName])
                 models_threshold_c.append(db_metadata[thresholdcName])
                 models_name.append(db_metadata[modelName])
+
+            print(len(defect_prob["probability_list"][0]))
 
             selected_defect_prob = defect_prob["probability_list"][0][int(defect_id)-1]
             model_num = len(selected_defect_prob)
@@ -374,11 +384,6 @@ def app() -> None:
 
             # Display using Streamlit
             st.title("Defect Probability vs Threshold Table")
-            st.markdown(html_table, unsafe_allow_html=True)
-
-
-            # Display using Streamlit HTML component
-            st.title("Defect Probability vs Threshold Table")      
             st.markdown(html_table, unsafe_allow_html=True)
 
         ### List view
