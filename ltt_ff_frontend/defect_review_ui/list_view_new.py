@@ -258,7 +258,24 @@ def app(result_dir: str, selected_lot_id: str) -> None:
     st.subheader("List View")
 
     # Select only the columns I want to display
-    selected_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster"]
+    all_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster"]
+
+    # Sample DataFrame (replace with your actual data)
+    df = st.session_state.filtered_df
+    print(df.columns)
+    # Let user select columns to display
+    selected_columns = st.multiselect(
+        "Select columns to display:",
+        options=all_columns,
+        default=all_columns  # You can change this to a subset if needed
+    )
+
+    # Display the selected columns
+    if selected_columns:
+        st.session_state.filtered_df = df[selected_columns]
+    else:
+        st.warning("Please select at least one column to display.")
+    
     listview_df = st.session_state.filtered_df[selected_columns]
 
     event = st.dataframe(
