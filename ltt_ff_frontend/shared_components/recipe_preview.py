@@ -115,26 +115,28 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
                         format="%.5f",
                         key=f"{r['model_name']}_{i}_threshold_c",
                     )
-                # with col4:
-                #     disable = st.toggle("disabled:", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
+                with col4:
+                    st.markdown("<br>", unsafe_allow_html=True)  
+                    disable = st.toggle("disabled:", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
 
                 custom_recipe["recipes"].append(
                     {
                         "model_name": r["model_name"],
                         "threshold": threshold,
                         "threshold_c": threshold_c,
-                        # "disable": disable,
+                        "disable": disable,
                     }
                 )
 
             if st.form_submit_button("Apply Custom Recipe"):
                 recipe = custom_recipe
+                recipe_to_preview = custom_recipe
             else:
                 recipe = {}
     else:
         recipe, recipe_to_preview = {}, {}
 
-    if recipe and recipe["recipes"] != [] and recipe_type != CUSTOM_MODE:
+    if recipe and recipe["recipes"] != []:
         with st.expander(f"{recipe_type} Recipe preview:", expanded=True):
             st.code(yaml.dump(recipe_to_preview), language="yaml")
 
