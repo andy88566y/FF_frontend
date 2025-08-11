@@ -71,6 +71,7 @@ def app() -> None:
             required_input={
                 "model_ids": [selected_models[0]["id"]],
                 "model_ids_2": [selected_models[1]["id"]],
+                "model_name_2": selected_models[1]["model_name"]
             },
         )
     except ValueError as e:
