@@ -353,7 +353,6 @@ def app() -> None:
             models_threshold = []
             models_threshold_c = []
             models_name = []
-            print(db_metadata.keys())
             for x in range(10):
                 thresholdName = "model_threshold_" + str(x)
                 thresholdcName = "model_threshold_c_" + str(x)

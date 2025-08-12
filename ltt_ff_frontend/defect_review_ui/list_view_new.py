@@ -59,6 +59,16 @@ def reload_data(df: pd.DataFrame):
         "C/NC",
         "No",
         "Cluster",
+        "probability_0",
+        "probability_1",
+        "probability_2",
+        "probability_3",
+        "probability_4",
+        "probability_5",
+        "probability_6",
+        "probability_7",
+        "probability_8",
+        "probability_9"
     ]
     st.session_state.filtered_df = df[selected_columns]
 
@@ -72,6 +82,8 @@ def app(result_dir: str, selected_lot_id: str) -> None:
         lot_id=selected_lot_id,
     )[0]
     db_metadata = api_helper.get_db_metadata_lists(output_dir=result_dir, lot_id=selected_lot_id)[0]
+    defect_prob_list = api_helper.get_probabilities_per_model(output_dir=result_dir, lot_id=selected_lot_id)
+    print(len(defect_prob_list["probability_list"][0]))
 
     # Extract relevant columns and convert "X" and "Y" to floats
     defect_data = [
@@ -86,13 +98,21 @@ def app(result_dir: str, selected_lot_id: str) -> None:
         }
         for defect in defects
     ]
-
     # Convert to DataFrame
     df = pd.DataFrame(defect_data)
+    print("df", len(df))
+    prob_df = pd.DataFrame(
+        defect_prob_list["probability_list"][0],
+        columns=[f"probability_{i}" for i in range(10)]
+    )
 
+    # Concatenate with your existing df
+    df = pd.concat([df, prob_df], axis=1)
     # Set the "No" column as the index
     df.set_index("No", inplace=True)
     df["No"] = df.index
+    
+    print(df.columns.tolist())
 
     # Ensure all columns have consistent data types
     df["No"] = df["No"].astype(int)
@@ -102,7 +122,7 @@ def app(result_dir: str, selected_lot_id: str) -> None:
     df["ClassType"] = df["ClassType"].astype(int)
     df["Ans"] = df["Ans"].astype(int)
     df["Probability"] = df["Probability"].astype(float)
-
+    st.session_state.filtered_df = df
     # Initialize session state for selected index
     if "selected_row_index" not in st.session_state:
         st.session_state.selected_row_index = 0
@@ -182,13 +202,14 @@ def app(result_dir: str, selected_lot_id: str) -> None:
             step=0.00001,
             format="%.5f",
             key="prob_threshold",
-            on_change=reload_data(st.session_state.filtered_df),
+            on_change=reload_data(st.session_state.filtered_df)
         )
 
     # Add filter options
     with filter_options_col:
         # Define the columns I want to display
-        specific_columns = ["UniqueID", "X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster"]
+        specific_columns = ["UniqueID", "X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster", "probability_0", "probability_1", "probability_2", "probability_3", "probability_4", "probability_5",
+                   "probability_6", "probability_7", "probability_8", "probability_9"]
         # Filter the DataFrame columns to only include the specific columns
         filtered_columns = [col for col in df.columns if col in specific_columns]
         # Use the filtered columns in the selectbox
@@ -258,7 +279,9 @@ def app(result_dir: str, selected_lot_id: str) -> None:
     st.subheader("List View")
 
     # Select only the columns I want to display
-    all_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster"]
+    all_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster",
+                   "probability_0", "probability_1", "probability_2", "probability_3", "probability_4", "probability_5",
+                   "probability_6", "probability_7", "probability_8", "probability_9"]
 
     # Sample DataFrame (replace with your actual data)
     df = st.session_state.filtered_df
