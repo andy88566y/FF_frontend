@@ -12,7 +12,7 @@ NAME_SPACE = ["First Inference (Base) ", "Second Inference (Candidate)"]
 
 def app() -> None:
     result_dirs = ["", ""]
-    selected_models = [None, None]
+    selected_models: list[dict] = [{}, {}]
     for i in range(2):
         result_dir_col, recipe_choice_col, th_choice_col, th_c_choice_col = st.columns([2, 1, 1, 1])
         db_recipe = None

@@ -46,7 +46,7 @@ RECIPE_UPLOAD_HELP_TEXT = (
     "```\n\n"
     "### 🔹 YAML Format\n"
     "Used for updating a **single recipe**. The filename must follow the format:\n"
-    "`Week_LayerGroup_Site.yaml` (e.g., `WWEEK2_LG1_SITE1.yaml`)\n\n"
+    "`Week_LayerGroup_Site.yaml` (e.g., `WEEK2_LG1_SITE1.yaml`)\n\n"
     "The content should follow the standard recipe YAML structure:\n"
     "```yaml\n"
     "recipes:\n"
