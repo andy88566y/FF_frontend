@@ -17,6 +17,8 @@ streamlit = "^1.44.1"
 pandas = "^2.2.3"
 numpy = "^2.2.4"
 scikit-learn = "^1.6.1"
+upsetplot = "^0.9.0"
+matplotlib-venn = "^1.1.2"
 
 [tool.poetry.group.viz.dependencies]
 pillow = "^11.2.1"

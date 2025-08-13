@@ -1,11 +1,10 @@
 import re
-from typing import Any, Optional
+import numpy as np
+from typing import Any
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-
-from ltt_ff_frontend.shared_components import helper
 
 
 DEFECT_COLOR_MAPPING = {
@@ -31,9 +30,9 @@ def get_color_map(legends_list: list[str]) -> dict[str, Any]:
 
 
 def gen(
-    aggregated_lists: tuple[list[str], list[float], list[int], list[str]],
-    selected_threshold: float,
-    selected_lot_id_list: Optional[list[str]] = None,
+    aggregated_lists: tuple[list[str], list[list[float]], list[int], list[str]],
+    selected_model: dict[str, Any],
+    split_lot: bool,
 ) -> go.Figure:
     """
     Generates a 1D plot for defect probability distribution across multiple lots.
@@ -42,7 +41,7 @@ def gen(
     aggregated_lists:
         A tuple containing four lists of lists:
         - list[list[str]]: List of defect No or UniqueID.
-        - list[list[float]]: List of probabilities.
+        - list[list[float]]: List of probabilities per models.
         - list[list[int]]: List of labels (0 for non-defect, 1 for defect, other values for unlabeled).
         - list[str]: List of Lot IDs
 
@@ -50,28 +49,26 @@ def gen(
         The threshold value for classification.
         Used to draw red dot line.
 
-    selected_lot_id_list (list[str], optional):
-        A list of lot IDs to filter the data. Defaults to an empty list.
-
     Returns:
     go.Figure:
         Plotly figure object with the defect probability distribution histogram.
     """
 
-    if selected_lot_id_list is None:
-        selected_lot_id_list = []
-
     id_list, prob_list, ans_list, lot_id_list = aggregated_lists
 
     df = pd.DataFrame(
-        data={"Defect_ID": id_list, "Probability": prob_list, "LRF_Label": ans_list, "Lot ID": lot_id_list}
+        data={"Defect_ID": id_list, "Probability": np.array(prob_list)[:, 0], "LRF_Label": ans_list, "Lot ID": lot_id_list}
     )
-    df = df[df["Lot ID"].isin(selected_lot_id_list)] if selected_lot_id_list else df
+
     df["Classification"] = [
         "Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]
     ]
-    df["Legends"] = [f"{classification} {lot_id}" for classification, lot_id in zip(df["Classification"], df["Lot ID"])]
-
+    if split_lot:
+        df["Legends"] = [
+            f"{classification} {lot_id}" for classification, lot_id in zip(df["Classification"], df["Lot ID"])
+        ]
+    else:
+        df["Legends"] = df["Classification"]
     # Add histogram
     # hover_data defines which df columns will appear on the hover message
     # label changes the column name on the hover message
@@ -100,8 +97,8 @@ def gen(
     # Add threshold line
     fig.add_shape(
         type="line",
-        x0=selected_threshold,
-        x1=selected_threshold,
+        x0=selected_model["threshold"],
+        x1=selected_model["threshold"],
         y0=0,
         y1=1,
         xref="x",
@@ -113,7 +110,7 @@ def gen(
         barmode="stack",
         xaxis_title="Probabilities",
         yaxis_title="Frequency",
-        title="Defect Probability Distribution",
+        title= "Defect Probability Distribution",
     )
 
     return fig

@@ -83,24 +83,25 @@ def app() -> None:
         ResultViewerComponents.PARTICLE_MODE_LIST.value,
         ResultViewerComponents.CLASSTYPE_COUNT.value,
         ResultViewerComponents.INFERENCE_RESULT_TABLE.value,
-        ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value,
-        ResultViewerComponents.CR_FFR_CURVE.value,
     ]
 
-    try:
-        result_viewer_components = api_helper.get_result_viewer_components(
-            inference_result_dir=inference_result_dir,
-            recipe=recipe,
-            required_components=required_components,
-            required_input={
-                "recipe_threshold": recipe["recipes"][0]["threshold"],
-            },
-            read_children_dirs=read_children_dirs,
-        )
+    rvc_setting = (inference_result_dir, recipe, read_children_dirs)
 
-    except ValueError as e:
-        st.error(e)
-        return
+    if "rvc_result" not in st.session_state or st.session_state.rvc_result["setting"] != rvc_setting:
+        try:
+            st.session_state.rvc_result = {
+                "result": api_helper.get_result_viewer_components(
+                    inference_result_dir=rvc_setting[0],
+                    recipe=rvc_setting[1],
+                    required_components=required_components,
+                    read_children_dirs=rvc_setting[2],
+                ),
+                "setting": rvc_setting,
+            }
+        except ValueError as e:
+            st.error(e)
+            return
+    result_viewer_components = st.session_state.rvc_result["result"]
 
     try:
         if ResultViewerComponents.OOS_SUMMARY.value in required_components:
@@ -137,30 +138,49 @@ def app() -> None:
         st.error(e)
         return
 
-    if len(recipe["recipes"]) == 1:
-        # Columns for drawing distribution chart and ROC curve
-        col_1d_chart_column, col_roc_curve_column = st.columns(2)
+    # Columns for drawing distribution chart and ROC curve
+    model_map = helper.get_model_map(recipe)
+    selected_model = model_map[st.selectbox("Select Model", list(model_map.keys()))]
+    independent_components = [
+        ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value,
+        ResultViewerComponents.CR_FFR_CURVE.value,
+    ]
 
-        recipe_model_name = recipe["recipes"][0]["model_name"]
-        recipe_threshold = recipe["recipes"][0]["threshold"]
-        if ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value in required_components:
-            # Draw 1D comparison chart
-            with col_1d_chart_column:
-                with st.expander(label="1D Prob Distribution Chart"):
-                    st.plotly_chart(
-                        prob_distribution_fig.gen(
-                            aggregated_lists=result_viewer_components["one_d_defect_distribution_chart"],
-                            selected_threshold=recipe_threshold,
-                            selected_lot_id_list=selected_lot_id_list,
-                        )
-                    )
+    try:
+        independent_components = api_helper.get_result_viewer_components(
+            inference_result_dir=inference_result_dir,
+            recipe=recipe,
+            required_components=independent_components,
+            required_input={
+                "model_ids": [selected_model["id"]],
+                "recipe_threshold": selected_model["threshold"],
+                "selected_lot_id_list": selected_lot_id_list,
+            },
+            read_children_dirs=read_children_dirs,
+        )
+    except ValueError as e:
+        st.error(e)
+        return
 
-        if ResultViewerComponents.CR_FFR_CURVE.value in required_components:
-            with col_roc_curve_column:
-                with st.expander(label="Roc Curve Chart"):
-                    roc_fig.gen(
-                        model_name=recipe_model_name,
-                        roc_data=result_viewer_components["cr_ffr_curve"],
-                        threshold=recipe_threshold,
-                        selected_lot_id_list=selected_lot_id_list,
+    split_lot = st.toggle(label="Results split by lots", value=False)
+    col_1d_chart_column, col_roc_curve_column = st.columns(2)
+    if ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value in independent_components:
+        # Draw 1D comparison chart
+        with col_1d_chart_column:
+            with st.expander(label="1D Prob Distribution Chart"):
+                st.plotly_chart(
+                    prob_distribution_fig.gen(
+                        aggregated_lists=independent_components["one_d_defect_distribution_chart"],
+                        selected_model=selected_model,
+                        split_lot=split_lot,
                     )
+                )
+
+    if ResultViewerComponents.CR_FFR_CURVE.value in independent_components:
+        with col_roc_curve_column:
+            with st.expander(label="Roc Curve Chart"):
+                roc_fig.gen(
+                    model=selected_model,
+                    roc_data=independent_components["cr_ffr_curve"],
+                    split_lot=split_lot,
+                )

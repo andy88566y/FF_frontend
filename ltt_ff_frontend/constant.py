@@ -34,8 +34,10 @@ else:  # FF_ENV == Env.DEV:
     API_ROOT = f"http://localhost:{8580 + int(os.environ.get('DEV_NUM', '0'))}/api/v1/"
     RESTRICT_OUTPUT_DIR = False
 
+HIDE_CREDENTIAL = False
 
 BLANK_MODEL = "[UNUSED]"
+BASE_MODEL = "BASE MODEL"
 
 INFERENCE_DEFAULT_RESULT_DIR = "/mnt/dbpc/xxx"
 
@@ -260,4 +262,5 @@ class ResultViewerComponents(Enum):
     INFERENCE_RESULT_TABLE = "inference_result_table"
     ONE_D_DEFECT_DISTRIBUTION_CHART = "one_d_defect_distribution_chart"
     TWO_D_DEFECT_DISTRIBUTION_CHART = "two_d_defect_distribution_chart"
+    MULTI_MODEL_PROBABILITIES = "multi_model_probabilities"
     CR_FFR_CURVE = "cr_ffr_curve"

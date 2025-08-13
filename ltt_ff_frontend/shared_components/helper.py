@@ -2,12 +2,11 @@ from typing import Any
 
 from loguru import logger
 
-from ltt_ff_frontend.constant import BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR
+from ltt_ff_frontend.constant import BLANK_MODEL, INFERENCE_DEFAULT_RESULT_DIR, RESTRICT_OUTPUT_DIR, HIDE_CREDENTIAL, BASE_MODEL
 
 
 # put only codes like: format strings, aggregate data
 # for generating figure, extract to one seperate component file
-
 
 def format_model_name(name: str | None) -> str:
     if name is None:
@@ -25,12 +24,26 @@ def format_model_name(name: str | None) -> str:
         return f"{name.replace('.encrypted', '').replace('.pth', '').replace('#', ' ')}"
 
 
+def get_model_hash(name: str) -> str:
+    if name.startswith("base"):
+        return name.split("#", maxsplit=-1)[-1].split(".", maxsplit=1)[0]
+    else:
+        return name
+
+
+def get_model_map(recipe: dict[str, Any]):
+    model_map = {}
+    for ridx, r in enumerate(recipe["recipes"]):
+        model_hash = get_model_hash(r["model_name"]) if not HIDE_CREDENTIAL else f"{BASE_MODEL} { ridx}"
+        model_map[model_hash] = {**r, "id": ridx, "model_hash": model_hash}
+    return model_map
+
+
 def filter_recipe_columns(recipe: dict[str, Any]) -> dict[str, Any]:
     column_white_list = ["model_name", "threshold", "threshold_c", "threshold_d"]
     filtered_recipe = {"recipes": [{k: v for k, v in r.items() if k in column_white_list} for r in recipe["recipes"]]}
 
     return filtered_recipe
-
 
 def is_valid_output_dir(output_dir: str) -> bool:
     """

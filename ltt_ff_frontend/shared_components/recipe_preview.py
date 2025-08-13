@@ -117,7 +117,7 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
                     )
                 with col4:
                     st.markdown("<br>", unsafe_allow_html=True)  
-                    disable = st.toggle("disabled:", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
+                    disable = st.toggle("disabled", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
 
                 custom_recipe["recipes"].append(
                     {
