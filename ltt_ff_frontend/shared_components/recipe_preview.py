@@ -91,7 +91,6 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
     elif recipe_type == CUSTOM_MODE:
         if not db_recipe:
             return {}
-        custom_recipe: dict[str, Any] = {"recipes": []}
         with st.form(key="custom_recipe_form"):
             for i, r in enumerate(db_recipe["recipes"]):
                 col1, col2, col3, col4 = st.columns([3.5, 2, 2, 1])
@@ -100,7 +99,7 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
                         label="model name:", value=r["model_name"], key=f"{r['model_name']}_{i}", disabled=True
                     )
                 with col2:
-                    threshold = st.number_input(
+                    r["threshold"] = st.number_input(
                         label="threshold:",
                         value=r["threshold"],
                         step=1e-5,
@@ -108,7 +107,7 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
                         key=f"{r['model_name']}_{i}_threshold",
                     )
                 with col3:
-                    threshold_c = st.number_input(
+                    r["threshold_c"] = st.number_input(
                         label="threshold_c",
                         value=r["threshold_c"],
                         step=1e-5,
@@ -117,20 +116,13 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
                     )
                 with col4:
                     st.markdown("<br>", unsafe_allow_html=True)  
-                    disable = st.toggle("disabled", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
+                    r["disable"] = st.toggle("disabled", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
 
-                custom_recipe["recipes"].append(
-                    {
-                        "model_name": r["model_name"],
-                        "threshold": threshold,
-                        "threshold_c": threshold_c,
-                        "disable": disable,
-                    }
-                )
+                db_recipe["recipes"][i] = r
 
             if st.form_submit_button("Apply Custom Recipe"):
-                recipe = custom_recipe
-                recipe_to_preview = custom_recipe
+                recipe = db_recipe
+                recipe_to_preview = db_recipe
             else:
                 recipe = {}
     else:
