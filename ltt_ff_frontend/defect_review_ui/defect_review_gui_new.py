@@ -346,7 +346,7 @@ def app() -> None:
     with col2:     
 
         # if defect_id != "":
-            # draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
+        #     draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
         
         ### Receipe area
         if defect_id != "":
@@ -359,10 +359,8 @@ def app() -> None:
                 modelName = "model_name_" + str(x)
                 models_threshold.append(db_metadata[thresholdName])
                 models_threshold_c.append(db_metadata[thresholdcName])
-                models_name.append(db_metadata[modelName])
-
-            print(len(defect_prob["probability_list"][0]))
-
+                models_name.append(re.search(r"#([^#\.]+)\.", db_metadata[modelName]).group(1))
+            
             selected_defect_prob = defect_prob["probability_list"][0][int(defect_id)-1]
             model_num = len(selected_defect_prob)
             table_data = {
