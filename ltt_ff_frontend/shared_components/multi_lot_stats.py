@@ -124,7 +124,13 @@ def gen(
     df = pd.DataFrame(rows, columns=pd_multiindex)
 
     styled_df = (
-        df.style.apply(draw_column_background_color, axis=1)
+        df.style
+        .format({
+            ("Total Defect Count", "Filter Rate"): "{:.4f}",
+            ("True Defect Count", "Capture Rate"): "{:.4f}",
+            ("Non Defect Count", "False Filter Rate"): "{:.4f}"
+        })
+        .apply(draw_column_background_color, axis=1)
         .apply(highlight_oos, axis=1)
         .apply(highlight_capture_rate, subset=[("True Defect Count", "Capture Rate")], axis=0)
     )

@@ -21,9 +21,9 @@ def get_require_component_lists(length: int) -> list[str]:
     if length == 0:
         return []
     elif length == 1:
-        return [ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value, ResultViewerComponents.CR_FFR_CURVE.value]
+        return {ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value: True, ResultViewerComponents.CR_FFR_CURVE.value: True}
     else:
-        return [ResultViewerComponents.MULTI_MODEL_PROBABILITIES.value]
+        return {ResultViewerComponents.MULTI_MODEL_PROBABILITIES.value: True}
 
 
 def app() -> None:

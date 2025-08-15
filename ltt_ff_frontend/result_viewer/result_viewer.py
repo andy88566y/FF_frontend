@@ -77,13 +77,13 @@ def app() -> None:
     with st.container():
         st.subheader("Inference Results")
 
-    required_components = [
-        ResultViewerComponents.OOS_SUMMARY.value,
-        ResultViewerComponents.MISSED_DEFECT_LIST.value,
-        ResultViewerComponents.PARTICLE_MODE_LIST.value,
-        ResultViewerComponents.CLASSTYPE_COUNT.value,
-        ResultViewerComponents.INFERENCE_RESULT_TABLE.value,
-    ]
+    required_components = {
+        ResultViewerComponents.OOS_SUMMARY.value: True,
+        ResultViewerComponents.MISSED_DEFECT_LIST.value: True,
+        ResultViewerComponents.PARTICLE_MODE_LIST.value: True,
+        ResultViewerComponents.CLASSTYPE_COUNT.value: True,
+        ResultViewerComponents.INFERENCE_RESULT_TABLE.value: True,
+    }
 
     rvc_setting = (inference_result_dir, recipe, read_children_dirs)
 
@@ -141,10 +141,10 @@ def app() -> None:
     # Columns for drawing distribution chart and ROC curve
     model_map = helper.get_model_map(recipe)
     selected_model = model_map[st.selectbox("Select Model", list(model_map.keys()))]
-    independent_components = [
-        ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value,
-        ResultViewerComponents.CR_FFR_CURVE.value,
-    ]
+    independent_components = {
+        ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value: True,
+        ResultViewerComponents.CR_FFR_CURVE.value: True,
+    }
 
     try:
         independent_components = api_helper.get_result_viewer_components(
