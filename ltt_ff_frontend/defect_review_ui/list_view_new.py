@@ -52,7 +52,7 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
             "X": float(defect["X"]),
             "Y": float(defect["Y"]),
             "ClassType": defect["ClassType"],
-            "Ans": defect["Ans"],
+            "GT": defect["Ans"],
             "P_rank": defect["Probability"],
         }
         for defect in defects
@@ -79,7 +79,7 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
     df["X"] = df["X"].astype(float)
     df["Y"] = df["Y"].astype(float)
     df["ClassType"] = df["ClassType"].astype(int)
-    df["Ans"] = df["Ans"].astype(int)
+    df["GT"] = df["GT"].astype(int)
     df["P_rank"] = df["P_rank"].astype(float)
     st.session_state.filtered_df = df
     # Initialize session state for selected index
@@ -105,14 +105,10 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
         st.session_state.color_option = "ClassType"
 
     # Add "D/ND" column based on the threshold (Defect/Not defect)
-    df["D/ND"] = df["P_rank"] >= st.session_state.prob_threshold
-    # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
-    df["C/NC"] = df[["Ans", "D/ND"]].apply(lambda x: -1 if x["Ans"] == -1 else x["Ans"] == x["D/ND"], axis=1)
+    df["Pred"] = df["P_rank"] >= st.session_state.prob_threshold
 
-    # Convert "Ans" "D/ND" "C/NC" column to T/F
-    df["Ans"] = df["Ans"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
-    df["D/ND"] = df["D/ND"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
-    df["C/NC"] = df["C/NC"].apply(lambda x: "UNK" if x == -1 else "T" if x else "F")
+    df["GT"] = df["GT"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
+    df["Pred"] = df["Pred"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
 
     # Normalize coordinates
     x_min, x_max = df["X"].min(), df["X"].max()
@@ -154,7 +150,7 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
     # Add filter options
     with filter_options_col:
         # Define the columns I want to display
-        specific_columns = ["UniqueID", "X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster"]
+        specific_columns = ["UniqueID", "X", "Y", "ClassType", "GT", "Pred", "Cluster"]
         for i in range(len(models_name)):
             specific_columns.append("P_" + models_name[i])
         # Filter the DataFrame columns to only include the specific columns
@@ -226,7 +222,7 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
     st.subheader("List View")
 
     # Select only the columns I want to display
-    all_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "P_rank", "D/ND", "C/NC", "Cluster"]
+    all_columns = ["No", "UniqueID", "X", "Y", "ClassType", "GT", "Pred", "P_rank", "Cluster"]
     for i in range(len(models_name)):
             all_columns.append("P_" + models_name[i])
     # Sample DataFrame (replace with your actual data)
