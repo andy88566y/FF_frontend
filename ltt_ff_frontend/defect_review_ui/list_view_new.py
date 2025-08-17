@@ -226,8 +226,7 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
     for i in range(len(models_name)):
             all_columns.append("P_" + models_name[i])
     # Sample DataFrame (replace with your actual data)
-    df = st.session_state.filtered_df
-    print(df.columns)
+    df = st.session_state.filtered_df 
     # Let user select columns to display
     selected_columns = st.multiselect(
         "Select columns to display:",
@@ -242,9 +241,27 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
         st.warning("Please select at least one column to display.")
     
     listview_df = st.session_state.filtered_df[selected_columns]
+      
+    def highlight_row(row):
+        pred = row.get("Pred", None)
+        gt = row.get("GT", None)
+
+        if pred == "D" and gt == "D":
+            return ["background-color: lightblue"] * len(row)
+        elif pred == "ND" and gt == "ND":
+            return ["background-color: lightgreen"] * len(row)
+        elif pred == "ND" and gt == "D":
+            return ["background-color: lightcoral"] * len(row)
+        elif pred == "D" and gt == "ND":
+            return ["background-color: lightyellow"] * len(row)
+        else:
+            return [""] * len(row)
+
+
+    styled_df = listview_df.style.apply(highlight_row, axis=1)
 
     event = st.dataframe(
-        listview_df,
+        styled_df,
         use_container_width=True,
         height=300,
         hide_index=False,
