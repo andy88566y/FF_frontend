@@ -1528,6 +1528,7 @@ def convert_model(model_conversion_config: dict[str, list[dict]]) -> dict[str, A
 #####################################################################################################
 # Defect Viewer                                                                                     #
 #####################################################################################################
+@st.cache_data(ttl="300s")
 def generate_diff_images(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool = True) -> dict[str, Any]:
     r = requests.post(
         API_ROOT + "generate_diff_images",

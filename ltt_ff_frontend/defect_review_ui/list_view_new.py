@@ -32,48 +32,7 @@ def generate_colors(num_clusters):
     return colors
 
 
-# define callback when threshold changes
-def reload_data(df: pd.DataFrame):
-    # Add "D/ND" column based on the threshold (Defect/Not defect)
-    df["D/ND"] = df["Probability"] >= st.session_state.prob_threshold
-    # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
-    df["C/NC"] = df[["Ans", "D/ND"]].apply(
-        lambda x: "UNK" if x["Ans"] == "UNK" else (x["Ans"] == "T") == x["D/ND"], axis=1
-    )
-
-    # Convert back "D/ND" "C/NC" column to T/F
-    df["D/ND"] = df["D/ND"].apply(lambda x: "UNK" if x == "UNK" else "T" if x else "F")
-    df["C/NC"] = df["C/NC"].apply(lambda x: "UNK" if x == "UNK" else "T" if x else "F")
-
-    # Select only the columns I want to display
-    selected_columns = [
-        "X",
-        "Y",
-        "UniqueID",
-        "X_norm",
-        "Y_norm",
-        "ClassType",
-        "Ans",
-        "Probability",
-        "D/ND",
-        "C/NC",
-        "No",
-        "Cluster",
-        "probability_0",
-        "probability_1",
-        "probability_2",
-        "probability_3",
-        "probability_4",
-        "probability_5",
-        "probability_6",
-        "probability_7",
-        "probability_8",
-        "probability_9"
-    ]
-    st.session_state.filtered_df = df[selected_columns]
-
-
-def app(result_dir: str, selected_lot_id: str) -> None:
+def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
     
     defects = api_helper.get_lrf_data_lists(
         output_dir=result_dir,
@@ -94,7 +53,7 @@ def app(result_dir: str, selected_lot_id: str) -> None:
             "Y": float(defect["Y"]),
             "ClassType": defect["ClassType"],
             "Ans": defect["Ans"],
-            "Probability": defect["Probability"],
+            "P_rank": defect["Probability"],
         }
         for defect in defects
     ]
@@ -103,7 +62,7 @@ def app(result_dir: str, selected_lot_id: str) -> None:
     print("df", len(df))
     prob_df = pd.DataFrame(
         defect_prob_list["probability_list"][0],
-        columns=[f"probability_{i}" for i in range(10)]
+        columns=[f"P_{models_name[i]}" for i in range(10)]
     )
 
     # Concatenate with your existing df
@@ -121,7 +80,7 @@ def app(result_dir: str, selected_lot_id: str) -> None:
     df["Y"] = df["Y"].astype(float)
     df["ClassType"] = df["ClassType"].astype(int)
     df["Ans"] = df["Ans"].astype(int)
-    df["Probability"] = df["Probability"].astype(float)
+    df["P_rank"] = df["P_rank"].astype(float)
     st.session_state.filtered_df = df
     # Initialize session state for selected index
     if "selected_row_index" not in st.session_state:
@@ -146,7 +105,7 @@ def app(result_dir: str, selected_lot_id: str) -> None:
         st.session_state.color_option = "ClassType"
 
     # Add "D/ND" column based on the threshold (Defect/Not defect)
-    df["D/ND"] = df["Probability"] >= st.session_state.prob_threshold
+    df["D/ND"] = df["P_rank"] >= st.session_state.prob_threshold
     # Create the new column 'C/NC' based on the conditions provided (Correct/Not correct)
     df["C/NC"] = df[["Ans", "D/ND"]].apply(lambda x: -1 if x["Ans"] == -1 else x["Ans"] == x["D/ND"], axis=1)
 
@@ -190,26 +149,14 @@ def app(result_dir: str, selected_lot_id: str) -> None:
         st.session_state.result_dir = result_dir
         st.session_state.lot_id = selected_lot_id
 
-    threshold_col, filter_options_col, filter_operators_col, filter_value_col, filter_message_col, apply_col, remove_col = st.columns([1, 1, 1, 2, 1, 1, 1])
-
-    # Add threshold selection
-    with threshold_col:
-        # TODO: figure out why this variable is not working
-        _threshold = st.number_input(
-            "Select Probability Threshold",
-            min_value=0.0,
-            max_value=1.0,
-            step=0.00001,
-            format="%.5f",
-            key="prob_threshold",
-            on_change=reload_data(st.session_state.filtered_df)
-        )
+    filter_options_col, filter_operators_col, filter_value_col, filter_message_col, apply_col, remove_col = st.columns([1, 1, 2, 1, 1, 1])
 
     # Add filter options
     with filter_options_col:
         # Define the columns I want to display
-        specific_columns = ["UniqueID", "X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster", "probability_0", "probability_1", "probability_2", "probability_3", "probability_4", "probability_5",
-                   "probability_6", "probability_7", "probability_8", "probability_9"]
+        specific_columns = ["UniqueID", "X", "Y", "ClassType", "Ans", "D/ND", "C/NC", "Cluster"]
+        for i in range(len(models_name)):
+            specific_columns.append("P_" + models_name[i])
         # Filter the DataFrame columns to only include the specific columns
         filtered_columns = [col for col in df.columns if col in specific_columns]
         # Use the filtered columns in the selectbox
@@ -279,10 +226,9 @@ def app(result_dir: str, selected_lot_id: str) -> None:
     st.subheader("List View")
 
     # Select only the columns I want to display
-    all_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "Probability", "D/ND", "C/NC", "Cluster",
-                   "probability_0", "probability_1", "probability_2", "probability_3", "probability_4", "probability_5",
-                   "probability_6", "probability_7", "probability_8", "probability_9"]
-
+    all_columns = ["No", "UniqueID", "X", "Y", "ClassType", "Ans", "P_rank", "D/ND", "C/NC", "Cluster"]
+    for i in range(len(models_name)):
+            all_columns.append("P_" + models_name[i])
     # Sample DataFrame (replace with your actual data)
     df = st.session_state.filtered_df
     print(df.columns)

@@ -345,15 +345,17 @@ def app() -> None:
 
     with col2:     
 
-        # if defect_id != "":
-        #     draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
+        if defect_id != "":
+            draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
         
         ### Receipe area
         if defect_id != "":
             models_threshold = []
             models_threshold_c = []
             models_name = []
-            for x in range(10):
+            selected_defect_prob = defect_prob["probability_list"][0][int(defect_id)-1]
+            model_num = len(selected_defect_prob)
+            for x in range(model_num):
                 thresholdName = "model_threshold_" + str(x)
                 thresholdcName = "model_threshold_c_" + str(x)
                 modelName = "model_name_" + str(x)
@@ -361,10 +363,8 @@ def app() -> None:
                 models_threshold_c.append(db_metadata[thresholdcName])
                 models_name.append(re.search(r"#([^#\.]+)\.", db_metadata[modelName]).group(1))
             
-            selected_defect_prob = defect_prob["probability_list"][0][int(defect_id)-1]
-            model_num = len(selected_defect_prob)
             table_data = {
-                "Model Name": models_name[:model_num],
+                "Model Name": models_name,
                 "Defect Probability / Threshold": [f"{selected_defect_prob[i]:.3f}/{models_threshold[i]}" for i in range(model_num)],
                 "Defect Probability / Threshold_C": [f"{selected_defect_prob[i]:.3f}/{models_threshold_c[i]}" for i in range(model_num)]
             }
@@ -389,5 +389,5 @@ def app() -> None:
                 raise ValueError(f"Input Result directory in text field is invalid: {text_input_result_dir}")
 
             logger.info("Input field params encoded and stored in URL.")
-            list_view_new.app(text_input_result_dir, selected_lot_id)
+            list_view_new.app(text_input_result_dir, selected_lot_id, models_name)
     
