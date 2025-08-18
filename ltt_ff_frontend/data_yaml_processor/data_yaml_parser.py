@@ -5,7 +5,16 @@ import streamlit as st
 import yaml
 from loguru import logger
 
-from ltt_ff_frontend.constant import LayerGroup, MaskType, ModelType, PixelSize, Site, TechLayer, Tool
+from ltt_ff_frontend.constant import (
+    ST_DATAFRAME_ROW_HEIGHT,
+    LayerGroup,
+    MaskType,
+    ModelType,
+    PixelSize,
+    Site,
+    TechLayer,
+    Tool,
+)
 from ltt_ff_frontend.helpers import api_helper
 
 
@@ -40,5 +49,5 @@ def app() -> None:
 
     st.dataframe(
         data=formatted_stats,
-        height=35 * (len(formatted_stats) + 2),
+        height=ST_DATAFRAME_ROW_HEIGHT * (len(formatted_stats) + 2),
     )

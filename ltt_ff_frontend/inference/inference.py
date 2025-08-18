@@ -1,11 +1,12 @@
 import os
+from datetime import datetime
 
 import pandas as pd
 import streamlit as st
 import yaml
 from loguru import logger
 
-from ltt_ff_frontend.constant import INFERENCE_DEFAULT_RESULT_DIR
+from ltt_ff_frontend.constant import INFERENCE_DEFAULT_RESULT_DIR, ST_DATAFRAME_ROW_HEIGHT
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import helper, stop_job_button
 
@@ -140,30 +141,47 @@ def app() -> None:
     #####################################################################################################
     # Multilot job status                                                                               #
     #####################################################################################################
+    if "status_df_multi_inf_current_page" not in st.session_state:
+        st.session_state.status_df_multi_inf_current_page = 1
+    if "status_df_multi_inf_page_size" not in st.session_state:
+        st.session_state.status_df_multi_inf_page_size = 10
     if "status_df_multi_inf" not in st.session_state:
         st.session_state.status_df_multi_inf = pd.DataFrame()
     if "detailed_df_multi_inf" not in st.session_state:
         st.session_state.detailed_df_multi_inf = pd.DataFrame()
 
-    col1, col2 = st.columns(2, vertical_alignment="bottom")
+    m_refresh_col, m_download_col, m_page_size_col, m_current_page_col = st.columns(4, vertical_alignment="bottom")
 
-    with col1:
+    with m_page_size_col:
+        st.session_state.status_df_multi_inf_page_size = st.number_input(
+            "Page size", min_value=10, max_value=100, value=10, step=1, key="multilot_page_size"
+        )
+
+    with m_current_page_col:
+        st.session_state.status_df_multi_inf_current_page = st.number_input(
+            "Page number", min_value=1, value=1, step=1, key="multilot_page"
+        )
+        st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
+            page_size=st.session_state.status_df_multi_inf_page_size,
+            current_page=st.session_state.status_df_multi_inf_current_page,
+        )
+
+    with m_refresh_col:
         if st.button("Check all multilot inference jobs"):
-            page_size = 10
-            current_page = 1
             st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
-                page_size, current_page
+                page_size=st.session_state.status_df_multi_inf_page_size,
+                current_page=st.session_state.status_df_multi_inf_current_page,
             )
 
-    progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
-
-    # Pagination settings
-    with col2:
-        page_size = 10
-        current_page = st.number_input("Page number", min_value=1, value=1, step=1, key="multilot_page")
-        st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
-            page_size, current_page
+    with m_download_col:
+        st.download_button(
+            label="Download multilot inference job statuses",
+            data=st.session_state.status_df_multi_inf.to_csv(index=False),
+            file_name=f"multilot_inference_status_{datetime.now().astimezone()}.csv",
+            mime="text/csv",
         )
+
+    progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
 
     st.header("All multilot inference jobs") if not st.session_state.status_df_multi_inf.empty else st.write("")
 
@@ -176,6 +194,7 @@ def app() -> None:
             selection_mode="multi-row",
             use_container_width=True,
             column_config={"progress": progress_column},
+            height=ST_DATAFRAME_ROW_HEIGHT * (len(st.session_state.status_df_multi_inf) + 1),
         )
         if not st.session_state.status_df_multi_inf.empty
         else st.write("")
@@ -201,26 +220,47 @@ def app() -> None:
     #####################################################################################################
     # Per lot job status                                                                                #
     #####################################################################################################
+    if "status_df_inf_current_page" not in st.session_state:
+        st.session_state.status_df_inf_current_page = 1
+    if "status_df_inf_page_size" not in st.session_state:
+        st.session_state.status_df_inf_page_size = 10
     if "status_df_inf" not in st.session_state:
         st.session_state.status_df_inf = pd.DataFrame()
     if "detailed_df_inf" not in st.session_state:
         st.session_state.detailed_df_inf = pd.DataFrame()
 
-    col1, col2 = st.columns(2, vertical_alignment="bottom")
+    refresh_col, download_col, page_size_col, current_page_col = st.columns(4, vertical_alignment="bottom")
 
-    with col1:
+    with page_size_col:
+        st.session_state.status_df_inf_page_size = st.number_input(
+            "Page size", min_value=10, max_value=100, value=10, step=1, key="per_lot_page_size"
+        )
+
+    with current_page_col:
+        st.session_state.status_df_inf_current_page = st.number_input(
+            "Page number", min_value=1, value=1, step=1, key="per_lot_page"
+        )
+        st.session_state.status_df_inf = api_helper.request_paginated_inference_status(
+            page_size=st.session_state.status_df_inf_page_size,
+            current_page=st.session_state.status_df_inf_current_page,
+        )
+
+    with refresh_col:
         if st.button("Check all inference jobs"):
-            page_size = 10
-            current_page = 1
-            st.session_state.status_df_inf = api_helper.request_paginated_inference_status(page_size, current_page)
+            st.session_state.status_df_inf = api_helper.request_paginated_inference_status(
+                page_size=st.session_state.status_df_inf_page_size,
+                current_page=st.session_state.status_df_inf_current_page,
+            )
 
     progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
 
-    # Pagination settings
-    with col2:
-        page_size = 10
-        current_page = st.number_input("Page number", min_value=1, value=1, step=1, key="per_lot_page")
-        st.session_state.status_df_inf = api_helper.request_paginated_inference_status(page_size, current_page)
+    with download_col:
+        st.download_button(
+            label="Download inference job statuses",
+            data=st.session_state.status_df_inf.to_csv(index=False),
+            file_name=f"inference_status_{datetime.now().astimezone()}.csv",
+            mime="text/csv",
+        )
 
     st.header("All inference jobs") if not st.session_state.status_df_inf.empty else st.write("")
 
@@ -233,6 +273,7 @@ def app() -> None:
             selection_mode="multi-row",
             use_container_width=True,
             column_config={"progress": progress_column},
+            height=ST_DATAFRAME_ROW_HEIGHT * (len(st.session_state.status_df_inf) + 1),
         )
         if not st.session_state.status_df_inf.empty
         else st.write("")

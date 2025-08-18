@@ -40,6 +40,7 @@ BLANK_MODEL = "[UNUSED]"
 BASE_MODEL = "BASE MODEL"
 
 INFERENCE_DEFAULT_RESULT_DIR = "/mnt/dbpc/xxx"
+ST_DATAFRAME_ROW_HEIGHT = 35
 
 
 class NumInputParamConfig(BaseModel):
