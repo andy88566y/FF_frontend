@@ -1,4 +1,5 @@
 import typing
+from datetime import datetime
 from typing import Any
 
 import pandas as pd
@@ -7,10 +8,9 @@ import yaml
 from loguru import logger
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
-from ltt_ff_frontend.constant import TrainingOption
+from ltt_ff_frontend.constant import ST_DATAFRAME_ROW_HEIGHT, TrainingOption
 from ltt_ff_frontend.datamodel.ff_core.request import FFCoreTrainingRequest
-from ltt_ff_frontend.helpers import api_helper
-from ltt_ff_frontend.helpers import training_helper
+from ltt_ff_frontend.helpers import api_helper, training_helper
 from ltt_ff_frontend.shared_components import helper, stop_job_button
 
 
@@ -48,27 +48,44 @@ def app() -> None:
     st.divider()
 
     # _init_session_state_df()
-
+    if "status_df_fin_current_page" not in st.session_state:
+        st.session_state.status_df_fin_current_page = 1
+    if "status_df_fin_page_size" not in st.session_state:
+        st.session_state.status_df_fin_page_size = 10
     if "status_df_fin" not in st.session_state:
         st.session_state.status_df_fin = pd.DataFrame()
-
     if "detailed_df_fin" not in st.session_state:
         st.session_state.detailed_df_fin = pd.DataFrame()
 
-    col1, col2 = st.columns(2, vertical_alignment="bottom")
-    with col1:
+    refresh_col, download_col, page_size_col, current_page_col = st.columns(4, vertical_alignment="bottom")
+
+    with page_size_col:
+        st.session_state.status_df_fin_page_size = st.number_input(
+            "Page size", min_value=10, max_value=100, value=10, step=1
+        )
+
+    with current_page_col:
+        st.session_state.status_df_fin_current_page = st.number_input("Page number", min_value=1, value=1, step=1)
+        st.session_state.status_df_fin = api_helper.request_paginated_finetuning_status(
+            page_size=st.session_state.status_df_fin_page_size, current_page=st.session_state.status_df_fin_current_page
+        )
+
+    with refresh_col:
         if st.button("Check all training jobs"):
-            page_size = 10
-            current_page = 1
-            st.session_state.status_df_fin = api_helper.request_paginated_finetuning_status(page_size, current_page)
+            st.session_state.status_df_fin = api_helper.request_paginated_finetuning_status(
+                page_size=st.session_state.status_df_fin_page_size,
+                current_page=st.session_state.status_df_fin_current_page,
+            )
+
+    with download_col:
+        st.download_button(
+            label="Download training job statuses",
+            data=st.session_state.status_df_fin.to_csv(index=False),
+            file_name=f"training_status_{datetime.now().astimezone()}.csv",
+            mime="text/csv",
+        )
 
     progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
-
-    # Pagination settings
-    with col2:
-        page_size = 10
-        current_page = st.number_input("Page number", min_value=1, value=1, step=1)
-        st.session_state.status_df_fin = api_helper.request_paginated_finetuning_status(page_size, current_page)
 
     if st.session_state.status_df_fin.empty:
         st.write("")
@@ -87,6 +104,7 @@ def app() -> None:
             selection_mode="multi-row",
             use_container_width=True,
             column_config={"progress": progress_column},
+            height=ST_DATAFRAME_ROW_HEIGHT * (len(st.session_state.status_df_fin) + 1),
         )
 
     if event_fin and event_fin.selection:  # type: ignore[attr-defined] # "DataframeState" has no attribute "selection"
@@ -106,7 +124,7 @@ def app() -> None:
 
 
 def _create_training_option_columns(
-    training_option: TrainingOption
+    training_option: TrainingOption,
 ) -> tuple[str | None, UploadedFile | None, UploadedFile | None]:
     if training_option == TrainingOption.FINE_TUNE:
         base_model_name = st.selectbox(
@@ -200,7 +218,7 @@ def _start_training_job_button(
             base_model_name=base_model_name,
             output_model_name=output_model_name,
             multilot_config=multilot_config,
-            **training_config
+            **training_config,
         )
 
         if training_option == TrainingOption.BASE_TRAIN:

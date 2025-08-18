@@ -154,13 +154,11 @@ def app() -> None:
 
     with m_page_size_col:
         st.session_state.status_df_multi_inf_page_size = st.number_input(
-            "Page size", min_value=10, max_value=100, value=10, step=1, key="multilot_page_size"
+            "Page size", min_value=10, max_value=100, value=10, step=1
         )
 
     with m_current_page_col:
-        st.session_state.status_df_multi_inf_current_page = st.number_input(
-            "Page number", min_value=1, value=1, step=1, key="multilot_page"
-        )
+        st.session_state.status_df_multi_inf_current_page = st.number_input("Page number", min_value=1, value=1, step=1)
         st.session_state.status_df_multi_inf = api_helper.request_paginated_multilot_inference_status(
             page_size=st.session_state.status_df_multi_inf_page_size,
             current_page=st.session_state.status_df_multi_inf_current_page,
@@ -252,8 +250,6 @@ def app() -> None:
                 current_page=st.session_state.status_df_inf_current_page,
             )
 
-    progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
-
     with download_col:
         st.download_button(
             label="Download inference job statuses",
@@ -261,6 +257,8 @@ def app() -> None:
             file_name=f"inference_status_{datetime.now().astimezone()}.csv",
             mime="text/csv",
         )
+
+    progress_column = st.column_config.ProgressColumn(label="progress_bar", min_value=0, max_value=100)
 
     st.header("All inference jobs") if not st.session_state.status_df_inf.empty else st.write("")
 
