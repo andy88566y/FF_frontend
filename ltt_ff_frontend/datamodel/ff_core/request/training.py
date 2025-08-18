@@ -114,7 +114,7 @@ class FFCoreTrainingRequest(BaseModel):
     ]
     hyper_params: Annotated[HyperParams, Field(description="Model training hyper parameters.")]
     skip_particle_mode_list: Annotated[
-        list, Field(default=[], description="List for flags to enable/disable training using particle mode defects.")
+        list, Field(default=[], description="List of flags to enable/disable training using particle mode defects.")
     ]
 
     model_config = ConfigDict(extra="forbid")
