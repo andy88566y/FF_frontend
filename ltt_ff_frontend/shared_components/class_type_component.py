@@ -21,4 +21,4 @@ def gen(classtype_count_list: list[dict[str, Any]]) -> None:
             # Rearrage columns
             classtype_counter_df = classtype_counter_df[["Classification", "ClassType", "Count"]]
 
-            st.dataframe(data=classtype_counter_df)
+            st.dataframe(data=classtype_counter_df, use_container_width=True)
