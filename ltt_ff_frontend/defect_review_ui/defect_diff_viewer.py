@@ -157,16 +157,27 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
 
     # Convert image tensors to numpy arrays
     for p in ["Rt", "T"]:
-        for k in ["aligned_ref", "aligned_test", "aligned_diff"]:
+        for k in ["aligned_ref", "aligned_test", "aligned_diff", "feature_map"]:
             image_data[p][k] = np.array(image_data[p][k])
 
     # Create Plotly subplots
     fig = make_subplots(rows=2, cols=4, subplot_titles=[
-        "Reference [Rt]", "Test [Rt]", "Difference [Rt]", "Placeholder",
-        "Reference [T]", "Test [T]", "Difference [T]", "Placeholder"
+        "Reference [Rt]", "Test [Rt]", "Difference [Rt]", "Feature map [Rt]",
+        "Reference [T]", "Test [T]", "Difference [T]", "Feature map [T]"
     ], horizontal_spacing=0.05, vertical_spacing=0.1)
     
-    placeholder_img = np.zeros((64, 64))
+    
+    ft_color_mapping = {
+        0: ("UNK", "white"),
+        1: ("clear", "purple"),
+        2: ("opaque", "blue"),
+        3: ("edge", "yellow"),
+        4: ("non_edge", "lightsteelblue"),
+        5: ("defect_edge", "orange"),
+        6: ("pin_defect", "red"),
+    }
+    
+    feature_colorscale = [[i / 6, color] for i, (_, color) in enumerate(ft_color_mapping.values())]
 
     seismic_colorscale = [
         [0.0, "blue"],
@@ -178,25 +189,29 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
     for rid, ptype in enumerate(["Rt", "T"]):
         ref_img = image_data[ptype]["aligned_ref"]
         test_img = image_data[ptype]["aligned_test"]
-        diff_img = image_data[ptype]["aligned_diff"]
+        diff_img = image_data[ptype]["aligned_diff"]     
+        feature_map = image_data[ptype]["feature_map"]
 
         max_pos = np.unravel_index(diff_img.argmax(), diff_img.shape)
         min_pos = np.unravel_index(diff_img.argmin(), diff_img.shape)
         crop_size = 16
 
-        for cid, img, cmap, vmin, vmax in zip(
-            [1, 2, 3],
-            [ref_img, test_img, diff_img],
-            ["gray", "gray", seismic_colorscale],
-            [None, None, -diff_clip],
-            [None, None, diff_clip]
+        
+        for cid, img, cmap, vmin, vmax, show_scale in zip(
+            [1, 2, 3, 4],
+            [ref_img, test_img, diff_img, feature_map],
+            ["gray", "gray", seismic_colorscale, feature_colorscale],
+            [None, None, -diff_clip, 0],
+            [None, None, diff_clip, 6],
+            [False, False, True, False]
         ):
             fig.add_trace(go.Heatmap(
                 z=img,
                 colorscale=cmap,
                 zmin=vmin,
                 zmax=vmax,
-                showscale=(cid == 3)
+                showscale=show_scale,
+                hoverinfo="skip"
             ), row=rid + 1, col=cid)
 
             # Add rectangles for defect positions
@@ -210,12 +225,6 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
                     line=dict(color=color, width=1),
                     row=rid + 1, col=cid
                 )
-        
-        fig.add_trace(go.Heatmap(
-                z=placeholder_img,
-                colorscale="gray",
-                showscale=False
-            ), row=rid + 1, col=4)
 
 
     # Update layout
@@ -224,12 +233,15 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
             f"[Defect Aligned Comparison] {layer_name} Lot: {lot_id} | Defect ID: {defect_id} | "
             f"X: {defect_info['X']} | Y: {defect_info['Y']}<br>"
             f"ClassType: {defect_info['ClassType']}, isDefect: {defect_info['isDefect']}, "
-            f"ParticleModeOnly: {defect_info['particleModeOnly']} "
-            f"(lrf-ORIG | pc: {defect_info['PixelCount']}, h: {defect_info['H']}, w: {defect_info['W']})"
+            f" ParticleModeOnly: {defect_info['particleModeOnly']} {defect_info.get('relaxedParticleMode', False)} "
+            f"{defect_info.get('ulParticleMode', False)} {image_data['avail_refs'] == 0}"
+            f" (lrf-ORIG | pc: {defect_info['PixelCount']}, h: {defect_info['H']}, w: {defect_info['W']})"
         ),
         height=800,
         width=1200
     )
+    
+    fig.update_yaxes(autorange='reversed')
 
     st.plotly_chart(fig)
 

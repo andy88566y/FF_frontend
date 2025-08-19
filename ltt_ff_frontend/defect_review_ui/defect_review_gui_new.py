@@ -68,6 +68,7 @@ def app() -> None:
             
             else:
                 text_input_result_dir = result_dir_input
+            # lots = api_helper.list_yaml_lots(data_yaml_input)
             lots = [file.split(".")[0] for file in os.listdir(result_dir_input) if ".db" in file]
 
             if len(lots) > 1:
