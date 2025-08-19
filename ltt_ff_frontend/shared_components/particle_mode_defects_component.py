@@ -41,9 +41,9 @@ def gen(particle_mode_info: dict[str, Any]) -> None:
         df.loc[len(df)] = pd.Series(
             {
                 "Lot ID": lot_id,
-                "Particle-mode-only defects": all_lists.get("Particle-mode-only defects", ["None"]),
-                "Relaxed particle mode defects": all_lists.get("Relaxed particle mode defects", ["None"]),
-                "U/L particle mode defects": all_lists.get("U/L particle mode defects", ["None"]),
+                "Particle-mode-only defects": all_lists.get("Particle-mode-only defects", [-1]),
+                "Relaxed particle mode defects": all_lists.get("Relaxed particle mode defects", [-1]),
+                "U/L particle mode defects": all_lists.get("U/L particle mode defects", [-1]),
                 "LRF Path": lrf_path,
             }
         )
