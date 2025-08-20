@@ -17,7 +17,7 @@ from ltt_ff_frontend.shared_components import (
 UPSET_SORT_OPTIONS = ["default", "ascending", "descending"]
 
 
-def get_require_component_lists(length: int) -> list[str]:
+def get_require_component_lists(length: int) -> dict[str, bool]:
     if length == 0:
         return []
     elif length == 1:
