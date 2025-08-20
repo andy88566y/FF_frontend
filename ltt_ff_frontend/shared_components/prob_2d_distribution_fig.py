@@ -5,11 +5,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from ltt_ff_frontend.shared_components.prob_distribution_fig import get_color_map
+from ltt_ff_frontend.shared_components.prob_distribution_fig import get_classtype_color_map
 
 
 def gen(
-    aggregated_model_data: list[tuple[list[str], list[list[float]], list[int], list[str]]],
+    aggregated_model_data: list[tuple[list[str], list[dict[str, Any]], list[list[float]], list[int], list[str]]],
     model_1: dict[str, Any],
     model_2: dict[str, Any],
     split_lot: bool,
@@ -18,22 +18,24 @@ def gen(
     m1_name = model_1["model_hash"]
     m2_name = model_2["model_hash"]
     if len(aggregated_model_data) == 1:
-        defect_ids, model_probs, ans, lot_ids = aggregated_model_data[0]
+        defect_ids, defect_infos, model_probs, ans, lot_ids = aggregated_model_data[0]
         classifications = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in ans]
         m1_probs = np.array(model_probs)[:, 0]
         m2_probs = np.array(model_probs)[:, 1]
     else:
-        defect_ids, m1_probs, m1_ans, lot_ids = aggregated_model_data[0]
-        m2_defect_ids, m2_probs, m2_ans, m2_lot_ids = aggregated_model_data[1]
+        defect_ids, defect_infos, m1_probs, m1_ans, lot_ids = aggregated_model_data[0]
+        m2_defect_ids, m2_defect_infos, m2_probs, m2_ans, m2_lot_ids = aggregated_model_data[1]
         m1_probs = np.array(m1_probs)[:, 0]
         m2_probs = np.array(m2_probs)[:, 0]
         assert sorted(lot_ids) == sorted(m2_lot_ids), "Lot IDs Mismatch!"
         assert sorted(defect_ids) == sorted(m2_defect_ids), "Defect IDs Count Mismatch!"
+        assert sorted(defect_infos) == sorted(m2_defect_infos), "Defect Infos Count Mismatch!"
 
         classifications = [
             "Defect" if (a1 * a2) == 1 else "Non-defect" if (a1 + a2) == 0 else "No-Label"
             for a1, a2 in zip(m1_ans, m2_ans)
         ]
+    classtypes = [str(defect_info["ClassType"] ) for defect_info in defect_infos]
     if split_lot:
         legends = [f"{classification} {lot_id}" for classification, lot_id in zip(classifications, lot_ids)]
     else:
@@ -43,6 +45,7 @@ def gen(
             "Defect_ID": defect_ids,
             f"Probability_{m1_name}": m1_probs,
             f"Probability_{m2_name}": m2_probs,
+            "Classtype": classtypes,
             "Classification": classifications,
             "Legends": legends,
         }
@@ -63,7 +66,6 @@ def gen(
         "star",
     ]
     symbols = available_symbols[: len(df["Legends"])]
-
     fig = px.scatter(
         df,
         x=f"Probability_{m1_name}",
@@ -72,8 +74,8 @@ def gen(
         range_y=[0.0, 1.0],
         marginal_x="histogram",
         marginal_y="histogram",
-        color="Legends",
-        color_discrete_map=get_color_map(df["Legends"]),
+        color="Classtype",
+        color_discrete_map= get_classtype_color_map(df["Classtype"]),
         hover_data={"Defect_ID": True},
         symbol="Legends",
         symbol_sequence=symbols,
