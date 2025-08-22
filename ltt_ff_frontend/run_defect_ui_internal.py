@@ -11,7 +11,7 @@ from ltt_ff_frontend.model_converter import model_converter
 from ltt_ff_frontend.regression_result_viewer import regression_result_viewer
 from ltt_ff_frontend.regression_test_ui import regression_test
 from ltt_ff_frontend.result_viewer import result_viewer, result_viewer_summary
-from ltt_ff_frontend.training import training, training_by_config
+from ltt_ff_frontend.training import training_by_config
 
 
 if __name__ == "__main__":
@@ -58,7 +58,6 @@ if __name__ == "__main__":
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
 
-    page_training = st.Page(training.app, url_path="training", title="Training", icon=":material/build:")
     page_training_by_config = st.Page(
         training_by_config.app, url_path="training_by_config", title="Training By Config", icon=":material/build:"
     )
@@ -90,7 +89,6 @@ if __name__ == "__main__":
             page_defect_review_gui,
             page_regression_result_viewer,
             page_regression_test,
-            page_training,
             page_training_by_config,
             page_model_converter,
             page_lrf_processor,
