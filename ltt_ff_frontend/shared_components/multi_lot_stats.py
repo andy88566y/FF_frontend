@@ -3,6 +3,8 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from ltt_ff_frontend.constant import ST_DATAFRAME_ROW_HEIGHT
+
 
 BG_COLORS = {
     "red": "#ffcccb",
@@ -135,7 +137,7 @@ def gen(
         hide_index=True,
         on_select="rerun",
         selection_mode="multi-row",
-        height=35 * (len(rows) + 2),
+        height=ST_DATAFRAME_ROW_HEIGHT * (len(rows) + 2),
     )
 
     selected_rows = event.selection.rows

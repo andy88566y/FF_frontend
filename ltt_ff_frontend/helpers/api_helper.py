@@ -168,7 +168,7 @@ def get_particle_mode_only_defects(
 
 
 def match_automation_results(
-    add_lrf_dir: str, ff_result_dir: str, date_range: tuple[datetime.date, datetime.date]
+    labeled_lrf_dir: str, ff_result_dir: str, labeled_lrf_type: str, date_range: tuple[datetime.date, datetime.date]
 ) -> dict[str, Any]:
     """
     Get CR & FFR for each matching ADD.lrf add FF .lrf.
@@ -176,8 +176,9 @@ def match_automation_results(
     r = requests.post(
         API_ROOT + "result/get_answer_matching_components",
         json={
-            "add_lrf_dir": add_lrf_dir,
+            "labeled_lrf_dir": labeled_lrf_dir,
             "ff_result_dir": ff_result_dir,
+            "labeled_lrf_type": labeled_lrf_type,
             "start_date": json.dumps(date_range[0], default=str),
             "end_date": json.dumps(date_range[1], default=str),
         },

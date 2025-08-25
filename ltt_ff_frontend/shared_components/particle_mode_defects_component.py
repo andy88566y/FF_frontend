@@ -22,19 +22,19 @@ def gen(particle_mode_info: dict[str, Any]) -> None:
 
     lrf_paths = particle_mode_info["lrf_path_list"]
 
-    df_dict = {}
+    df_dict: dict[str, Any] = {}
 
     for particle_mode_defects_per_lot, lrf_path in zip(particle_mode_only_defect_lists, lrf_paths):
         for k, v in particle_mode_defects_per_lot.items():
-            df_dict[k] = {"Particle-mode-only defects": v, "LRF Path": lrf_path}
+            df_dict.setdefault(k, {}).update({"Particle-mode-only defects": v, "LRF Path": lrf_path})
 
     for relaxed_particle_mode_defects_per_lot, lrf_path in zip(relaxed_particle_mode_lists, lrf_paths):
         for k, v in relaxed_particle_mode_defects_per_lot.items():
-            df_dict[k].update({"Relaxed particle mode defects": v, "LRF Path": lrf_path})
+            df_dict.setdefault(k, {}).update({"Relaxed particle mode defects": v, "LRF Path": lrf_path})
 
     for ul_particle_mode_defects_per_lot, lrf_path in zip(ul_particle_mode_lists, lrf_paths):
         for k, v in ul_particle_mode_defects_per_lot.items():
-            df_dict[k].update({"U/L particle mode defects": v, "LRF Path": lrf_path})
+            df_dict.setdefault(k, {}).update({"U/L particle mode defects": v, "LRF Path": lrf_path})
 
     # Update df_dict to conform to steamlit requirements
     for lot_id, all_lists in df_dict.items():

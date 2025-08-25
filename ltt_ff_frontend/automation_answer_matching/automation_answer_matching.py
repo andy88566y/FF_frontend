@@ -1,6 +1,7 @@
 import streamlit as st
 from loguru import logger
 
+from ltt_ff_frontend.constant import LRFType
 from ltt_ff_frontend.helpers import api_helper
 from ltt_ff_frontend.shared_components import (
     class_type_component,
@@ -31,6 +32,10 @@ def app() -> None:
             help="YYYY/MM/DD subdirectories will be searched.",
         )
 
+    labeled_lrf_type_col, _ = st.columns(2)
+    with labeled_lrf_type_col:
+        labeled_lrf_type = st.selectbox(label="Select labeled LRF type", options=[lrftype.value for lrftype in LRFType])
+
     date_range = st.date_input(label="Select period (start & end dates are inclusive)", value=())
 
     if not labeled_lrf_dir or not ff_result_dir or not date_range or len(date_range) < 2:
@@ -39,7 +44,10 @@ def app() -> None:
     st.divider()
 
     ui_components = api_helper.match_automation_results(
-        add_lrf_dir=labeled_lrf_dir, ff_result_dir=ff_result_dir, date_range=date_range
+        labeled_lrf_dir=labeled_lrf_dir,
+        ff_result_dir=ff_result_dir,
+        labeled_lrf_type=labeled_lrf_type,
+        date_range=date_range,
     )
 
     with st.expander(label="Incomplete lots"):
