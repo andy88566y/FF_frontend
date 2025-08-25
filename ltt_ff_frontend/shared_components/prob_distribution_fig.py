@@ -13,7 +13,7 @@ DEFECT_COLOR_MAPPING = {
 }
 
 TOTAL_CLASSTYPES = 32
-CLASSTYPE_COLOR_MAPPING = px.colors.sample_colorscale("rainbow", [(i + 1 )/ (TOTAL_CLASSTYPES - 1) for i in range(TOTAL_CLASSTYPES -2, -2, -1)])
+CLASSTYPE_COLOR_MAPPING = px.colors.sample_colorscale("rainbow", [(i + 1) / TOTAL_CLASSTYPES for i in range(TOTAL_CLASSTYPES -2, -2, -1)])
 
 def get_legend_color_map(legends_list: list[str]) -> dict[str, Any]:
     unique_legends = set(legends_list)

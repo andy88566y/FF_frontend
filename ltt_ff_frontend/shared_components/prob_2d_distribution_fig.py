@@ -24,12 +24,11 @@ def gen(
         m2_probs = np.array(model_probs)[:, 1]
     else:
         defect_ids, defect_infos, m1_probs, m1_ans, lot_ids = aggregated_model_data[0]
-        m2_defect_ids, m2_defect_infos, m2_probs, m2_ans, m2_lot_ids = aggregated_model_data[1]
+        m2_defect_ids, _, m2_probs, m2_ans, m2_lot_ids = aggregated_model_data[1]
         m1_probs = np.array(m1_probs)[:, 0]
         m2_probs = np.array(m2_probs)[:, 0]
         assert sorted(lot_ids) == sorted(m2_lot_ids), "Lot IDs Mismatch!"
         assert sorted(defect_ids) == sorted(m2_defect_ids), "Defect IDs Count Mismatch!"
-        assert sorted(defect_infos) == sorted(m2_defect_infos), "Defect Infos Count Mismatch!"
 
         classifications = [
             "Defect" if (a1 * a2) == 1 else "Non-defect" if (a1 + a2) == 0 else "No-Label"

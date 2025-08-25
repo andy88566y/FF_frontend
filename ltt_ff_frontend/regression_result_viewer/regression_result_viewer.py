@@ -39,7 +39,7 @@ def app() -> None:
         yaml_path = os.path.join(regression_result_parent_dir, CONFIG_NAME)
         data = None
         if os.path.isfile(yaml_path):
-            with open(yaml_path) as f:
+            with open(yaml_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
         layers = data["layers"] if data else ["OD", "PO", "CUT", "M0M2", "M1", "VIA"]
         sites = data["sites"] if data else ["F20", "F12", "F18A", "F18B", "F18EBO", "F15EBO"]
