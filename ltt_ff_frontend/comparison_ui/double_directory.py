@@ -67,7 +67,7 @@ def app() -> None:
             inference_result_dir=result_dirs[0],
             secondary_inference_result_dir=result_dirs[1],
             recipe=None,
-            required_components=[ResultViewerComponents.TWO_D_DEFECT_DISTRIBUTION_CHART.value],
+            required_components={ResultViewerComponents.TWO_D_DEFECT_DISTRIBUTION_CHART.value: True},
             required_input={
                 "model_ids": [selected_models[0]["id"]],
                 "model_ids_2": [selected_models[1]["id"]],

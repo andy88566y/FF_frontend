@@ -77,7 +77,7 @@ def get_model_details(model_name: str) -> dict[str, Any]:
 @st.cache_data(ttl="60s")
 def get_result_viewer_components(
     inference_result_dir: str,
-    required_components: list[str],
+    required_components: dict[str, bool],
     recipe: dict[str, Any] | None = None,
     required_input: Optional[dict[str, Any]] = None,
     secondary_inference_result_dir: str = "",  # only required for 2D Dist. Chart

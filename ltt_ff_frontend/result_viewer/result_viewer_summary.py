@@ -73,12 +73,12 @@ def app() -> None:
     with st.container():
         st.subheader("Inference Results")
 
-    required_components = [
-        ResultViewerComponents.OOS_SUMMARY.value,
-        ResultViewerComponents.MISSED_DEFECT_LIST.value,
-        ResultViewerComponents.PARTICLE_MODE_LIST.value,
-        ResultViewerComponents.CLASSTYPE_COUNT.value,
-    ]
+    required_components = {
+        ResultViewerComponents.OOS_SUMMARY.value: True,
+        ResultViewerComponents.MISSED_DEFECT_LIST.value: True,
+        ResultViewerComponents.PARTICLE_MODE_LIST.value: True,
+        ResultViewerComponents.CLASSTYPE_COUNT.value: True,
+    }
 
     try:
         result_viewer_components = api_helper.get_result_viewer_components(
