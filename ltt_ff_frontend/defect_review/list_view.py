@@ -41,8 +41,8 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
         lot_id=selected_lot_id,
     )[0]
     db_metadata = api_helper.get_db_metadata_lists(output_dir=result_dir, lot_id=selected_lot_id)[0]
-    defect_prob_list = api_helper.get_probabilities_per_model(output_dir=result_dir, lot_id=selected_lot_id)
-    print(len(defect_prob_list["probability_list"][0]))
+    if models_name != None:
+        defect_prob_list = api_helper.get_probabilities_per_model(output_dir=result_dir, lot_id=selected_lot_id)
 
     # Extract relevant columns and convert "X" and "Y" to floats
     defect_data = [
@@ -59,7 +59,6 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
     ]
     # Convert to DataFrame
     df = pd.DataFrame(defect_data)
-    print("df", len(df))
     prob_df = pd.DataFrame(
         defect_prob_list["probability_list"][0],
         columns=[f"P_{models_name[i]}" for i in range(10)]
@@ -223,8 +222,9 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
 
     # Select only the columns I want to display
     all_columns = ["No", "UniqueID", "X", "Y", "ClassType", "GT", "Pred", "P_rank", "Cluster"]
-    for i in range(len(models_name)):
-            all_columns.append("P_" + models_name[i])
+    if models_name != None:
+        for i in range(len(models_name)):
+                all_columns.append("P_" + models_name[i])
     # Sample DataFrame (replace with your actual data)
     df = st.session_state.filtered_df 
     # Let user select columns to display

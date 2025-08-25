@@ -9,9 +9,9 @@ import pydeck as pdk
 from sklearn.cluster import DBSCAN
 
 
-from ltt_ff_frontend.defect_review_ui import list_view_new
-from ltt_ff_frontend.defect_review_ui.list_view_new import generate_colors, hex_to_rgb
-from ltt_ff_frontend.defect_review_ui.lrf_constant import lttswadc_map
+from ltt_ff_frontend.defect_review import list_view
+from ltt_ff_frontend.defect_review.list_view import generate_colors, hex_to_rgb
+from ltt_ff_frontend.defect_review.lrf_constant import lttswadc_map
 from ltt_ff_frontend.defect_review_ui.defect_diff_viewer import draw_diff_img_plotly
 from ltt_ff_frontend.helpers import api_helper
 
@@ -58,18 +58,26 @@ def app() -> None:
                 st.query_params["data_yaml"] = base64.urlsafe_b64encode(data_yaml_input.encode()).decode()
                 st.rerun()
 
-            # Validate directories
-            if not os.path.isdir(result_dir_input):
-                st.error(f"Invalid result directory: {result_dir_input}")
-                st.stop()
-
-            if not result_dir_input or not data_yaml_input:
+            if not result_dir_input and not data_yaml_input:
                 st.caption("Please input an Result Directory and Data yml to begin reviewing defects.")
             
             else:
                 text_input_result_dir = result_dir_input
-            # lots = api_helper.list_yaml_lots(data_yaml_input)
-            lots = [file.split(".")[0] for file in os.listdir(result_dir_input) if ".db" in file]
+
+            dir_lots = []
+            data_lots = []
+            if result_dir_input:
+                dir_lots = [file.split(".")[0] for file in os.listdir(result_dir_input) if ".db" in file]
+            if data_yaml_input:
+                data_lots = api_helper.list_yaml_lots(data_yaml_input)
+
+            
+            if not dir_lots:
+                lots = data_lots
+            elif not data_lots:
+                lots = dir_lots
+            else:
+                lots = list(set(dir_lots) & set(data_lots))
 
             if len(lots) > 1:
                 selected_lot_id = st.selectbox(label="Select a Lot ID", options=lots)
@@ -362,6 +370,7 @@ def app() -> None:
                 modelName = "model_name_" + str(x)
                 models_threshold.append(db_metadata[thresholdName])
                 models_threshold_c.append(db_metadata[thresholdcName])
+                #Todo, if match not found, just keep the model name
                 models_name.append(re.search(r"#([^#\.]+)\.", db_metadata[modelName]).group(1))
             
             table_data = {

@@ -4,7 +4,8 @@ from loguru import logger
 from ltt_ff_frontend.automation_answer_matching import automation_answer_matching
 from ltt_ff_frontend.comparison_ui import comparison_viewer
 from ltt_ff_frontend.data_yaml_processor import data_yaml_processor
-from ltt_ff_frontend.defect_review_ui import defect_diff_viewer, defect_review_gui
+from ltt_ff_frontend.defect_review_ui import defect_diff_viewer
+from ltt_ff_frontend.defect_review import defect_review_gui
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
 from ltt_ff_frontend.result_viewer import result_viewer, result_viewer_summary
