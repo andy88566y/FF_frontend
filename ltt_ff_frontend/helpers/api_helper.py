@@ -2,7 +2,7 @@ import json
 import typing
 from datetime import datetime
 from pprint import pformat
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Dict
 
 import numpy as np
 import pandas as pd
@@ -410,6 +410,27 @@ def get_lrf_data_lists(
     else:
         return lrf_data_with_ans_list
 
+
+@st.cache_data(ttl="30s")
+def parse_lrf_data_lists(
+    lrf_path: str
+) -> list:
+    """
+    Return lrf data with selected columns
+    """
+    r = requests.get(
+        API_ROOT + "parse_lrf",
+        params={
+            "lrf_path": lrf_path,
+        },
+        timeout=180,
+    )
+    if r.json()["status"] == "error":
+        logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
+    else:
+        lrf_data_list = r.json()["defect_info"]
+        return lrf_data_list
 
 @st.cache_data(ttl="10s")
 def get_roc_data(output_dir: str, return_curve: bool = True) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
@@ -1544,21 +1565,9 @@ def generate_diff_images(data_yaml_path: str, lot_id: str, defect_id: str, norm:
     return r.json()
 
 
-# TODO: Move to backend
-@st.cache_data(ttl="60s")
-def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
-    with open(data_yaml_path, encoding="utf-8") as f:
-        raw_data_lots = yaml.load(f, Loader=yaml.Loader)
-        data_lots = {d["lot_id"]: d for d in raw_data_lots["data_paths"]}
-    logger.success(f"Total lots loaded: {len(data_lots)}")
-    return data_lots
-
-
 #####################################################################################################
 # Regression Test                                                                                #
 #####################################################################################################
-
-
 @st.cache_data(ttl="60s")
 def fetch_valid_lots(test_data: dict[str, Any], gen_stats: bool) -> dict[str, Any]:
     data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
@@ -1614,3 +1623,25 @@ def request_regression_test(
     else:
         logger.error(f"Error occurred when calling Request Regression API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling Request Regression  API: {r.json()['message']}")
+
+
+# TODO: Move to backend
+@st.cache_data(ttl="60s")
+
+def get_lot_lrf_paths(data_yaml_path: str) -> Dict[str, str]:
+    with open(data_yaml_path, encoding="utf-8") as f:
+        raw_data = yaml.safe_load(f)
+
+    lots = raw_data.get("data_paths", [])
+
+    if not isinstance(lots, list):
+        raise ValueError("Expected 'data_paths' to be a list of lot entries.")
+
+    lot_lrf_map = {
+        lot["lot_id"]: lot["lrf_path"]
+        for lot in lots
+        if isinstance(lot, dict) and lot.get("lot_id") and lot.get("lrf_path")
+    }
+
+    print(f"Total lots with lrf_path: {len(lot_lrf_map)}")
+    return lot_lrf_map

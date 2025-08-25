@@ -16,7 +16,7 @@ from ltt_ff_frontend.defect_review_ui.defect_diff_viewer import draw_diff_img_pl
 from ltt_ff_frontend.helpers import api_helper
 
 def app() -> None:
-    st.title("Defect Review new")
+    st.title("Defect Review")
     
     col1, col2 = st.columns([1, 3])
     ###Mask info
@@ -69,8 +69,7 @@ def app() -> None:
             if result_dir_input:
                 dir_lots = [file.split(".")[0] for file in os.listdir(result_dir_input) if ".db" in file]
             if data_yaml_input:
-                data_lots = api_helper.list_yaml_lots(data_yaml_input)
-
+                data_lots = list(api_helper.get_lot_lrf_paths(data_yaml_input).keys())
             
             if not dir_lots:
                 lots = data_lots
@@ -197,28 +196,32 @@ def app() -> None:
             "F": "#55ff7f",  # green
             "UNK": "#808080",  # grey
         }
-
-        defects = api_helper.get_lrf_data_lists(
-            output_dir=text_input_result_dir,
-            cols=["No", "UniqueID", "X", "Y", "ClassType"],
-            include_prob=True,
-            lot_id=selected_lot_id,
-        )[0]
-        db_metadata = api_helper.get_db_metadata_lists(output_dir=text_input_result_dir, lot_id=selected_lot_id)[0]
-        defect_prob = api_helper.get_probabilities_per_model(output_dir=text_input_result_dir, lot_id=selected_lot_id)
+        if text_input_result_dir:       
+            defects = api_helper.get_lrf_data_lists(
+                output_dir=text_input_result_dir,
+                cols=["No", "UniqueID", "X", "Y", "ClassType"],
+                include_prob=True,
+                lot_id=selected_lot_id,
+            )[0]
+            db_metadata = api_helper.get_db_metadata_lists(output_dir=text_input_result_dir, lot_id=selected_lot_id)[0]
+            defect_prob = api_helper.get_probabilities_per_model(output_dir=text_input_result_dir, lot_id=selected_lot_id)
+            defect_data = [
+                {
+                    "No": defect["No"],
+                    "UniqueID": defect["UniqueID"],
+                    "X": float(defect["X"]),
+                    "Y": float(defect["Y"]),
+                    "ClassType": defect["ClassType"],
+                    "Ans": defect["Ans"],
+                    "Probability": defect["Probability"],
+                }
+                for defect in defects
+            ]
+        else:
+            pass
+       
         # Extract relevant columns and convert "X" and "Y" to floats
-        defect_data = [
-            {
-                "No": defect["No"],
-                "UniqueID": defect["UniqueID"],
-                "X": float(defect["X"]),
-                "Y": float(defect["Y"]),
-                "ClassType": defect["ClassType"],
-                "Ans": defect["Ans"],
-                "Probability": defect["Probability"],
-            }
-            for defect in defects
-        ]
+        
 
         # Convert to DataFrame
         df = pd.DataFrame(defect_data)
