@@ -5,14 +5,14 @@ from ltt_ff_frontend.shared_components.chart_drawer.upset import plot_upset
 
 
 def gen(
-    aggregated_model_data: tuple[list[str], list[float], list[int], list[str]],
+    aggregated_model_data: tuple[list[str], list[dict], list[float], list[int], list[str]],
     intersections: tuple[list[list[int]]],
     model_names: list[str],
     split_lot: bool,
     sort_by: str,
     exclude_zero: bool,
 ) -> tuple:
-    defect_ids, prob_lists, ans, lot_ids = aggregated_model_data
+    defect_ids, _, prob_lists, ans, lot_ids = aggregated_model_data
     classifications = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in ans]
     tp_datas, tn_datas, tp_corrections, tn_corretions = intersections
 
