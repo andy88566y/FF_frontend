@@ -68,7 +68,6 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
         # Concatenate with your existing df
         df = pd.concat([df, prob_df], axis=1)
         # Set the "No" column as the index
-        df["GT"] = df["GT"].astype(int)
         df["P_rank"] = df["P_rank"].astype(float)
         df["UniqueID"] = df["UniqueID"].astype(str)
     else:
@@ -96,6 +95,7 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
     df["X"] = df["X"].astype(float)
     df["Y"] = df["Y"].astype(float)
     df["ClassType"] = df["ClassType"].astype(int)
+    df["GT"] = df["GT"].astype(int)
 
     st.session_state.filtered_df = df
     # Initialize session state for selected index
@@ -167,7 +167,7 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
     with filter_options_col:
         # Define the columns I want to display
         if result_dir:
-            specific_columns = ["UniqueID", "X", "Y", "ClassType", "GT", "Pred", "Cluster"]
+            specific_columns = ["UniqueID", "X",  "Y", "ClassType", "GT", "Pred", "Cluster"]
             for i in range(len(models_name)):
                 specific_columns.append("P_" + models_name[i])
         else:
