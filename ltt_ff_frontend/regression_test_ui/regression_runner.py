@@ -174,7 +174,7 @@ def app() -> None:
                 os.makedirs(reg_output_dir, exist_ok=True)
                 yaml_path = os.path.join(reg_output_dir, "regression_config.yaml")
 
-                with open(yaml_path, "w") as f:
+                with open(yaml_path, "w", encoding="utf-8") as f:
                     yaml.dump(regression_config, f)
                 st.success(f"Test config saved to: {yaml_path}")
 
