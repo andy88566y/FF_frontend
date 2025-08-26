@@ -143,7 +143,6 @@ def draw_diff_img(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, 
 
 def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool, diff_clip: float = 0.3):
     # Load data
-    data_lots = api_helper.list_yaml_lots(data_yaml_path)
     diff_img_data = api_helper.generate_diff_images(data_yaml_path, lot_id, defect_id, norm)
 
     if diff_img_data["status"] == "error":
@@ -153,7 +152,6 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
     # Extract metadata and image tensors
     defect_info = diff_img_data["defect_meta"]
     image_data = diff_img_data["image_data"]
-    layer_name = data_lots[lot_id].get("layer_group", "")
 
     # Convert image tensors to numpy arrays
     for p in ["Rt", "T"]:
@@ -230,7 +228,7 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
     # Update layout
     fig.update_layout(
         title_text=(
-            f"[Defect Aligned Comparison] {layer_name} Lot: {lot_id} | Defect ID: {defect_id} | "
+            f"[Defect Aligned Comparison] Lot: {lot_id} | Defect ID: {defect_id} | "
             f"X: {defect_info['X']} | Y: {defect_info['Y']}<br>"
             f"ClassType: {defect_info['ClassType']}, isDefect: {defect_info['isDefect']}, "
             f" ParticleModeOnly: {defect_info['particleModeOnly']} {defect_info.get('relaxedParticleMode', False)} "

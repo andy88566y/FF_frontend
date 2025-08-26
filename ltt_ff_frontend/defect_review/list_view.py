@@ -32,54 +32,71 @@ def generate_colors(num_clusters):
     return colors
 
 
-def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
+def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name: list) -> None:
     
-    defects = api_helper.get_lrf_data_lists(
-        output_dir=result_dir,
-        cols=["No", "UniqueID", "X", "Y", "ClassType"],
-        include_prob=True,
-        lot_id=selected_lot_id,
-    )[0]
-    db_metadata = api_helper.get_db_metadata_lists(output_dir=result_dir, lot_id=selected_lot_id)[0]
-    if models_name != None:
-        defect_prob_list = api_helper.get_probabilities_per_model(output_dir=result_dir, lot_id=selected_lot_id)
+    if result_dir:
+        defects = api_helper.get_lrf_data_lists(
+            output_dir=result_dir,
+            cols=["No", "UniqueID", "X", "Y", "ClassType"],
+            include_prob=True,
+            lot_id=selected_lot_id,
+        )[0]
+        db_metadata = api_helper.get_db_metadata_lists(output_dir=result_dir, lot_id=selected_lot_id)[0]
+        if models_name != None:
+            defect_prob_list = api_helper.get_probabilities_per_model(output_dir=result_dir, lot_id=selected_lot_id)
 
-    # Extract relevant columns and convert "X" and "Y" to floats
-    defect_data = [
-        {
-            "No": defect["No"],
-            "UniqueID": defect["UniqueID"],
-            "X": float(defect["X"]),
-            "Y": float(defect["Y"]),
-            "ClassType": defect["ClassType"],
-            "GT": defect["Ans"],
-            "P_rank": defect["Probability"],
-        }
-        for defect in defects
-    ]
-    # Convert to DataFrame
-    df = pd.DataFrame(defect_data)
-    prob_df = pd.DataFrame(
-        defect_prob_list["probability_list"][0],
-        columns=[f"P_{models_name[i]}" for i in range(10)]
-    )
+        # Extract relevant columns and convert "X" and "Y" to floats
+        defect_data = [
+            {
+                "No": defect["No"],
+                "UniqueID": defect["UniqueID"],
+                "X": float(defect["X"]),
+                "Y": float(defect["Y"]),
+                "ClassType": defect["ClassType"],
+                "GT": defect["Ans"],
+                "P_rank": defect["Probability"],
+            }
+            for defect in defects
+        ]
+        # Convert to DataFrame
+        df = pd.DataFrame(defect_data)
+        prob_df = pd.DataFrame(
+            defect_prob_list["probability_list"][0],
+            columns=[f"P_{models_name[i]}" for i in range(10)]
+        )
 
-    # Concatenate with your existing df
-    df = pd.concat([df, prob_df], axis=1)
-    # Set the "No" column as the index
+        # Concatenate with your existing df
+        df = pd.concat([df, prob_df], axis=1)
+        # Set the "No" column as the index
+        df["GT"] = df["GT"].astype(int)
+        df["P_rank"] = df["P_rank"].astype(float)
+        df["UniqueID"] = df["UniqueID"].astype(str)
+    else:
+        lot_lrf_path_map = api_helper.get_lot_lrf_paths(data_yaml_path)
+
+        lrf_path = lot_lrf_path_map[selected_lot_id]
+        defects = api_helper.parse_lrf_data_lists(lrf_path=lrf_path)
+        defect_data = [
+            {
+                "No": defect["No"],
+                "X": float(defect["X"]),
+                "Y": float(defect["Y"]),
+                "ClassType": defect["ClassType"],
+                "GT": defect["isDefect"]
+            }
+            for defect in defects
+        ]
+        print(defect_data)
+        df = pd.DataFrame(defect_data)
+
     df.set_index("No", inplace=True)
     df["No"] = df.index
-    
-    print(df.columns.tolist())
-
     # Ensure all columns have consistent data types
     df["No"] = df["No"].astype(int)
-    df["UniqueID"] = df["UniqueID"].astype(str)
     df["X"] = df["X"].astype(float)
     df["Y"] = df["Y"].astype(float)
     df["ClassType"] = df["ClassType"].astype(int)
-    df["GT"] = df["GT"].astype(int)
-    df["P_rank"] = df["P_rank"].astype(float)
+
     st.session_state.filtered_df = df
     # Initialize session state for selected index
     if "selected_row_index" not in st.session_state:
@@ -97,17 +114,17 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
     if "lot_id" not in st.session_state:
         st.session_state.lot_id = ""
     # Initialize session state for probability threshold
-    if "prob_threshold" not in st.session_state:
+    if result_dir and "prob_threshold" not in st.session_state:
         st.session_state.prob_threshold = db_metadata.get("model_threshold", db_metadata.get("model_threshold_0", -1))
     # Ensure color_option is set in session state
     if "color_option" not in st.session_state:
         st.session_state.color_option = "ClassType"
 
     # Add "D/ND" column based on the threshold (Defect/Not defect)
-    df["Pred"] = df["P_rank"] >= st.session_state.prob_threshold
-
-    df["GT"] = df["GT"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
-    df["Pred"] = df["Pred"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
+    if result_dir:
+        df["Pred"] = df["P_rank"] >= st.session_state.prob_threshold
+        df["GT"] = df["GT"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
+        df["Pred"] = df["Pred"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
 
     # Normalize coordinates
     x_min, x_max = df["X"].min(), df["X"].max()
@@ -149,9 +166,13 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
     # Add filter options
     with filter_options_col:
         # Define the columns I want to display
-        specific_columns = ["UniqueID", "X", "Y", "ClassType", "GT", "Pred", "Cluster"]
-        for i in range(len(models_name)):
-            specific_columns.append("P_" + models_name[i])
+        if result_dir:
+            specific_columns = ["UniqueID", "X", "Y", "ClassType", "GT", "Pred", "Cluster"]
+            for i in range(len(models_name)):
+                specific_columns.append("P_" + models_name[i])
+        else:
+            specific_columns = ["UniqueID", "X", "Y", "ClassType", "GT", "Cluster"]
+
         # Filter the DataFrame columns to only include the specific columns
         filtered_columns = [col for col in df.columns if col in specific_columns]
         # Use the filtered columns in the selectbox
@@ -221,7 +242,11 @@ def app(result_dir: str, selected_lot_id: str, models_name: list) -> None:
     st.subheader("List View")
 
     # Select only the columns I want to display
-    all_columns = ["No", "UniqueID", "X", "Y", "ClassType", "GT", "Pred", "P_rank", "Cluster"]
+    if result_dir:
+        all_columns = ["No", "UniqueID", "X", "Y", "X_norm", "Y_norm", "ClassType", "GT", "Pred", "P_rank", "Cluster"]
+    else:
+        all_columns = ["No", "X", "Y","X_norm", "Y_norm", "ClassType", "GT", "Cluster"]
+
     if models_name != None:
         for i in range(len(models_name)):
                 all_columns.append("P_" + models_name[i])
