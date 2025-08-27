@@ -187,8 +187,12 @@ def app() -> None:
                 # format into something easy to copy-paste
                 message = ast.literal_eval(r["message"].split(":")[-1])
                 for converted_model in message:
-                    st.success(f"{converted_model[0]}  \n{converted_model[1]}")
-                    logger.success(f"{converted_model[0]}  \n{converted_model[1]}")
+                    if "error" in converted_model[1]:
+                        st.error(f"{converted_model[0]}  \n{converted_model[1]}")
+                        logger.error(f"{converted_model[0]}  \n{converted_model[1]}")
+                    else:
+                        st.success(f"{converted_model[0]}  \n{converted_model[1]}")
+                        logger.success(f"{converted_model[0]}  \n{converted_model[1]}")
             except ValueError:
                 logger.error("Encountered ValueError when formatting response message. Showing original message.")
                 st.success(r["message"])
