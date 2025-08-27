@@ -6,6 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from ltt_ff_frontend.shared_components.prob_distribution_fig import get_classtype_color_map
+from loguru import logger
 
 
 def gen(
@@ -151,7 +152,7 @@ def gen(
             type="rect",
             x0=model_1["threshold_c"],
             x1=1,
-            y0=max(0, model_2["threshold"]) if model_2["model_hash"].startswith("RULE") else 0,
+            y0=0 if model_1["model_hash"].startswith("RULE") else max(0, model_2["threshold"]), # if model 1 is rule model, force the result to be true defect
             y1=1,
             xref="x",
             yref="y",
@@ -161,7 +162,7 @@ def gen(
         )
         fig.add_shape(
             type="rect",
-            x0=max(0, model_1["threshold"]) if model_1["model_hash"].startswith("RULE") else 0,
+            x0= 0 if model_2["model_hash"].startswith("RULE") else max(0, model_1["threshold"]), # if model 2 is rule model, force the result to be true defect
             x1=model_1["threshold_c"],
             y0=model_2["threshold_c"],
             y1=1,
@@ -183,7 +184,6 @@ def gen(
             opacity=0.3,
             line_width=0,
         )
-
         fig.add_shape(
             type="rect",
             x0=0,
