@@ -164,7 +164,8 @@ class Regression_Recipe:
         if not match:
             raise ValueError(f"Invalid filename format: {file_name}. Expected format: WX_layer_site")
         week, layer, site = match.groups()
-        self.update_week(week[1:])
+        week = week[1:]
+        self.update_week(week)
         self.recipe.setdefault(layer, {}).setdefault(week, {})[site] = update_data
 
     def recipe_model_mapping(self) -> None:
