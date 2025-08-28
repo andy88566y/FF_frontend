@@ -57,25 +57,6 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
     if "color_option" not in st.session_state:
         st.session_state.color_option = "ClassType"
 
-    # Add "D/ND" column based on the threshold (Defect/Not defect)
-    if result_dir:
-        df["Pred"] = df["P_rank"] >= st.session_state.prob_threshold
-        df["GT"] = df["GT"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
-        df["Pred"] = df["Pred"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
-
-    # Normalize coordinates
-    x_min, x_max = df["X"].min(), df["X"].max()
-    y_min, y_max = df["Y"].min(), df["Y"].max()
-    df["X_norm"] = (df["X"] - x_min) / (x_max - x_min)
-    df["Y_norm"] = (df["Y"] - y_min) / (y_max - y_min)
-
-    # Use DBScan to identify clusters
-    dbscan = DBSCAN(eps=50, min_samples=5)
-    df["Cluster"] = dbscan.fit_predict(df[["X", "Y"]])
-
-    # Count the total number of clusters
-    total_clusters = df["Cluster"].nunique()
-
     # Initialize session state for filter criteria
     if "filter_column" not in st.session_state:
         st.session_state.filter_column = df.columns[0]
