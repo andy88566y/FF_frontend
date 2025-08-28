@@ -1564,6 +1564,61 @@ def generate_diff_images(data_yaml_path: str, lot_id: str, defect_id: str, norm:
 
     return r.json()
 
+#####################################################################################################
+# Regression Test                                                                                #
+#####################################################################################################
+@st.cache_data(ttl="60s")
+def fetch_valid_lots(test_data: dict[str, Any], gen_stats: bool) -> dict[str, Any]:
+    data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
+    r = requests.post(
+        API_ROOT + "fetch_valid_lots",
+        json={"data_lots": data_lots, "gen_stats": gen_stats},
+        timeout=TIMEOUT,
+    )
+    if r.json()["status"] == "completed":
+        return r.json()
+    else:
+        logger.error(f"Error occurred when calling Valid Lots API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling Valid Lots API: {r.json()['message']}")
+
+
+def fetch_regression_result(
+    test_cases: dict[str, list], prefixes: list[str], result_dir: str, mode: str
+) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "fetch_regression_result",
+        json={"test_cases": test_cases, "prefixes": prefixes, "result_dir": result_dir, "mode": mode},
+        timeout=TIMEOUT,
+    )
+    if r.json()["status"] == "completed":
+        return r.json()
+    else:
+        logger.error(f"Error occurred when calling Regression Result API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling Regression Result  API: {r.json()['message']}")
+
+def request_regression_test(
+    output_dir_root: str,
+    valid_data_lots: dict[str, Any],
+    recipe_config: dict[str, Any],
+    run_layer: list[str],
+    run_site: list[str],
+    run_week: list[str],
+) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "request_regression_test",
+        json={
+            "output_dir_root": output_dir_root,
+            "valid_data_lots": valid_data_lots,
+            "recipe_config": recipe_config,
+            "run_config": {"layers": run_layer, "sites": run_site, "weeks": run_week},
+        },
+        timeout=TIMEOUT,
+    )
+    if r.json()["status"] == "started":
+        return r.json()
+    else:
+        logger.error(f"Error occurred when calling Request Regression API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling Request Regression  API: {r.json()['message']}")
 
 #####################################################################################################
 # Regression Test                                                                                #
