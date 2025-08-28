@@ -1,10 +1,11 @@
-from typing import Any
 import re
-import numpy as np
+from typing import Any
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+
 
 DEFECT_COLOR_MAPPING = {
     "D": "darkred",
@@ -13,7 +14,10 @@ DEFECT_COLOR_MAPPING = {
 }
 
 TOTAL_CLASSTYPES = 32
-CLASSTYPE_COLOR_MAPPING = px.colors.sample_colorscale("rainbow", [(i + 1) / TOTAL_CLASSTYPES for i in range(TOTAL_CLASSTYPES -2, -2, -1)])
+CLASSTYPE_COLOR_MAPPING = px.colors.sample_colorscale(
+    "rainbow", [(i + 1) / TOTAL_CLASSTYPES for i in range(TOTAL_CLASSTYPES - 2, -2, -1)]
+)
+
 
 def get_legend_color_map(legends_list: list[str]) -> dict[str, Any]:
     unique_legends = set(legends_list)
@@ -29,12 +33,14 @@ def get_legend_color_map(legends_list: list[str]) -> dict[str, Any]:
 
     return color_map
 
-def get_classtype_color_map(classtypes: list[str]) -> dict[str, str]:
-    unique_classes = sorted(set(classtypes)) 
 
-    return {
-        cat: CLASSTYPE_COLOR_MAPPING[int(cat.split("-")[0]) + 1] for cat in unique_classes
-    }
+def get_classtype_color_map(classtypes: list[str]) -> dict[str, str]:
+    def extract_ct_number(unique_ct: str) -> int:
+        return int(unique_ct.replace("-Non-defect", "").replace("-Defect", "").replace("-Unlabeled", ""))
+
+    unique_classes = sorted(set(classtypes))
+    return {cat: CLASSTYPE_COLOR_MAPPING[extract_ct_number(cat) + 1] for cat in unique_classes}
+
 
 def gen(
     aggregated_lists: tuple[list[str], list[dict[str, Any]], list[list[float]], list[int], list[str]],
@@ -62,9 +68,15 @@ def gen(
     """
 
     id_list, defect_infos, prob_list, ans_list, lot_id_list = aggregated_lists
-    classtypes = [str(defect_info["ClassType"] ) for defect_info in defect_infos]
+    classtypes = [str(defect_info["ClassType"]) for defect_info in defect_infos]
     df = pd.DataFrame(
-        data={"Defect_ID": id_list, "Probability": np.array(prob_list)[:, 0], "LRF_Label": ans_list, "Lot ID": lot_id_list, "ClassType": classtypes}
+        data={
+            "Defect_ID": id_list,
+            "Probability": np.array(prob_list)[:, 0],
+            "LRF_Label": ans_list,
+            "Lot ID": lot_id_list,
+            "ClassType": classtypes,
+        }
     )
 
     df["Classification"] = [
@@ -76,7 +88,7 @@ def gen(
         ]
     else:
         df["Legends"] = df["Classification"]
-        
+
     df["ClassType"] = df["ClassType"] + "-" + df["Classification"]
     # Add histogram
     # hover_data defines which df columns will appear on the hover message
@@ -119,7 +131,7 @@ def gen(
         barmode="stack",
         xaxis_title="Probabilities",
         yaxis_title="Frequency",
-        title= "Defect Probability Distribution",
+        title="Defect Probability Distribution",
     )
 
     return fig
