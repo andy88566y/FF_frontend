@@ -92,6 +92,7 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
         if not db_recipe:
             return {}
         with st.form(key="custom_recipe_form"):
+            new_recipes = db_recipe.copy()
             for i, r in enumerate(db_recipe["recipes"]):
                 col1, col2, col3, col4 = st.columns([3.5, 2, 2, 1])
                 with col1:
@@ -118,11 +119,11 @@ def gen(recipe_type: str, db_recipe: dict[str, Any]) -> dict:
                     st.markdown("<br>", unsafe_allow_html=True)  
                     r["disable"] = st.toggle("disabled", value=r.get("disable", False), key=f"{r['model_name']}_{i}_toggle")
 
-                db_recipe["recipes"][i] = r
+                new_recipes["recipes"][i] = r
 
             if st.form_submit_button("Apply Custom Recipe"):
-                recipe = db_recipe
-                recipe_to_preview = db_recipe
+                recipe = new_recipes
+                recipe_to_preview = new_recipes
             else:
                 recipe = {}
     else:
