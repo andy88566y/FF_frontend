@@ -43,6 +43,9 @@ def app() -> None:
         read_children_dirs = st.toggle(label="Read .db in children directories", value=False)
 
     if helper.is_valid_output_dir(inference_result_dir):
+        if st.session_state.get("result_dir") != inference_result_dir:
+            st.session_state.result_dir = inference_result_dir
+            st.session_state.recipe = None
         try:
             db_metadata_list = api_helper.get_db_metadata_lists(
                 output_dir=inference_result_dir, read_children_dirs=read_children_dirs
@@ -63,6 +66,11 @@ def app() -> None:
             st.error(f"Output directory is invalid: {inference_result_dir}")
 
     recipe = recipe_preview.gen(recipe_type=st_recipe_type, db_recipe=db_recipe)
+    if recipe:
+        st.session_state.recipe = recipe
+    elif st_recipe_type == CUSTOM_MODE:
+        recipe = st.session_state.get("recipe") 
+
     if not recipe or recipe["recipes"] == []:
         return
 
