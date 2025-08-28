@@ -63,7 +63,7 @@ def app() -> None:
             
             else:
                 text_input_result_dir = result_dir_input
-
+            #TODO move out to another function and add cache
             dir_lots = []
             data_lots = []
             lot_lrf_path_map = {}
@@ -87,12 +87,75 @@ def app() -> None:
             logger.info(f"Lot selected: {selected_lot_id}")
             r1_col1, r1_col2 = st.columns([2, 1])
             with r1_col1:
-                print(decoded_defect_id)
+                if text_input_result_dir:       
+                    defects = api_helper.get_lrf_data_lists(
+                        output_dir=text_input_result_dir,
+                        cols=["No", "UniqueID", "X", "Y", "ClassType"],
+                        include_prob=True,
+                        lot_id=selected_lot_id,
+                    )[0]
+                    db_metadata = api_helper.get_db_metadata_lists(output_dir=text_input_result_dir, lot_id=selected_lot_id)[0]
+                    defect_prob = api_helper.get_probabilities_per_model(output_dir=text_input_result_dir, lot_id=selected_lot_id)
+                    defect_data = [
+                        {
+                            "No": defect["No"],
+                            "UniqueID": defect["UniqueID"],
+                            "X": float(defect["X"]),
+                            "Y": float(defect["Y"]),
+                            "ClassType": defect["ClassType"],
+                            "GT": defect["Ans"],
+                            "Probability": defect["Probability"],
+                        }
+                        for defect in defects
+                    ]
+                    df["UniqueID"] = df["UniqueID"].astype(str)
+                    df["Probability"] = df["Probability"].astype(float)
+                else:
+                    lrf_ext = api_helper.get_lot_lrf_ext(data_yaml_path=data_yaml_input ,lot_id=selected_lot_id)
+                    lrf_path = lot_lrf_path_map[selected_lot_id]
+                    defects = api_helper.parse_lrf_data_lists(lrf_path=lrf_path)
+                    print(defects[0].keys())
+                    if lrf_ext == "lrf":
+                        defect_data = [
+                            {
+                                "No": defect["No"],
+                                "X": float(defect["X"]),
+                                "Y": float(defect["Y"]),
+                                "ClassType": defect["ClassType"],
+                                "GT": defect["isDefect"] # valeu is 0 or 1
+                            }
+                            for defect in defects
+                        ]
+                    else:
+                        defect_data = [
+                            {
+                                "No": defect["No"],
+                                "UniqueID": defect["UniqueID"],
+                                "X": float(defect["X"]),
+                                "Y": float(defect["Y"]),
+                                "ClassType": defect["ClassType"],
+                                "GT": defect["isDefect"] # valeu is 0 or 1
+                            }
+                            for defect in defects
+                        ]
+    
                 if "defect_number" not in st.session_state or decoded_defect_id != None:
                     st.session_state.defect_number = decoded_defect_id            
                 
-                defect_id = st.text_input("Defect ID", value=st.session_state.defect_number)
-                
+                ##defect_id = st.text_input("Defect ID", value=st.session_state.defect_number)
+                no_list = [defect["No"] for defect in defect_data]
+                # print(st.session_state.defect_number)
+                # print(no_list)
+                # print(no_list.index(str(st.session_state.defect_number)))
+                # Set default index based on session state
+                default_index = no_list.index(str(st.session_state.defect_number)) if str(st.session_state.defect_number) in no_list else 0
+                # print(default_index)
+                defect_id = st.selectbox(label="Select a defect ID", options=no_list, index=default_index)
+
+                # Update session state
+                st.session_state.defect_number = defect_id
+
+
             with r1_col2:
                 norm = st.toggle("Normalize", value=True)
         ###Label info  
@@ -198,50 +261,7 @@ def app() -> None:
             "ND": "#55ff7f",  # green
             "UNK": "#808080",  # grey
         }
-        if text_input_result_dir:       
-            defects = api_helper.get_lrf_data_lists(
-                output_dir=text_input_result_dir,
-                cols=["No", "UniqueID", "X", "Y", "ClassType"],
-                include_prob=True,
-                lot_id=selected_lot_id,
-            )[0]
-            db_metadata = api_helper.get_db_metadata_lists(output_dir=text_input_result_dir, lot_id=selected_lot_id)[0]
-            defect_prob = api_helper.get_probabilities_per_model(output_dir=text_input_result_dir, lot_id=selected_lot_id)
-            defect_data = [
-                {
-                    "No": defect["No"],
-                    "UniqueID": defect["UniqueID"],
-                    "X": float(defect["X"]),
-                    "Y": float(defect["Y"]),
-                    "ClassType": defect["ClassType"],
-                    "GT": defect["Ans"],
-                    "Probability": defect["Probability"],
-                }
-                for defect in defects
-            ]
-            df["UniqueID"] = df["UniqueID"].astype(str)
-            df["Probability"] = df["Probability"].astype(float)
-
-        else:
-            lrf_path = lot_lrf_path_map[selected_lot_id]
-            defects = api_helper.parse_lrf_data_lists(lrf_path=lrf_path)
-            print(defects[0].keys())
-            defect_data = [
-                {
-                    "No": defect["No"],
-                    "X": float(defect["X"]),
-                    "Y": float(defect["Y"]),
-                    "ClassType": defect["ClassType"],
-                    "GT": defect["isDefect"]
-                }
-                for defect in defects
-            ]
-            print(defect_data)
-
-       
-        # Extract relevant columns and convert "X" and "Y" to floats
         
-
         # Convert to DataFrame
         df = pd.DataFrame(defect_data)
 
@@ -292,7 +312,7 @@ def app() -> None:
         df["X_norm"] = (df["X"] - x_min) / (x_max - x_min)
         df["Y_norm"] = (df["Y"] - y_min) / (y_max - y_min)
 
-        # Use DBScan to identify clusters
+        # Use DBScan to identify clusters (might be slow need to add cache Test large dataset)
         dbscan = DBSCAN(eps=50, min_samples=5)
         df["Cluster"] = dbscan.fit_predict(df[["X", "Y"]])
 
@@ -359,19 +379,26 @@ def app() -> None:
                 defect_id = st.session_state.selected_map_index
                 print("map selected" + str(defect_id))
                 st.query_params.defect_no = defect_id
+                st.session_state.defect_number = defect_id
                 st.rerun()
 
     with col2:     
 
         if defect_id != "":
-            draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
+            if lrf_ext=="lrf":
+                draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
+            else:
+                row_index = df.index[df['No'] == int(defect_id)]
+                unique_id = df.loc[row_index[0], 'UniqueID']
+                draw_diff_img_plotly(data_yaml_input, selected_lot_id, unique_id, norm, diff_clip=0.3)
         
         ### Receipe area
         if text_input_result_dir and defect_id != "":
             models_threshold = []
             models_threshold_c = []
             models_name = []
-            selected_defect_prob = defect_prob["probability_list"][0][int(defect_id)-1]
+            row_index = df.index[df['No'] == int(defect_id)]
+            selected_defect_prob = defect_prob["probability_list"][0][int(row_index[0])]
             model_num = len(selected_defect_prob)
             for x in range(model_num):
                 thresholdName = "model_threshold_" + str(x)
@@ -379,7 +406,7 @@ def app() -> None:
                 modelName = "model_name_" + str(x)
                 models_threshold.append(db_metadata[thresholdName])
                 models_threshold_c.append(db_metadata[thresholdcName])
-                #Todo, if match not found, just keep the model name
+                #TODO, if match not found, just keep the model name
                 models_name.append(re.search(r"#([^#\.]+)\.", db_metadata[modelName]).group(1))
             
             table_data = {
@@ -388,10 +415,10 @@ def app() -> None:
                 "Defect Probability / Threshold_C": [f"{selected_defect_prob[i]:.3f}/{models_threshold_c[i]}" for i in range(model_num)]
             }
             
-            df = pd.DataFrame(table_data)
+            table_df = pd.DataFrame(table_data)
 
             # Apply styling and hide index
-            styled_df = df.style.set_table_styles(
+            styled_df = table_df.style.set_table_styles(
                 [{'selector': 'th, td', 'props': [('text-align', 'center')]}]
             ).hide(axis="index")
 
@@ -408,8 +435,8 @@ def app() -> None:
                 raise ValueError(f"Input Result directory in text field is invalid: {text_input_result_dir}")
 
             logger.info("Input field params encoded and stored in URL.")
-            list_view.app(text_input_result_dir, None, selected_lot_id, models_name)
+            list_view.app(text_input_result_dir, None, selected_lot_id, models_name, lrf_ext, df)
         else:
-            list_view.app(None, data_yaml_input, selected_lot_id, None)
+            list_view.app(None, data_yaml_input, selected_lot_id, None, lrf_ext, df)
 
     

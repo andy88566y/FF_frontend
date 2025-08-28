@@ -1627,7 +1627,6 @@ def request_regression_test(
 
 # TODO: Move to backend
 @st.cache_data(ttl="60s")
-
 def get_lot_lrf_paths(data_yaml_path: str) -> Dict[str, str]:
     with open(data_yaml_path, encoding="utf-8") as f:
         raw_data = yaml.safe_load(f)
@@ -1645,3 +1644,15 @@ def get_lot_lrf_paths(data_yaml_path: str) -> Dict[str, str]:
 
     print(f"Total lots with lrf_path: {len(lot_lrf_map)}")
     return lot_lrf_map
+
+
+@st.cache_data(ttl="300s")
+def get_lot_lrf_ext(data_yaml_path: str, lot_id: str,) -> str:
+    params = {"data_yaml_path": data_yaml_path, "lot_id": lot_id}
+    r = requests.get(f"{API_ROOT}get_lrf_ext", params=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        return []
+    else:
+        return r.json()["lrf_ext"]

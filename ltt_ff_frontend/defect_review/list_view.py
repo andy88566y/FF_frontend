@@ -32,70 +32,7 @@ def generate_colors(num_clusters):
     return colors
 
 
-def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name: list) -> None:
-    
-    if result_dir:
-        defects = api_helper.get_lrf_data_lists(
-            output_dir=result_dir,
-            cols=["No", "UniqueID", "X", "Y", "ClassType"],
-            include_prob=True,
-            lot_id=selected_lot_id,
-        )[0]
-        db_metadata = api_helper.get_db_metadata_lists(output_dir=result_dir, lot_id=selected_lot_id)[0]
-        if models_name != None:
-            defect_prob_list = api_helper.get_probabilities_per_model(output_dir=result_dir, lot_id=selected_lot_id)
-
-        # Extract relevant columns and convert "X" and "Y" to floats
-        defect_data = [
-            {
-                "No": defect["No"],
-                "UniqueID": defect["UniqueID"],
-                "X": float(defect["X"]),
-                "Y": float(defect["Y"]),
-                "ClassType": defect["ClassType"],
-                "GT": defect["Ans"],
-                "P_rank": defect["Probability"],
-            }
-            for defect in defects
-        ]
-        # Convert to DataFrame
-        df = pd.DataFrame(defect_data)
-        prob_df = pd.DataFrame(
-            defect_prob_list["probability_list"][0],
-            columns=[f"P_{models_name[i]}" for i in range(10)]
-        )
-
-        # Concatenate with your existing df
-        df = pd.concat([df, prob_df], axis=1)
-        # Set the "No" column as the index
-        df["P_rank"] = df["P_rank"].astype(float)
-        df["UniqueID"] = df["UniqueID"].astype(str)
-    else:
-        lot_lrf_path_map = api_helper.get_lot_lrf_paths(data_yaml_path)
-
-        lrf_path = lot_lrf_path_map[selected_lot_id]
-        defects = api_helper.parse_lrf_data_lists(lrf_path=lrf_path)
-        defect_data = [
-            {
-                "No": defect["No"],
-                "X": float(defect["X"]),
-                "Y": float(defect["Y"]),
-                "ClassType": defect["ClassType"],
-                "GT": defect["isDefect"]
-            }
-            for defect in defects
-        ]
-        print(defect_data)
-        df = pd.DataFrame(defect_data)
-
-    df.set_index("No", inplace=True)
-    df["No"] = df.index
-    # Ensure all columns have consistent data types
-    df["No"] = df["No"].astype(int)
-    df["X"] = df["X"].astype(float)
-    df["Y"] = df["Y"].astype(float)
-    df["ClassType"] = df["ClassType"].astype(int)
-    df["GT"] = df["GT"].astype(int)
+def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name: list, lrf_ext: str, df: pd.DataFrame) -> None:
 
     st.session_state.filtered_df = df
     # Initialize session state for selected index
@@ -171,7 +108,11 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
             for i in range(len(models_name)):
                 specific_columns.append("P_" + models_name[i])
         else:
-            specific_columns = ["UniqueID", "X", "Y", "ClassType", "GT", "Cluster"]
+            if lrf_ext == "lrf":
+                specific_columns = ["X", "Y", "ClassType", "GT", "Cluster"]
+            else:
+                specific_columns = ["UniqueID", "X", "Y", "ClassType", "GT", "Cluster"]
+
 
         # Filter the DataFrame columns to only include the specific columns
         filtered_columns = [col for col in df.columns if col in specific_columns]
@@ -231,12 +172,12 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
             st.session_state.filtered_df = df
             st.rerun()
 
-    # Add message box showing active filters
-    with filter_message_col:
-        # TODO: To be fixed. Current method will cause message box to not appear if no values are filtered,
-        #       even if filter is active. But this is unlikely to happen.
-        if len(defect_data) != len(st.session_state.filtered_df):
-            st.warning(f"Active filter: {st.session_state.filter_column} = {st.session_state.filter_value}")
+    # # Add message box showing active filters
+    # with filter_message_col:
+    #     # TODO: To be fixed. Current method will cause message box to not appear if no values are filtered,
+    #     #       even if filter is active. But this is unlikely to happen.
+    #     if len(defect_data) != len(st.session_state.filtered_df):
+    #         st.warning(f"Active filter: {st.session_state.filter_column} = {st.session_state.filter_value}")
 
     # List view
     st.subheader("List View")
@@ -245,7 +186,11 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
     if result_dir:
         all_columns = ["No", "UniqueID", "X", "Y", "X_norm", "Y_norm", "ClassType", "GT", "Pred", "P_rank", "Cluster"]
     else:
-        all_columns = ["No", "X", "Y","X_norm", "Y_norm", "ClassType", "GT", "Cluster"]
+        if lrf_ext == "lrf":
+            all_columns = ["No", "X", "Y","X_norm", "Y_norm", "ClassType", "GT", "Cluster"]
+        else:
+            all_columns = ["No","UniqueID", "X", "Y","X_norm", "Y_norm", "ClassType", "GT", "Cluster"]
+
 
     if models_name != None:
         for i in range(len(models_name)):
