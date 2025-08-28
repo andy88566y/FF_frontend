@@ -185,8 +185,7 @@ def app() -> None:
         if r["status"] == "completed":
             try:
                 # format into something easy to copy-paste
-                message = ast.literal_eval(r["message"].split(":")[-1])
-                for converted_model in message:
+                for converted_model in r['result']:
                     if "error" in converted_model[1]:
                         st.error(f"{converted_model[0]}  \n{converted_model[1]}")
                         logger.error(f"{converted_model[0]}  \n{converted_model[1]}")
@@ -195,12 +194,12 @@ def app() -> None:
                         logger.success(f"{converted_model[0]}  \n{converted_model[1]}")
             except ValueError:
                 logger.error("Encountered ValueError when formatting response message. Showing original message.")
-                st.success(r["message"])
-                logger.success(r["message"])
+                st.warning(r["result"])
+                logger.warning(r["result"])
             except SyntaxError:
                 logger.error("Encountered SyntaxError when formatting response message. Showing original message.")
-                st.success(r["message"])
-                logger.success(r["message"])
+                st.warning(r["result"])
+                logger.warning(r["result"])
         else:
-            st.error(r["message"])
-            logger.error(r["message"])
+            st.error(r["result"])
+            logger.error(r["result"])
