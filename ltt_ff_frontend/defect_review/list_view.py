@@ -93,6 +93,9 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
                 specific_columns = ["X", "Y", "ClassType", "GT", "Cluster"]
             else:
                 specific_columns = ["UniqueID", "X", "Y", "ClassType", "GT", "Cluster"]
+        if models_name:
+            for model_name in models_name:
+                specific_columns.append("P_" + model_name)
 
 
         # Filter the DataFrame columns to only include the specific columns
@@ -175,7 +178,7 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
 
     if models_name != None:
         for i in range(len(models_name)):
-                all_columns.append("P_" + models_name[i])
+            all_columns.append("P_" + models_name[i])
     # Sample DataFrame (replace with your actual data)
     df = st.session_state.filtered_df 
     # Let user select columns to display

@@ -36,7 +36,10 @@ def app() -> None:
 
             decoded_result_dir = decode_param(encoded_result_dir)
             decoded_data_yaml = decode_param(encoded_data_yaml)
-            decoded_defect_id = int(encoded_defect_id)
+            if encoded_defect_id:
+                decoded_defect_id = int(encoded_defect_id)
+            else:
+                decoded_defect_id = None
             # Initialize session state
             if "result_dir" not in st.session_state:
                 st.session_state.result_dir = decoded_result_dir
@@ -80,14 +83,17 @@ def app() -> None:
             else:
                 lots = list(set(dir_lots) & set(data_lots))
 
-            if len(lots) > 1:
+            if len(lots) >= 1:
                 selected_lot_id = st.selectbox(label="Select a Lot ID", options=lots)
             else:
-                selected_lot_id = lots[0]
+                logger.warn("cannot find any lots")
             logger.info(f"Lot selected: {selected_lot_id}")
             r1_col1, r1_col2 = st.columns([2, 1])
             with r1_col1:
-                if text_input_result_dir:       
+                if text_input_result_dir:
+                    #TODO do I need to check lrf  
+                    lrf_ext = "lrf"
+     
                     defects = api_helper.get_lrf_data_lists(
                         output_dir=text_input_result_dir,
                         cols=["No", "UniqueID", "X", "Y", "ClassType"],
@@ -96,6 +102,21 @@ def app() -> None:
                     )[0]
                     db_metadata = api_helper.get_db_metadata_lists(output_dir=text_input_result_dir, lot_id=selected_lot_id)[0]
                     defect_prob = api_helper.get_probabilities_per_model(output_dir=text_input_result_dir, lot_id=selected_lot_id)
+                    model_num = len(defect_prob["probability_list"][0][0])
+                    models_threshold = []
+                    models_threshold_c = []
+                    models_name = []
+                    for x in range(model_num):
+                        thresholdName = "model_threshold_" + str(x)
+                        thresholdcName = "model_threshold_c_" + str(x)
+                        modelName = "model_name_" + str(x)
+                        models_threshold.append(db_metadata[thresholdName])
+                        models_threshold_c.append(db_metadata[thresholdcName])
+                        match = re.search(r"#([^#\.]+)\.", db_metadata[modelName])
+                        if match:
+                            models_name.append(match.group(1))
+                        else:
+                            models_name.append(modelName)
                     defect_data = [
                         {
                             "No": defect["No"],
@@ -108,8 +129,6 @@ def app() -> None:
                         }
                         for defect in defects
                     ]
-                    df["UniqueID"] = df["UniqueID"].astype(str)
-                    df["Probability"] = df["Probability"].astype(float)
                 else:
                     lrf_ext = api_helper.get_lot_lrf_ext(data_yaml_path=data_yaml_input ,lot_id=selected_lot_id)
                     lrf_path = lot_lrf_path_map[selected_lot_id]
@@ -139,8 +158,10 @@ def app() -> None:
                             for defect in defects
                         ]
     
-                if "defect_number" not in st.session_state or decoded_defect_id != None:
-                    st.session_state.defect_number = decoded_defect_id            
+                if "defect_number" not in st.session_state and decoded_defect_id != None:
+                    st.session_state.defect_number = decoded_defect_id
+                else:
+                    st.session_state.defect_number = None    
                 
                 ##defect_id = st.text_input("Defect ID", value=st.session_state.defect_number)
                 no_list = [defect["No"] for defect in defect_data]
@@ -148,7 +169,7 @@ def app() -> None:
                 # print(no_list)
                 # print(no_list.index(str(st.session_state.defect_number)))
                 # Set default index based on session state
-                default_index = no_list.index(str(st.session_state.defect_number)) if str(st.session_state.defect_number) in no_list else 0
+                default_index = no_list.index(str(st.session_state.defect_number)) if str(st.session_state.defect_number) in no_list else 1
                 # print(default_index)
                 defect_id = st.selectbox(label="Select a defect ID", options=no_list, index=default_index)
 
@@ -175,7 +196,7 @@ def app() -> None:
 
 
         # Create DataFrame
-        df = pd.DataFrame(indices)
+        lrf_constant_df = pd.DataFrame(indices)
 
         # Display title
         st.title("LTTSWADC Map")
@@ -231,7 +252,7 @@ def app() -> None:
                         opacity: 1;
                     }}
                 </style>
-                {df.to_html(escape=False, index=False, header=False)}
+                {lrf_constant_df.to_html(escape=False, index=False, header=False)}
             </div>
             """,
             unsafe_allow_html=True
@@ -275,6 +296,11 @@ def app() -> None:
         df["Y"] = df["Y"].astype(float)
         df["ClassType"] = df["ClassType"].astype(int)
         df["GT"] = df["GT"].astype(int)
+        if "UniqueID" in df.columns:
+            df["UniqueID"] = df["UniqueID"].astype(str)
+        if "Probability" in df.columns:
+            df["Probability"] = df["Probability"].astype(float)        
+            df = df.rename(columns={"Probability": "P_rank"})
 
         # Initialize session state for selected index
         if "selected_row_index" not in st.session_state:
@@ -315,7 +341,13 @@ def app() -> None:
         # Use DBScan to identify clusters (might be slow need to add cache Test large dataset)
         dbscan = DBSCAN(eps=50, min_samples=5)
         df["Cluster"] = dbscan.fit_predict(df[["X", "Y"]])
+        if model_num > 0:
+            prob_df = pd.DataFrame(
+                defect_prob["probability_list"][0],
+                columns=[f"P_{models_name[i]}" for i in range(10)]
+            )
 
+            df_with_prob = pd.concat([df, prob_df], axis=1)
         # Count the total number of clusters
         total_clusters = df["Cluster"].nunique()
         cluster_colors = generate_colors(total_clusters)
@@ -394,20 +426,8 @@ def app() -> None:
         
         ### Receipe area
         if text_input_result_dir and defect_id != "":
-            models_threshold = []
-            models_threshold_c = []
-            models_name = []
             row_index = df.index[df['No'] == int(defect_id)]
             selected_defect_prob = defect_prob["probability_list"][0][int(row_index[0])]
-            model_num = len(selected_defect_prob)
-            for x in range(model_num):
-                thresholdName = "model_threshold_" + str(x)
-                thresholdcName = "model_threshold_c_" + str(x)
-                modelName = "model_name_" + str(x)
-                models_threshold.append(db_metadata[thresholdName])
-                models_threshold_c.append(db_metadata[thresholdcName])
-                #TODO, if match not found, just keep the model name
-                models_name.append(re.search(r"#([^#\.]+)\.", db_metadata[modelName]).group(1))
             
             table_data = {
                 "Model Name": models_name,
@@ -435,7 +455,7 @@ def app() -> None:
                 raise ValueError(f"Input Result directory in text field is invalid: {text_input_result_dir}")
 
             logger.info("Input field params encoded and stored in URL.")
-            list_view.app(text_input_result_dir, None, selected_lot_id, models_name, lrf_ext, df)
+            list_view.app(text_input_result_dir, None, selected_lot_id, models_name, lrf_ext, df_with_prob)
         else:
             list_view.app(None, data_yaml_input, selected_lot_id, None, lrf_ext, df)
 
