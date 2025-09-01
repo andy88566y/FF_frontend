@@ -6,7 +6,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from ltt_ff_frontend.shared_components.prob_distribution_fig import get_classtype_color_map
-from loguru import logger
 
 
 def gen(
@@ -35,7 +34,7 @@ def gen(
             "Defect" if (a1 * a2) == 1 else "Non-defect" if (a1 + a2) == 0 else "No-Label"
             for a1, a2 in zip(m1_ans, m2_ans)
         ]
-    classtypes = [str(defect_info["ClassType"] ) for defect_info in defect_infos]
+    classtypes = [str(defect_info["ClassType"]) for defect_info in defect_infos]
     if split_lot:
         legends = [f"{classification} {lot_id}" for classification, lot_id in zip(classifications, lot_ids)]
     else:
@@ -75,7 +74,7 @@ def gen(
         marginal_x="histogram",
         marginal_y="histogram",
         color="Classtype",
-        color_discrete_map= get_classtype_color_map(df["Classtype"]),
+        color_discrete_map=get_classtype_color_map(df["Classtype"]),
         hover_data={"Defect_ID": True},
         symbol="Legends",
         symbol_sequence=symbols,
@@ -152,7 +151,9 @@ def gen(
             type="rect",
             x0=model_1["threshold_c"],
             x1=1,
-            y0=0 if model_1["model_hash"].startswith("RULE") else max(0, model_2["threshold"]), # if model 1 is rule model, force the result to be true defect
+            y0=0
+            if model_1["model_hash"].startswith("RULE")
+            else max(0, model_2["threshold"]),  # if model 1 is rule model, force the result to be true defect
             y1=1,
             xref="x",
             yref="y",
@@ -162,7 +163,9 @@ def gen(
         )
         fig.add_shape(
             type="rect",
-            x0= 0 if model_2["model_hash"].startswith("RULE") else max(0, model_1["threshold"]), # if model 2 is rule model, force the result to be true defect
+            x0=0
+            if model_2["model_hash"].startswith("RULE")
+            else max(0, model_1["threshold"]),  # if model 2 is rule model, force the result to be true defect
             x1=model_1["threshold_c"],
             y0=model_2["threshold_c"],
             y1=1,
