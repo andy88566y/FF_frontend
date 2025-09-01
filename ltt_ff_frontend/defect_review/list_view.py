@@ -1,7 +1,5 @@
-import os
 import operator
 import random
-import re
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -10,9 +8,6 @@ import pydeck as pdk
 import streamlit as st
 from loguru import logger
 from sklearn.cluster import DBSCAN
-
-from ltt_ff_frontend.defect_review_ui import detail_view
-from ltt_ff_frontend.helpers import api_helper
 
 
 def hex_to_rgb(hex_color):
