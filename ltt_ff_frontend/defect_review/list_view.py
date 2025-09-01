@@ -39,18 +39,6 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
     # Initialize session state for selection source
     if "selection_source" not in st.session_state:
         st.session_state.selection_source = ""
-    # Initialize session state for selected folder
-    if "result_dir" not in st.session_state:
-        st.session_state.result_dir = ""
-    # Initialize session state for selected lot
-    if "lot_id" not in st.session_state:
-        st.session_state.lot_id = ""
-    # Initialize session state for probability threshold
-    if result_dir and "prob_threshold" not in st.session_state:
-        st.session_state.prob_threshold = db_metadata.get("model_threshold", db_metadata.get("model_threshold_0", -1))
-    # Ensure color_option is set in session state
-    if "color_option" not in st.session_state:
-        st.session_state.color_option = "ClassType"
 
     # Initialize session state for filter criteria
     if "filter_column" not in st.session_state:
@@ -151,13 +139,6 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
             st.session_state.filtered_df = df
             st.rerun()
 
-    # # Add message box showing active filters
-    # with filter_message_col:
-    #     # TODO: To be fixed. Current method will cause message box to not appear if no values are filtered,
-    #     #       even if filter is active. But this is unlikely to happen.
-    #     if len(defect_data) != len(st.session_state.filtered_df):
-    #         st.warning(f"Active filter: {st.session_state.filter_column} = {st.session_state.filter_value}")
-
     # List view
     st.subheader("List View")
 
@@ -235,11 +216,13 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
     defect_number = 0
     if st.session_state.selection_source == "list":    
         selected_data = df.loc[st.session_state.selected_row_index]
-        defect_number = selected_data["No"]  
-        if "defect_number" not in st.session_state or not st.session_state.defect_number:
-            st.session_state.defect_number = str(defect_number)
+        defect_number = selected_data["No"]
+        print(st.session_state.defect_number)
+        if st.session_state.defect_number != defect_number:  
+            st.session_state.defect_number = defect_number
+            print("row selected")
             print(defect_number)
-            st.query_params.defect_no = defect_number
+            st.query_params.defect_no = int(defect_number)
             st.rerun()
 
     else:

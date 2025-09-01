@@ -156,17 +156,14 @@ def app() -> None:
                             for defect in defects
                         ]
     
-                if "defect_number" not in st.session_state and decoded_defect_id != None:
+                if decoded_defect_id != None:
                     st.session_state.defect_number = decoded_defect_id
                 else:
                     st.session_state.defect_number = None    
                 
-                ##defect_id = st.text_input("Defect ID", value=st.session_state.defect_number)
                 no_list = [defect["No"] for defect in defect_data]
-                default_index = no_list.index(str(st.session_state.defect_number)) if str(st.session_state.defect_number) in no_list else 1
-                # print(default_index)
+                default_index = no_list.index(st.session_state.defect_number) if st.session_state.defect_number in no_list else 0
                 defect_id = st.selectbox(label="Select a defect ID", options=no_list, index=default_index)
-
                 # Update session state
                 st.session_state.defect_number = defect_id
 
@@ -308,7 +305,7 @@ def app() -> None:
             layers=[layer],
             initial_view_state=view_state,
             map_provider=None,
-            tooltip={"text": "No: {Nfo}\nClassType: {ClassType}\nX: {X}\nY: {Y}\nCluster: {Cluster}"},
+            tooltip={"text": "No: {No}\nClassType: {ClassType}\nX: {X}\nY: {Y}\nCluster: {Cluster}"},
         )
         event = st.pydeck_chart(r, height=300, on_select="rerun", selection_mode="single-object")
 
