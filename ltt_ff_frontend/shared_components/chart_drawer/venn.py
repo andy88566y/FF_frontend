@@ -17,6 +17,7 @@ OFFSETS = [
 def plot_venn(
     sets: list[set],
     labels: list[str],
+    miss_count: int,
     width: int = 600,
     height: int = 600,
     colors: tuple[str] = ("#FF6F61", "#6B5B95", "#88B04B"),
@@ -83,6 +84,34 @@ def plot_venn(
     offset = 0.2
     x_range = [min(x_bounds) - offset, max(x_bounds) + offset]
     y_range = [min(y_bounds) - offset, max(y_bounds) + offset]
+
+    shapes.append(
+        go.layout.Shape(
+            type="rect",
+            xref="x",
+            yref="y",
+            x0=x_range[0],
+            y0=y_range[0],
+            x1=x_range[1],
+            y1=y_range[1],
+            fillcolor="lightgray",
+            line_color="black",
+            opacity=0.5,
+        )
+    )
+
+    annotations.append(
+        go.layout.Annotation(
+            xref="x",
+            yref="y",
+            x=x_range[0] + 0.2,
+            y=y_range[0] + 0.1,
+            text=f"Missing: {miss_count}",
+            showarrow=False,
+            font=dict(size=20, color="BLACK"),
+        )
+    )
+
 
     fig = go.Figure()
     fig.update_xaxes(range=x_range, visible=False)
