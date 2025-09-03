@@ -265,7 +265,9 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
     fig.update_yaxes(autorange='reversed')
 
     for i in range(1, 9):  # 8 subplots
-        fig.update_yaxes(scaleanchor=f"x{i}", row=(i - 1) // 4 + 1, col=(i - 1) % 4 + 1)
+        fig.update_xaxes(matches='x1', scaleanchor=f"x{i}", row=(i - 1) // 4 + 1, col=(i - 1) % 4 + 1)
+        fig.update_yaxes(matches='y1', scaleanchor=f"x{i}", row=(i - 1) // 4 + 1, col=(i - 1) % 4 + 1)
+
     fig.update_xaxes(ticks="outside", ticklen=3)
     fig.update_yaxes(ticks="outside", ticklen=3)
 
