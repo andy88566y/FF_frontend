@@ -87,8 +87,9 @@ def app() -> None:
             if len(lots) >= 1:
                 selected_lot_id = st.selectbox(label="Select a Lot ID", options=lots)
             else:
-                logger.warn("cannot find any lots")
+                logger.warning("cannot find any lots")
             logger.info(f"Lot selected: {selected_lot_id}")
+            model_num=0
             r1_col1, r1_col2 = st.columns([2, 1])
             with r1_col1:
                 if text_input_result_dir:
@@ -115,7 +116,7 @@ def app() -> None:
                         if match:
                             models_name.append(match.group(1))
                         else:
-                            models_name.append(modelName)
+                            models_name.append(db_metadata[modelName])
                     defect_data = [
                         {
                             "No": defect["No"],
@@ -164,6 +165,7 @@ def app() -> None:
                 no_list = [defect["No"] for defect in defect_data]
                 default_index = no_list.index(st.session_state.defect_number) if st.session_state.defect_number in no_list else 0
                 defect_id = st.selectbox(label="Select a defect ID", options=no_list, index=default_index)
+                print("LINE 167  " + str(defect_id))
                 # Update session state
                 st.session_state.defect_number = defect_id
 
@@ -202,22 +204,6 @@ def app() -> None:
         # Convert to DataFrame
         df = pd.DataFrame(defect_data)
 
-        # Set the "No" column as the index
-        df.set_index("No", inplace=True)
-        df["No"] = df.index
-
-        # Ensure all columns have consistent data types
-        df["No"] = df["No"].astype(int)
-        df["X"] = df["X"].astype(float)
-        df["Y"] = df["Y"].astype(float)
-        df["ClassType"] = df["ClassType"].astype(int)
-        df["GT"] = df["GT"].astype(int)
-        if "UniqueID" in df.columns:
-            df["UniqueID"] = df["UniqueID"].astype(str)
-        if "Probability" in df.columns:
-            df["Probability"] = df["Probability"].astype(float)        
-            df = df.rename(columns={"Probability": "P_rank"})
-
         # Initialize session state for selected index
         if "selected_row_index" not in st.session_state:
             st.session_state.selected_row_index = 0
@@ -240,30 +226,50 @@ def app() -> None:
         if "color_option" not in st.session_state:
             st.session_state.color_option = "ClassType"
 
-        # Add "D/ND" column based on the threshold (Defect/Not defect)
-        if text_input_result_dir:
-            df["Pred"] = df["P_rank"] >= st.session_state.prob_threshold
-            df["Pred"] = df["Pred"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
-            
-        df["GT"] = df["GT"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
-
-
-        # Normalize coordinates
-        x_min, x_max = df["X"].min(), df["X"].max()
-        y_min, y_max = df["Y"].min(), df["Y"].max()
-        df["X_norm"] = (df["X"] - x_min) / (x_max - x_min)
-        df["Y_norm"] = (df["Y"] - y_min) / (y_max - y_min)
-
+        # TODO concat with index is wrong
         # Use DBScan to identify clusters (might be slow need to add cache Test large dataset)
         dbscan = DBSCAN(eps=50, min_samples=5)
         df["Cluster"] = dbscan.fit_predict(df[["X", "Y"]])
+        print(df.index)
         if model_num > 0:
             prob_df = pd.DataFrame(
                 defect_prob["probability_list"][0],
                 columns=[f"P_{models_name[i]}" for i in range(10)]
             )
 
-            df_with_prob = pd.concat([df, prob_df], axis=1)
+            df = pd.concat([df, prob_df], axis=1)
+        
+
+        # Set the "No" column as the index
+        df.set_index("No", inplace=True)
+        df["No"] = df.index
+
+        # Ensure all columns have consistent data types
+        df["No"] = df["No"].astype(int)
+        df["X"] = df["X"].astype(float)
+        df["Y"] = df["Y"].astype(float)
+        df["ClassType"] = df["ClassType"].astype(int)
+        df["GT"] = df["GT"].astype(int)
+        if "UniqueID" in df.columns:
+            df["UniqueID"] = df["UniqueID"].astype(str)
+        if "Probability" in df.columns:
+            df["Probability"] = df["Probability"].astype(float)        
+            df = df.rename(columns={"Probability": "P_rank"})
+        
+
+        #TODO NO, cluster ClassType is shown as float
+        # Normalize coordinates
+        x_min, x_max = df["X"].min(), df["X"].max()
+        y_min, y_max = df["Y"].min(), df["Y"].max()
+        df["X_norm"] = (df["X"] - x_min) / (x_max - x_min)
+        df["Y_norm"] = (df["Y"] - y_min) / (y_max - y_min)
+
+        # Add "D/ND" column based on the threshold (Defect/Not defect)  
+        if text_input_result_dir:
+            df["Pred"] = df["P_rank"] >= st.session_state.prob_threshold
+            df["Pred"] = df["Pred"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
+            
+        df["GT"] = df["GT"].apply(lambda x: "UNK" if x == -1 else "D" if x else "ND")
         # Count the total number of clusters
         total_clusters = df["Cluster"].nunique()
         cluster_colors = generate_colors(total_clusters)
@@ -329,18 +335,20 @@ def app() -> None:
 
     with col2:     
 
-        if defect_id != "":
-            if lrf_ext=="lrf":
-                draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
-            else:
-                row_index = df.index[df['No'] == int(defect_id)]
-                unique_id = df.loc[row_index[0], 'UniqueID']
-                draw_diff_img_plotly(data_yaml_input, selected_lot_id, unique_id, norm, diff_clip=0.3)
+        # if defect_id != "":
+        #     if lrf_ext=="lrf":
+        #         draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
+        #     else:
+        #         row_index = df.index[df['No'] == int(defect_id)]
+        #         unique_id = df.loc[row_index[0], 'UniqueID']
+        #         draw_diff_img_plotly(data_yaml_input, selected_lot_id, unique_id, norm, diff_clip=0.3)
         
         ### Receipe area
         if text_input_result_dir and defect_id != "":
-            row_index = df.index[df['No'] == int(defect_id)]
-            selected_defect_prob = defect_prob["probability_list"][0][int(row_index[0])]
+            row_number = df.index.get_loc(int(defect_id))
+            print("line349")
+            print(defect_id)
+            selected_defect_prob = defect_prob["probability_list"][0][row_number]
             
             table_data = {
                 "Model Name": models_name,
@@ -368,7 +376,7 @@ def app() -> None:
                 raise ValueError(f"Input Result directory in text field is invalid: {text_input_result_dir}")
 
             logger.info("Input field params encoded and stored in URL.")
-            list_view.app(text_input_result_dir, None, selected_lot_id, models_name, lrf_ext, df_with_prob)
+            list_view.app(text_input_result_dir, None, selected_lot_id, models_name, lrf_ext, df)
         else:
             list_view.app(None, data_yaml_input, selected_lot_id, None, lrf_ext, df)
 

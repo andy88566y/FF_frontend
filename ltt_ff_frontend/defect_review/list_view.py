@@ -62,7 +62,7 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
         st.session_state.result_dir = result_dir
         st.session_state.lot_id = selected_lot_id
 
-    filter_options_col, filter_operators_col, filter_value_col, filter_message_col, apply_col, remove_col = st.columns([1, 1, 2, 1, 1, 1])
+    filter_options_col, filter_operators_col, filter_value_col, apply_col, remove_col = st.columns([1, 1, 2, 1, 1])
 
     # Add filter options
     with filter_options_col:
@@ -171,7 +171,9 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
         st.warning("Please select at least one column to display.")
     
     listview_df = st.session_state.filtered_df[selected_columns]
-      
+    
+
+
     def highlight_row(row):
         pred = row.get("Pred", None)
         gt = row.get("GT", None)
@@ -198,6 +200,8 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
         on_select="rerun",
         selection_mode=["single-row"],
     )
+    # TODO SHOW each color meaning 
+    # st.text()
 
     # Check if a row is selected
     if event.selection and "rows" in event.selection:
@@ -217,11 +221,8 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
     if st.session_state.selection_source == "list":    
         selected_data = df.loc[st.session_state.selected_row_index]
         defect_number = selected_data["No"]
-        print(st.session_state.defect_number)
         if st.session_state.defect_number != defect_number:  
             st.session_state.defect_number = defect_number
-            print("row selected")
-            print(defect_number)
             st.query_params.defect_no = int(defect_number)
             st.rerun()
 
