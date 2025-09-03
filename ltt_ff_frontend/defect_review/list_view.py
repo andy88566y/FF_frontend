@@ -200,8 +200,7 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
         on_select="rerun",
         selection_mode=["single-row"],
     )
-    # TODO SHOW each color meaning 
-    # st.text()
+    st.text("Blue: TP, Green: TN, Red: FN, Yellow: FP")
 
     # Check if a row is selected
     if event.selection and "rows" in event.selection:

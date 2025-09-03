@@ -165,7 +165,6 @@ def app() -> None:
                 no_list = [defect["No"] for defect in defect_data]
                 default_index = no_list.index(st.session_state.defect_number) if st.session_state.defect_number in no_list else 0
                 defect_id = st.selectbox(label="Select a defect ID", options=no_list, index=default_index)
-                print("LINE 167  " + str(defect_id))
                 # Update session state
                 st.session_state.defect_number = defect_id
 
@@ -226,11 +225,9 @@ def app() -> None:
         if "color_option" not in st.session_state:
             st.session_state.color_option = "ClassType"
 
-        # TODO concat with index is wrong
         # Use DBScan to identify clusters (might be slow need to add cache Test large dataset)
         dbscan = DBSCAN(eps=50, min_samples=5)
         df["Cluster"] = dbscan.fit_predict(df[["X", "Y"]])
-        print(df.index)
         if model_num > 0:
             prob_df = pd.DataFrame(
                 defect_prob["probability_list"][0],
@@ -257,7 +254,6 @@ def app() -> None:
             df = df.rename(columns={"Probability": "P_rank"})
         
 
-        #TODO NO, cluster ClassType is shown as float
         # Normalize coordinates
         x_min, x_max = df["X"].min(), df["X"].max()
         y_min, y_max = df["Y"].min(), df["Y"].max()
@@ -335,19 +331,17 @@ def app() -> None:
 
     with col2:     
 
-        # if defect_id != "":
-        #     if lrf_ext=="lrf":
-        #         draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
-        #     else:
-        #         row_index = df.index[df['No'] == int(defect_id)]
-        #         unique_id = df.loc[row_index[0], 'UniqueID']
-        #         draw_diff_img_plotly(data_yaml_input, selected_lot_id, unique_id, norm, diff_clip=0.3)
+        if defect_id != "":
+            if lrf_ext=="lrf":
+                draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
+            else:
+                row_index = df.index[df['No'] == int(defect_id)]
+                unique_id = df.loc[row_index[0], 'UniqueID']
+                draw_diff_img_plotly(data_yaml_input, selected_lot_id, unique_id, norm, diff_clip=0.3)
         
         ### Receipe area
         if text_input_result_dir and defect_id != "":
             row_number = df.index.get_loc(int(defect_id))
-            print("line349")
-            print(defect_id)
             selected_defect_prob = defect_prob["probability_list"][0][row_number]
             
             table_data = {

@@ -1706,6 +1706,14 @@ def get_lot_lrf_paths(data_yaml_path: str) -> Dict[str, str]:
     print(f"Total lots with lrf_path: {len(lot_lrf_map)}")
     return lot_lrf_map
 
+@st.cache_data(ttl="60s")
+def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
+    with open(data_yaml_path, encoding="utf-8") as f:
+        raw_data_lots = yaml.load(f, Loader=yaml.Loader)
+        data_lots = {d["lot_id"]: d for d in raw_data_lots["data_paths"]}
+    logger.success(f"Total lots loaded: {len(data_lots)}")
+    return data_lots
+
 
 @st.cache_data(ttl="300s")
 def get_lot_lrf_ext(data_yaml_path: str, lot_id: str,) -> str:

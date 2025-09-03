@@ -153,17 +153,39 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
     defect_info = diff_img_data["defect_meta"]
     image_data = diff_img_data["image_data"]
 
+    title1 = None
+    if len(image_data["avail_refs"]) == 1:
+        title1 = (f"(Available Refs: {image_data['avail_refs'][0]})")
+    else:
+        title1 = f"(Available Refs: Median of {['C'] + image_data['avail_refs']})"
+    title2_Rt = f"Test ({image_data['worst_test']}) [Rt]<br>" + f"(best_pos: {[round(float(x), 2) for x in image_data['Rt']['best_pos']]})"
+    title2_T = f"Test ({image_data['worst_test']}) [T]<br>" + f"(best_pos: {[round(float(x), 2) for x in image_data['T']['best_pos']]})"
+    title3_Rt = f"Difference [Rt]<br>(max_diff: {round(image_data['Rt']['max_diff'], 3)})"
+    title3_T = f"Difference [T]<br>(max_diff: {round(image_data['T']['max_diff'], 3)})"
+    pt_mapping = {
+            -1: "UNK",
+            -2: "H1D",
+            -3: "V1D",
+            -4: "2D",
+        }
+    title4_Rt = f"Features [Rt]\nPattern [{pt_mapping[image_data['pattern_type']]}]"
+    title4_T = f"Features [T]\nPattern [{pt_mapping[image_data['pattern_type']]}]"
+
+    # Create Plotly subplots
+    fig = make_subplots(rows=2, cols=4, subplot_titles=[
+        "Reference [Rt]<br>"+title1, title2_Rt, title3_Rt, title4_Rt,
+        "Reference [T]<br>"+title1, title2_T, title3_T, title4_T
+    ], horizontal_spacing=0.1, vertical_spacing=0.05)
+    
+    fig.update_layout(
+        font=dict(size=10),  # Smaller font for all text including subplot titles
+    )
+
+
     # Convert image tensors to numpy arrays
     for p in ["Rt", "T"]:
         for k in ["aligned_ref", "aligned_test", "aligned_diff", "feature_map"]:
             image_data[p][k] = np.array(image_data[p][k])
-
-    # Create Plotly subplots
-    fig = make_subplots(rows=2, cols=4, subplot_titles=[
-        "Reference [Rt]", "Test [Rt]", "Difference [Rt]", "Feature map [Rt]",
-        "Reference [T]", "Test [T]", "Difference [T]", "Feature map [T]"
-    ], horizontal_spacing=0.05, vertical_spacing=0.1)
-    
     
     ft_color_mapping = {
         0: ("UNK", "white"),
@@ -235,11 +257,20 @@ def draw_diff_img_plotly(data_yaml_path: str, lot_id: str, defect_id: str, norm:
             f"{defect_info.get('ulParticleMode', False)} {image_data['avail_refs'] == 0}"
             f" (lrf-ORIG | pc: {defect_info['PixelCount']}, h: {defect_info['H']}, w: {defect_info['W']})"
         ),
+        title_y=0.98,  # Move title closer to top
         height=800,
-        width=1200
+        width=1100,
+        autosize=False,
     )
-    
     fig.update_yaxes(autorange='reversed')
+
+    for i in range(1, 9):  # 8 subplots
+        fig.update_yaxes(scaleanchor=f"x{i}", row=(i - 1) // 4 + 1, col=(i - 1) % 4 + 1)
+    fig.update_xaxes(ticks="outside", ticklen=3)
+    fig.update_yaxes(ticks="outside", ticklen=3)
+
+    fig.update_yaxes(constrain='domain')
+    fig.update_xaxes(constrain='domain')
 
     st.plotly_chart(fig)
 
