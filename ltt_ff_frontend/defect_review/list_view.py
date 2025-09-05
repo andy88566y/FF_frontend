@@ -1,22 +1,21 @@
 import operator
 import random
+from typing import Any
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
-import pydeck as pdk
 import streamlit as st
 from loguru import logger
-from sklearn.cluster import DBSCAN
 
 
-def hex_to_rgb(hex_color):
+def hex_to_rgb(hex_color: str) -> list[int]:
     hex_color = hex_color.lstrip("#")
     return [int(hex_color[i : i + 2], 16) for i in (0, 2, 4)] + [160]
 
 
 # Function to generate a list of colors for a given number of clusters
-def generate_colors(num_clusters):
+def generate_colors(num_clusters: int) -> list[str]:
     random.seed(num_clusters)
     # Use the 'viridis' colormap which can handle a large number of distinct colors
     cmap = plt.get_cmap("hsv", num_clusters)
@@ -27,8 +26,7 @@ def generate_colors(num_clusters):
     return colors
 
 
-def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name: list, lrf_ext: str, df: pd.DataFrame) -> None:
-
+def app(result_dir: str, selected_lot_id: str, models_name: list, lrf_ext: str, df: pd.DataFrame) -> None:
     st.session_state.filtered_df = df
     # Initialize session state for selected index
     if "selected_row_index" not in st.session_state:
@@ -68,9 +66,9 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
     with filter_options_col:
         # Define the columns I want to display
         if result_dir:
-            specific_columns = ["UniqueID", "X",  "Y", "ClassType", "GT", "Pred", "Cluster"]
-            for i in range(len(models_name)):
-                specific_columns.append("P_" + models_name[i])
+            specific_columns = ["UniqueID", "X", "Y", "ClassType", "GT", "Pred", "Cluster"]
+            for model_name in models_name:
+                specific_columns.extend("P_" + model_name)
         else:
             if lrf_ext == "lrf":
                 specific_columns = ["X", "Y", "ClassType", "GT", "Cluster"]
@@ -79,7 +77,6 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
         if models_name:
             for model_name in models_name:
                 specific_columns.append("P_" + model_name)
-
 
         # Filter the DataFrame columns to only include the specific columns
         filtered_columns = [col for col in df.columns if col in specific_columns]
@@ -90,7 +87,6 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
             index=filtered_columns.index(st.session_state.filter_column),
         )
 
-    
     ops = {
         "=": operator.eq,
         ">": operator.gt,
@@ -101,7 +97,11 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
 
     with filter_operators_col:
         operator_columns = list(ops.keys())
-        index = operator_columns.index(st.session_state.filter_operator) if st.session_state.filter_operator in operator_columns else 0
+        index = (
+            operator_columns.index(st.session_state.filter_operator)
+            if st.session_state.filter_operator in operator_columns
+            else 0
+        )
         st.session_state.filter_operator = st.selectbox(
             label="Filter operators",
             options=operator_columns,
@@ -109,11 +109,11 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
         )
 
     # Add filter value text input, confirm button, and cancel button
-    with filter_value_col:   
-            st.session_state.filter_value = st.text_input(
-                label="Filter value",
-                value=st.session_state.filter_value,
-            )
+    with filter_value_col:
+        st.session_state.filter_value = st.text_input(
+            label="Filter value",
+            value=st.session_state.filter_value,
+        )
     with apply_col:
         if st.button(label="Apply Filter", use_container_width=True):
             try:
@@ -123,9 +123,9 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
 
                 # Try to convert value to the same type as the column
                 col_dtype = df[col].dtype
-                if col_dtype.kind in "iuf": # numeric types
+                if col_dtype.kind in "iuf":  # numeric types
                     val = float(val)
-                elif col_dtype.kind == "b": # boolean
+                elif col_dtype.kind == "b":  # boolean
                     val = val.lower() in ["true", "1", "yes"]
                 # else keep as string
                 st.session_state.filtered_df = df[op(df[col], val)]
@@ -147,21 +147,20 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
         all_columns = ["No", "UniqueID", "X", "Y", "X_norm", "Y_norm", "ClassType", "GT", "Pred", "P_rank", "Cluster"]
     else:
         if lrf_ext == "lrf":
-            all_columns = ["No", "X", "Y","X_norm", "Y_norm", "ClassType", "GT", "Cluster"]
+            all_columns = ["No", "X", "Y", "X_norm", "Y_norm", "ClassType", "GT", "Cluster"]
         else:
-            all_columns = ["No","UniqueID", "X", "Y","X_norm", "Y_norm", "ClassType", "GT", "Cluster"]
+            all_columns = ["No", "UniqueID", "X", "Y", "X_norm", "Y_norm", "ClassType", "GT", "Cluster"]
 
-
-    if models_name != None:
-        for i in range(len(models_name)):
-            all_columns.append("P_" + models_name[i])
+    if models_name is not None:
+        for model_name in models_name:
+            all_columns.append("P_" + model_name)
     # Sample DataFrame (replace with your actual data)
-    df = st.session_state.filtered_df 
+    df = st.session_state.filtered_df
     # Let user select columns to display
     selected_columns = st.multiselect(
         "Select columns to display:",
         options=all_columns,
-        default=all_columns  # You can change this to a subset if needed
+        default=all_columns,  # You can change this to a subset if needed
     )
 
     # Display the selected columns
@@ -169,12 +168,10 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
         st.session_state.filtered_df = df[selected_columns]
     else:
         st.warning("Please select at least one column to display.")
-    
+
     listview_df = st.session_state.filtered_df[selected_columns]
-    
 
-
-    def highlight_row(row):
+    def highlight_row(row: Any) -> list[Any]:
         pred = row.get("Pred", None)
         gt = row.get("GT", None)
 
@@ -188,7 +185,6 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
             return ["background-color: lightyellow"] * len(row)
         else:
             return [""] * len(row)
-
 
     styled_df = listview_df.style.apply(highlight_row, axis=1)
 
@@ -217,10 +213,10 @@ def app(result_dir: str, data_yaml_path: str, selected_lot_id: str, models_name:
 
     # Get the selected row based on the session state
     defect_number = 0
-    if st.session_state.selection_source == "list":    
+    if st.session_state.selection_source == "list":
         selected_data = df.loc[st.session_state.selected_row_index]
         defect_number = selected_data["No"]
-        if st.session_state.defect_number != defect_number:  
+        if st.session_state.defect_number != defect_number:
             st.session_state.defect_number = defect_number
             st.query_params.defect_no = int(defect_number)
             st.rerun()

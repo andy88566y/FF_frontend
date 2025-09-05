@@ -1,6 +1,7 @@
 import pandas as pd
 
-def generate_lttswadc_html(lttswadc_map):
+
+def generate_lttswadc_html(lttswadc_map: dict) -> str:
     indices = []
     for i in range(0, len(lttswadc_map), 8):
         index_row = []
