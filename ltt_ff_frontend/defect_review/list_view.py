@@ -212,13 +212,12 @@ def app(result_dir: str, selected_lot_id: str, models_name: list, lrf_ext: str, 
                 st.session_state.selection_source = "list"
 
     # Get the selected row based on the session state
-    defect_number = 0
     if st.session_state.selection_source == "list":
         selected_data = df.loc[st.session_state.selected_row_index]
         defect_number = selected_data["No"]
-        if st.session_state.defect_number != defect_number:
-            st.session_state.defect_number = defect_number
-            st.query_params.defect_no = int(defect_number)
+        if st.session_state.defect_number != str(defect_number):
+            st.session_state.defect_number = str(defect_number)
+            st.query_params.defect_number = str(defect_number)
             st.rerun()
 
     else:

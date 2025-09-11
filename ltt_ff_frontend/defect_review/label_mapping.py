@@ -1,24 +1,27 @@
 import pandas as pd
+import streamlit as st
+
+from ltt_ff_frontend.defect_review.lrf_constant import CLASSTYPE_MAPPING
 
 
-def generate_lttswadc_html(lttswadc_map: dict) -> str:
+def generate_classtype_map_html(classtype_map: dict) -> str:
     indices = []
-    for i in range(0, len(lttswadc_map), 8):
+    for i in range(0, len(classtype_map), 8):
         index_row = []
-        for col_offset, j in enumerate(range(i, min(i + 8, len(lttswadc_map)))):
+        for col_offset, j in enumerate(range(i, min(i + 8, len(classtype_map)))):
             edge_class = "left-edge" if col_offset == 0 else ""
-            if lttswadc_map[j][1] == 1:
-                cell_html = f"""<div class='tooltip {edge_class}'><span style='color:red'>{j}</span><span class='tooltiptext'>{lttswadc_map[j][0]}</span></div>"""
+            if classtype_map[j][1] == 1:
+                cell_html = f"""<div class='tooltip {edge_class}'><span style='color:red'>{j}</span><span class='tooltiptext'>{classtype_map[j][0]}</span></div>"""
             else:
-                cell_html = f"""<div class='tooltip {edge_class}'>{j}<span class='tooltiptext'>{lttswadc_map[j][0]}</span></div>"""
+                cell_html = f"""<div class='tooltip {edge_class}'>{j}<span class='tooltiptext'>{classtype_map[j][0]}</span></div>"""
             index_row.append(cell_html)
         indices.append(index_row)
 
     lrf_constant_df = pd.DataFrame(indices)
-    return render_lttswadc_table(lrf_constant_df.to_html(escape=False, index=False, header=False))
+    return render_mapping_table(html_table=lrf_constant_df.to_html(escape=False, index=False, header=False))
 
 
-def render_lttswadc_table(html_table: str) -> str:
+def render_mapping_table(html_table: str) -> str:
     return f"""
     <div style="max-width: 100%; overflow-x: auto;">
         <style>
@@ -70,3 +73,9 @@ def render_lttswadc_table(html_table: str) -> str:
         {html_table}
     </div>
     """
+
+
+def app(lrf_type: str) -> None:
+    st.title("ClassType Map")
+    styled_html = generate_classtype_map_html(classtype_map=CLASSTYPE_MAPPING[lrf_type])
+    st.markdown(styled_html, unsafe_allow_html=True)

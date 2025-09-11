@@ -2,7 +2,7 @@ import json
 import typing
 from datetime import datetime
 from pprint import pformat
-from typing import Any, Literal, Optional, Dict
+from typing import Any, Dict, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -269,6 +269,7 @@ def get_probability(output_dir: str, defect_id: list[list[int]]) -> list[list[fl
         logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
 
+
 @st.cache_data(ttl="10s")
 def get_probabilities_per_model(output_dir: str, lot_id: str) -> list[list[list[float]]]:
     """
@@ -412,9 +413,7 @@ def get_lrf_data_lists(
 
 
 @st.cache_data(ttl="30s")
-def parse_lrf_data_lists(
-    lrf_path: str
-) -> list:
+def parse_lrf_data_lists(lrf_path: str) -> list:
     """
     Return lrf data with selected columns
     """
@@ -431,6 +430,7 @@ def parse_lrf_data_lists(
     else:
         lrf_data_list = r.json()["defect_info"]
         return lrf_data_list
+
 
 @st.cache_data(ttl="10s")
 def get_roc_data(output_dir: str, return_curve: bool = True) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
@@ -1564,6 +1564,7 @@ def generate_diff_images(data_yaml_path: str, lot_id: str, defect_id: str, norm:
 
     return r.json()
 
+
 #####################################################################################################
 # Regression Test                                                                                #
 #####################################################################################################
@@ -1625,6 +1626,7 @@ def request_regression_test(
     else:
         logger.error(f"Error occurred when calling Request Regression API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling Request Regression  API: {r.json()['message']}")
+
 
 #####################################################################################################
 # Regression Test                                                                                #
@@ -1703,8 +1705,9 @@ def get_lot_lrf_paths(data_yaml_path: str) -> Dict[str, str]:
         if isinstance(lot, dict) and lot.get("lot_id") and lot.get("lrf_path")
     }
 
-    print(f"Total lots with lrf_path: {len(lot_lrf_map)}")
+    logger.debug(f"Total lots with lrf_path: {len(lot_lrf_map)}")
     return lot_lrf_map
+
 
 @st.cache_data(ttl="60s")
 def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
@@ -1716,7 +1719,10 @@ def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
 
 
 @st.cache_data(ttl="300s")
-def get_lot_lrf_ext(data_yaml_path: str, lot_id: str,) -> str:
+def get_lot_lrf_ext(
+    data_yaml_path: str,
+    lot_id: str,
+) -> str:
     params = {"data_yaml_path": data_yaml_path, "lot_id": lot_id}
     r = requests.get(f"{API_ROOT}get_lrf_ext", params=params, timeout=TIMEOUT)
 
