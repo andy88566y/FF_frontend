@@ -115,16 +115,13 @@ def app() -> None:
                     models_threshold_c = []
                     models_name = []
                     for x in range(model_num):
-                        threshold_name = "model_threshold_" + str(x)
-                        threshold_c_name = "model_threshold_c_" + str(x)
-                        model_name = "model_name_" + str(x)
-                        models_threshold.append(db_metadata[threshold_name])
-                        models_threshold_c.append(db_metadata[threshold_c_name])
-                        match = re.search(r"#([^#\.]+)\.", db_metadata[model_name])
+                        models_threshold.append(db_metadata[f"model_threshold_{x}"])
+                        models_threshold_c.append(db_metadata[f"model_threshold_c_{x}"])
+                        match = re.search(r"#([^#\.]+)\.", db_metadata[f"model_name_{x}"])
                         if match:
                             models_name.append(match.group(1))
                         else:
-                            models_name.append(db_metadata[model_name])
+                            models_name.append(db_metadata[f"model_name_{x}"])
                     defect_data = [
                         {
                             "No": defect["No"],
@@ -242,7 +239,7 @@ def app() -> None:
         df["Cluster"] = dbscan.fit_predict(df[["X", "Y"]])
         if model_num > 0:
             prob_df = pd.DataFrame(
-                defect_prob["probability_list"][0], columns=[f"P_{models_name[i]}" for i in range(10)]
+                defect_prob["probability_list"][0], columns=[f"P_{model_name}" for model_name in models_name]
             )
 
             df = pd.concat([df, prob_df], axis=1)
@@ -351,7 +348,7 @@ def app() -> None:
                 st.rerun()
 
     with col2:
-        if defect_id != "":
+        if defect_id != "" and data_yaml_input:
             if lrf_ext == "lrf":
                 draw_diff_img_plotly(data_yaml_input, selected_lot_id, defect_id, norm, diff_clip=0.3)
             else:
