@@ -19,6 +19,10 @@ def app() -> None:
         col1, col2 = st.columns([1, 3])
         with col1:
             init_defect_review.app()
+
+            if not st.session_state.data_yaml:
+                return
+
             label_mapping.app()
             map_view.app()
 

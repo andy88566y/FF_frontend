@@ -44,6 +44,7 @@ def app() -> None:
             st.session_state.models_threshold_c = []
             st.session_state.models_name = []
             st.session_state.selected_lot_lrf_ext = st.session_state.db_metadata["input_lrf_ext"]
+            st.session_state.selected_lot_lrf_type = st.session_state.db_metadata["input_lrf_type"]
             for x in range(st.session_state.model_count):
                 st.session_state.models_threshold.append(st.session_state.db_metadata[f"model_threshold_{x}"])
                 st.session_state.models_threshold_c.append(st.session_state.db_metadata[f"model_threshold_c_{x}"])
@@ -70,6 +71,9 @@ def app() -> None:
             defects = api_helper.parse_lrf_data_lists(lrf_path=lrf_path)
             st.session_state.model_count = 0
             st.session_state.selected_lot_lrf_ext = lrf_ext
+            st.session_state.selected_lot_lrf_type = api_helper.get_lot_lrf_type(
+                lrf_path=lrf_path, lot_id=st.session_state.selected_lot_id
+            )
             if lrf_ext == "lrf":
                 return [
                     {

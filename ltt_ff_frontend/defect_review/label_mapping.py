@@ -78,7 +78,7 @@ def render_mapping_table(html_table: str) -> str:
 def app() -> None:
     st.title("ClassType Map")
 
-    lrf_type = st.session_state.db_metadata["input_lrf_type"]
+    lrf_type = st.session_state.selected_lot_lrf_type
     if lrf_type not in CLASSTYPE_MAPPING:
         st.warning(f"{lrf_type} is currently not implemented. Falling back to LTTSWADC mapping.")
         lrf_type = "LTTSWADC"

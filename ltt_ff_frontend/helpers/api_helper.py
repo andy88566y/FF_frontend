@@ -1718,7 +1718,7 @@ def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
     return data_lots
 
 
-@st.cache_data(ttl="300s")
+@st.cache_data(ttl="60s")
 def get_lot_lrf_ext(
     data_yaml_path: str,
     lot_id: str,
@@ -1728,6 +1728,17 @@ def get_lot_lrf_ext(
 
     if r.json()["status"] == "error":
         logger.error(r.json()["message"])
-        return []
+        return ""
     else:
         return r.json()["lrf_ext"]
+
+
+@st.cache_data(ttl="60s")
+def get_lot_lrf_type(lrf_path: str, lot_id: str | None = None) -> str:
+    params = {"lrf_path": lrf_path, "lot_id": lot_id}
+    r = requests.get(f"{API_ROOT}get_lrf_type", params=params, timeout=TIMEOUT)
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        raise ValueError(r.json()["message"])
+    else:
+        return r.json()["lrf_type"]
