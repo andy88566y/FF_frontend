@@ -58,7 +58,7 @@ def app(result_dir: str, selected_lot_id: str, models_name: list, lrf_ext: str, 
         st.session_state.filtered_df = df
         st.session_state.selection_source = ""
         st.session_state.result_dir = result_dir
-        st.session_state.lot_id = selected_lot_id
+        st.session_state.lot_id = selected_lot_id  # not used anywhere
 
     filter_options_col, filter_operators_col, filter_value_col, apply_col, remove_col = st.columns([1, 1, 2, 1, 1])
 

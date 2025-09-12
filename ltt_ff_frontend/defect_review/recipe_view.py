@@ -30,5 +30,5 @@ def app() -> None:
         html_table = styled_df.to_html()
 
         # Display using Streamlit
-        st.title("Defect Probability vs Threshold Table")
+        st.title(f"Defect Probability vs Threshold Table (Defect no. {st.session_state.defect_number})")
         st.markdown(html_table, unsafe_allow_html=True)

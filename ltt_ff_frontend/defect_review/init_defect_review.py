@@ -18,7 +18,6 @@ def app() -> None:
 
     def get_defect_data(selected_lot_id: str, lot_lrf_path_map: dict) -> list[dict]:
         if st.session_state.result_dir:
-            lrf_ext = api_helper.get_lot_lrf_ext(data_yaml_path=data_yaml_input, lot_id=selected_lot_id)
             defects = api_helper.get_lrf_data_lists(
                 output_dir=st.session_state.result_dir,
                 cols=["No", "UniqueID", "X", "Y", "ClassType"],
@@ -44,7 +43,7 @@ def app() -> None:
             st.session_state.models_threshold = []
             st.session_state.models_threshold_c = []
             st.session_state.models_name = []
-            st.session_state.selected_lot_lrf_ext = lrf_ext
+            st.session_state.selected_lot_lrf_ext = st.session_state.db_metadata["input_lrf_ext"]
             for x in range(st.session_state.model_count):
                 st.session_state.models_threshold.append(st.session_state.db_metadata[f"model_threshold_{x}"])
                 st.session_state.models_threshold_c.append(st.session_state.db_metadata[f"model_threshold_c_{x}"])

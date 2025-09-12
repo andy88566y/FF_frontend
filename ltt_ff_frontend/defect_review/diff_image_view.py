@@ -1,5 +1,4 @@
 import streamlit as st
-from loguru import logger
 
 from ltt_ff_frontend.defect_review.defect_diff_viewer import draw_diff_img_plotly
 

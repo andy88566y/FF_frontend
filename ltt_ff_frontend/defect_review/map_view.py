@@ -168,10 +168,10 @@ def app() -> None:
             st.session_state.selected_map_index = obj["No"]
             break
 
-        if previous_selected_map_index != st.session_state.selected_map_index:
+        if previous_selected_map_index != str(st.session_state.selected_map_index):
             st.session_state.selection_source = "map"
             defect_id = st.session_state.selected_map_index
-            logger.info("map selected" + str(defect_id))
-            st.session_state.defect_number = defect_id
-            st.query_params.defect_number = defect_id
+            logger.info("map selected " + str(defect_id))
+            st.session_state.defect_number = str(defect_id)
+            st.query_params.defect_number = str(defect_id)
             st.rerun()
