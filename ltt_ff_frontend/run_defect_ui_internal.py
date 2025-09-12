@@ -4,7 +4,7 @@ from loguru import logger
 from ltt_ff_frontend.automation_answer_matching import automation_answer_matching
 from ltt_ff_frontend.comparison_ui import comparison_viewer
 from ltt_ff_frontend.data_yaml_processor import data_yaml_processor
-from ltt_ff_frontend.defect_review_ui import defect_diff_viewer, defect_review_gui
+from ltt_ff_frontend.defect_review import defect_review_gui
 from ltt_ff_frontend.inference import inference
 from ltt_ff_frontend.lrf_processor import lrf_processor
 from ltt_ff_frontend.model_converter import model_converter
@@ -51,9 +51,6 @@ if __name__ == "__main__":
         comparison_viewer.app, url_path="comparison", title="Model Comparison", icon=":material/compare_arrows:"
     )
 
-    page_defect_diff_viewer = st.Page(
-        defect_diff_viewer.app, url_path="defect_diff_viewer", title="Defect Viewer", icon=":material/image_search:"
-    )
     page_defect_review_gui = st.Page(
         defect_review_gui.app, url_path="defect_review", title="Defect Review", icon=":material/image_search:"
     )
@@ -85,7 +82,6 @@ if __name__ == "__main__":
             page_inference,
             page_result_viewer,
             page_comparison,
-            page_defect_diff_viewer,
             page_defect_review_gui,
             page_regression_result_viewer,
             page_regression_test,

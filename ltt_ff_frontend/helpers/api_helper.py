@@ -2,7 +2,7 @@ import json
 import typing
 from datetime import datetime
 from pprint import pformat
-from typing import Any, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -271,6 +271,31 @@ def get_probability(output_dir: str, defect_id: list[list[int]]) -> list[list[fl
 
 
 @st.cache_data(ttl="10s")
+def get_probabilities_per_model(output_dir: str, lot_id: str) -> list[list[list[float]]]:
+    """
+    Read a list of the defect probabilities from a database.
+
+    Args:
+        output_dir: Root output directory where inference results were stored.
+        defect_id: ID of the defect images
+
+    Returns:
+        A list of the defect probabilities of a lot of images.
+    """
+    r = requests.get(
+        API_ROOT + "result/get_probabilities_per_model",
+        json={"output_dir": output_dir, "lot_id": lot_id},
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "completed":
+        return r.json()
+    else:
+        logger.error(f"Error occurred when calling inference API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling inference API: {r.json()['message']}")
+
+
+@st.cache_data(ttl="10s")
 def get_defect_id_lists(output_dir: str) -> list[list[str]]:
     """
     Get list of defect IDs from a database.
@@ -385,6 +410,26 @@ def get_lrf_data_lists(
             return lrf_data_with_prob_list
     else:
         return lrf_data_with_ans_list
+
+
+@st.cache_data(ttl="30s")
+def parse_lrf_data_lists(lrf_path: str) -> list:
+    """
+    Return lrf data with selected columns
+    """
+    r = requests.get(
+        API_ROOT + "parse_lrf",
+        params={
+            "lrf_path": lrf_path,
+        },
+        timeout=180,
+    )
+    if r.json()["status"] == "error":
+        logger.error(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling get LRF API (lrf): {r.json()['message']}")
+    else:
+        lrf_data_list = r.json()["defect_info"]
+        return lrf_data_list
 
 
 @st.cache_data(ttl="10s")
@@ -1504,6 +1549,7 @@ def convert_model(model_conversion_config: dict[str, list[dict]]) -> dict[str, A
 #####################################################################################################
 # Defect Viewer                                                                                     #
 #####################################################################################################
+@st.cache_data(ttl="300s")
 def generate_diff_images(data_yaml_path: str, lot_id: str, defect_id: str, norm: bool = True) -> dict[str, Any]:
     r = requests.post(
         API_ROOT + "generate_diff_images",
@@ -1519,21 +1565,72 @@ def generate_diff_images(data_yaml_path: str, lot_id: str, defect_id: str, norm:
     return r.json()
 
 
-# TODO: Move to backend
-@st.cache_data(ttl="60s")
-def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
-    with open(data_yaml_path, encoding="utf-8") as f:
-        raw_data_lots = yaml.load(f, Loader=yaml.Loader)
-        data_lots = {d["lot_id"]: d for d in raw_data_lots["data_paths"]}
-    logger.success(f"Total lots loaded: {len(data_lots)}")
-    return data_lots
-
-
 #####################################################################################################
 # Regression Test                                                                                #
 #####################################################################################################
 
 
+@st.cache_data(ttl="60s")
+def fetch_valid_lots(test_data: dict[str, Any], gen_stats: bool) -> dict[str, Any]:
+    data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
+    r = requests.post(
+        API_ROOT + "fetch_valid_lots",
+        json={"data_lots": data_lots, "gen_stats": gen_stats},
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "completed":
+        return r.json()
+    else:
+        logger.error(f"Error occurred when calling Valid Lots API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling Valid Lots API: {r.json()['message']}")
+
+
+def fetch_regression_result(
+    test_cases: dict[str, list], prefixes: list[str], result_dir: str, mode: str
+) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "fetch_regression_result",
+        json={"test_cases": test_cases, "prefixes": prefixes, "result_dir": result_dir, "mode": mode},
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "completed":
+        return r.json()
+    else:
+        logger.error(f"Error occurred when calling Regression Result API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling Regression Result  API: {r.json()['message']}")
+
+
+def request_regression_test(
+    output_dir_root: str,
+    valid_data_lots: dict[str, Any],
+    recipe_config: dict[str, Any],
+    run_layer: list[str],
+    run_site: list[str],
+    run_week: list[str],
+) -> dict[str, Any]:
+    r = requests.post(
+        API_ROOT + "request_regression_test",
+        json={
+            "output_dir_root": output_dir_root,
+            "valid_data_lots": valid_data_lots,
+            "recipe_config": recipe_config,
+            "run_config": {"layers": run_layer, "sites": run_site, "weeks": run_week},
+        },
+        timeout=TIMEOUT,
+    )
+
+    if r.json()["status"] == "started":
+        return r.json()
+    else:
+        logger.error(f"Error occurred when calling Request Regression API: {r.json()['message']}")
+        raise ValueError(f"Error occurred when calling Request Regression  API: {r.json()['message']}")
+
+
+#####################################################################################################
+# Regression Test                                                                                #
+#####################################################################################################
 @st.cache_data(ttl="60s")
 def fetch_valid_lots(test_data: dict[str, Any], gen_stats: bool) -> dict[str, Any]:
     data_lots = {d["lot_id"]: d for d in test_data["data_paths"]}
@@ -1589,3 +1686,59 @@ def request_regression_test(
     else:
         logger.error(f"Error occurred when calling Request Regression API: {r.json()['message']}")
         raise ValueError(f"Error occurred when calling Request Regression  API: {r.json()['message']}")
+
+
+# TODO: Move to backend
+@st.cache_data(ttl="60s")
+def get_lot_lrf_paths(data_yaml_path: str) -> Dict[str, str]:
+    with open(data_yaml_path, encoding="utf-8") as f:
+        raw_data = yaml.safe_load(f)
+
+    lots = raw_data.get("data_paths", [])
+
+    if not isinstance(lots, list):
+        raise ValueError("Expected 'data_paths' to be a list of lot entries.")
+
+    lot_lrf_map = {
+        lot["lot_id"]: lot["lrf_path"]
+        for lot in lots
+        if isinstance(lot, dict) and lot.get("lot_id") and lot.get("lrf_path")
+    }
+
+    logger.debug(f"Total lots with lrf_path: {len(lot_lrf_map)}")
+    return lot_lrf_map
+
+
+@st.cache_data(ttl="60s")
+def list_yaml_lots(data_yaml_path: str) -> dict[str, Any]:
+    with open(data_yaml_path, encoding="utf-8") as f:
+        raw_data_lots = yaml.load(f, Loader=yaml.Loader)
+        data_lots = {d["lot_id"]: d for d in raw_data_lots["data_paths"]}
+    logger.success(f"Total lots loaded: {len(data_lots)}")
+    return data_lots
+
+
+@st.cache_data(ttl="60s")
+def get_lot_lrf_ext(
+    data_yaml_path: str,
+    lot_id: str,
+) -> str:
+    params = {"data_yaml_path": data_yaml_path, "lot_id": lot_id}
+    r = requests.get(f"{API_ROOT}get_lrf_ext", params=params, timeout=TIMEOUT)
+
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        return ""
+    else:
+        return r.json()["lrf_ext"]
+
+
+@st.cache_data(ttl="60s")
+def get_lot_lrf_type(lrf_path: str, lot_id: str | None = None) -> str:
+    params = {"lrf_path": lrf_path, "lot_id": lot_id}
+    r = requests.get(f"{API_ROOT}get_lrf_type", params=params, timeout=TIMEOUT)
+    if r.json()["status"] == "error":
+        logger.error(r.json()["message"])
+        raise ValueError(r.json()["message"])
+    else:
+        return r.json()["lrf_type"]
