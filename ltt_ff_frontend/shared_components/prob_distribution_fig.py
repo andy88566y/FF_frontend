@@ -82,10 +82,14 @@ def gen(
     df["Classification"] = [
         "Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in df["LRF_Label"]
     ]
+
+    histogram_params = {}
     if split_lot:
         df["Legends"] = [
             f"{classification} {lot_id}" for classification, lot_id in zip(df["Classification"], df["Lot ID"])
         ]
+        histogram_params["pattern_shape"] = "Lot ID"
+        histogram_params["pattern_shape_sequence"]=["", "/", "x", "+", "|", "-", "."]
     else:
         df["Legends"] = df["Classification"]
 
@@ -93,6 +97,7 @@ def gen(
     # Add histogram
     # hover_data defines which df columns will appear on the hover message
     # label changes the column name on the hover message
+
     fig = px.histogram(
         data_frame=df,
         x="Probability",
@@ -113,6 +118,7 @@ def gen(
         labels={
             "LRF_Label": "Defect/non-defect",
         },
+        **histogram_params,
     )
 
     # Add threshold line
