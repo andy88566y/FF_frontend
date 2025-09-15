@@ -46,6 +46,7 @@ def gen(
     aggregated_lists: tuple[list[str], list[dict[str, Any]], list[list[float]], list[int], list[str]],
     selected_model: dict[str, Any],
     split_lot: bool,
+    use_log_scale: bool,
 ) -> go.Figure:
     """
     Generates a 1D plot for defect probability distribution across multiple lots.
@@ -139,5 +140,20 @@ def gen(
         yaxis_title="Frequency",
         title="Defect Probability Distribution",
     )
+
+    if use_log_scale:
+        counts, _ = np.histogram(df["Probability"], bins=100, range=(0.0, 1.0))
+        max_count = counts.max()
+        tickvals = [10**i for i in range(int(np.log10(max_count)) + 1)]
+
+        fig.update_layout(
+            yaxis_type="log",
+            yaxis=dict(
+                tickvals=tickvals,
+                tickformat=".0f",
+                title="Frequency (log scale)"
+            )
+        )
+
 
     return fig

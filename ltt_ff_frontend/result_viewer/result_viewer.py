@@ -170,6 +170,7 @@ def app() -> None:
         return
 
     split_lot = st.toggle(label="Results split by lots", value=False)
+    use_log_scale = st.toggle(label="Results count scale with log", value=False)
     col_1d_chart_column, col_roc_curve_column = st.columns(2)
     if ResultViewerComponents.ONE_D_DEFECT_DISTRIBUTION_CHART.value in independent_components:
         # Draw 1D comparison chart
@@ -180,6 +181,7 @@ def app() -> None:
                         aggregated_lists=independent_components["one_d_defect_distribution_chart"],
                         selected_model=selected_model,
                         split_lot=split_lot,
+                        use_log_scale=use_log_scale,
                     )
                 )
 
