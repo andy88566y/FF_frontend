@@ -30,15 +30,15 @@ def plot_upset(
     height: int = 600,
     width: int = 800,
     title: str = "Upset Chart",
-):
+    top_k: int=None,
+) -> go.Figure:
     # Error Handling
-    df_columns = [df.columns for df in dataframes]
-    lengths = [len(x) for x in df_columns]
     df = dataframes[0]
 
-    if len(np.unique(lengths)) != 1:
+    cols = [tuple(df.columns) for df in dataframes]
+    if len({len(c) for c in cols}) != 1:
         raise Exception("DataFrames don't share same number of columns.")
-    elif len(np.unique(df_columns)) != np.unique(lengths):
+    elif len(set(cols)) != 1:
         raise Exception("DataFrames don't share same columns.")
     elif len(legendgroups) != len(dataframes):
         raise Exception("Number of DataFrames and Number of Legend Groups don't match.")
@@ -50,7 +50,7 @@ def plot_upset(
         raise Exception(f"Unknown sorting order: {sorted_x}.")
     elif sorted_y is not None and (sorted_y.lower() not in ["ascending", "descending"]):
         raise Exception("Unknown sorting order.")
-    elif (sorted_x is not None or sorted_x is not None) and len(dataframes) > 1:
+    elif (sorted_x is not None or sorted_y is not None) and len(dataframes) > 1:
         raise Exception("Sorting isn't available for multiple DataFrames.")
     elif exclude_zeros is True and len(dataframes) > 1:
         raise Exception("Zero value exclusion isn't available for multiple DataFrames.")
