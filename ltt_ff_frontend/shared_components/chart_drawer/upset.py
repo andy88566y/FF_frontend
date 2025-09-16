@@ -22,6 +22,7 @@ def plot_upset(
     exclude_zeros: bool = False,
     sorted_x: str = None,
     sorted_y: str = None,
+    top_k: int | None = None,
     row_heights: list = [0.7, 0.3],
     column_widths: list = [0.2, 0.8],
     vertical_spacing: float = 0.05,
@@ -30,7 +31,6 @@ def plot_upset(
     height: int = 600,
     width: int = 800,
     title: str = "Upset Chart",
-    top_k: int=None,
 ) -> go.Figure:
     # Error Handling
     df = dataframes[0]
@@ -62,6 +62,14 @@ def plot_upset(
         raise Exception("Invalid Vertical Spacing.")
     elif horizontal_spacing > 1.0:
         raise Exception("Invalid Horizontal Spacing.")
+    
+    if top_k is not None:
+        if not isinstance(top_k, int) or top_k <= 0:
+            raise Exception("top_k/Max Non-Empty Combination must be integer")
+        if len(dataframes) > 1:
+            raise Exception("top_k/Max Non-Empty Combination isn't available for multiple DataFrames.")
+        if sorted_x is not None:
+            raise Exception("top_k and sort can not use together.")
 
     if set_names is not None:
         sets = set_names
@@ -128,6 +136,17 @@ def plot_upset(
             int_ss = int_ss[int_ss != 0]
 
             t, f, edges = get_nonzero_nodes_and_edges(t=t, f=f, edges=edges, nonzero_indices=nonzero_indices)
+
+        if top_k is not None:
+            if len(int_ss) == 0:
+                selected = np.array([], dtype=int)
+            else:
+                order = np.argsort(-int_ss)
+                selected = order[: min(top_k, len(order))]
+            string_repr = np.array(string_repr)[selected]
+            int_ss = int_ss[selected]
+            t, f, edges = get_nonzero_nodes_and_edges(t=t, f=f, edges=edges, nonzero_indices=selected)
+
 
         plot_range_x = len(int_ss)
         customdata = [(k, get_active_sets(k, sets)) for k in string_repr]
