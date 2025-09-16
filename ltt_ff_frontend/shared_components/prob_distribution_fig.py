@@ -14,8 +14,17 @@ DEFECT_COLOR_MAPPING = {
 }
 
 TOTAL_CLASSTYPES = 32
-CLASSTYPE_COLOR_MAPPING = px.colors.sample_colorscale(
-    "rainbow", [(i + 1) / TOTAL_CLASSTYPES for i in range(TOTAL_CLASSTYPES - 2, -2, -1)]
+
+DEFECT_CLASSTYPE_COLOR_MAPPING = px.colors.sample_colorscale(
+    "Reds", np.linspace(0.25, 0.9, TOTAL_CLASSTYPES)
+)
+
+NON_DEFECT_CLASSTYPE_COLOR_MAPPING = px.colors.sample_colorscale(
+    "Greens", np.linspace(0.25, 0.8, TOTAL_CLASSTYPES)
+)
+
+UNLABELED_CLASSTYPE_COLOR_MAPPING= px.colors.sample_colorscale(
+    "gray", [0, 0.1]
 )
 
 
@@ -39,7 +48,19 @@ def get_classtype_color_map(classtypes: list[str]) -> dict[str, str]:
         return int(unique_ct.replace("-Non-defect", "").replace("-Defect", "").replace("-Unlabeled", ""))
 
     unique_classes = sorted(set(classtypes))
-    return {cat: CLASSTYPE_COLOR_MAPPING[extract_ct_number(cat) + 1] for cat in unique_classes}
+    defect_color_mapping = {
+        cat: DEFECT_CLASSTYPE_COLOR_MAPPING[(extract_ct_number(cat) + 1) * 10 % 32]
+        for cat in unique_classes if "-Defect" in cat
+    }
+    non_defect_color_mapping = {
+        cat: NON_DEFECT_CLASSTYPE_COLOR_MAPPING[(extract_ct_number(cat) + 1) * 10 % 32]
+        for cat in unique_classes if "-Non-defect" in cat
+    }
+    unlabeled_color_mapping = {
+        cat: UNLABELED_CLASSTYPE_COLOR_MAPPING[(extract_ct_number(cat) + 1) * 10 % 32]
+        for cat in unique_classes if "-Unlabeled" in cat
+    }
+    return {**defect_color_mapping, **non_defect_color_mapping, **unlabeled_color_mapping}
 
 
 def gen(
@@ -99,6 +120,7 @@ def gen(
     # hover_data defines which df columns will appear on the hover message
     # label changes the column name on the hover message
 
+    print(get_classtype_color_map(df["ClassType"]))
     fig = px.histogram(
         data_frame=df,
         x="Probability",
