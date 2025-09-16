@@ -11,6 +11,7 @@ def gen(
     split_lot: bool,
     sort_by: str,
     exclude_zero: bool,
+    top_k: int=None,
 ) -> tuple:
     defect_ids, _, prob_lists, ans, lot_ids = aggregated_model_data
     classifications = ["Defect" if label == 1 else "Non-defect" if label == 0 else "Unlabeled" for label in ans]
@@ -30,6 +31,7 @@ def gen(
                     sorted_x=sort_by if sort_by != "default" else None,
                     sorted_y=sort_by if sort_by != "default" else None,
                     title=f"True Defects Upset Chart (Total: {ans.count(1)})",
+                    top_k=top_k,
                 )
             )
         else:
@@ -44,6 +46,7 @@ def gen(
                     sorted_x=sort_by if sort_by != "default" else None,
                     sorted_y=sort_by if sort_by != "default" else None,
                     title=f"False Defects Upset Chart (Total: {ans.count(0)})",
+                    top_k=top_k,
                 )
             )
         else:

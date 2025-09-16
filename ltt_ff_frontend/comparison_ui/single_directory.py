@@ -70,7 +70,7 @@ def app() -> None:
             return
     result_viewer_components = st.session_state.rvc_result["result"]
 
-    col1, col2, col3, _ = st.columns([1, 1, 1, 6])
+    col1, col2, col3, col4, _ = st.columns([1, 1, 1, 1, 5])
     
     if selected_count == 1:
         with col1:
@@ -121,6 +121,9 @@ def app() -> None:
             with col3:
                 st.markdown("<br>", unsafe_allow_html=True)
                 exclude_zero = st.toggle("Exclude Empty Subsets")
+            with col4:
+                st.markdown("<br>", unsafe_allow_html=True)
+                max_of_combination = st.number_input("Max Non-Empty Combination:", value=5, placeholder="Type a number...", format="%d")
 
             upset_plot.gen(
                 aggregated_model_data=result_viewer_components["multi_model_probabilities"],
@@ -129,6 +132,7 @@ def app() -> None:
                 sort_by=sort_by,
                 split_lot=False, #temporally unused
                 exclude_zero=exclude_zero,
+                top_k=max_of_combination
             )
 
     else:
@@ -137,6 +141,9 @@ def app() -> None:
         with col2:
             st.markdown("<br>", unsafe_allow_html=True)
             exclude_zero = st.toggle("Exclude Empty Subsets")
+        with col3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            max_of_combination = st.number_input("Max Non-Empty Combination:", value=5, placeholder="Type a number...", format="%d")
 
         upset_plot.gen(
             aggregated_model_data=result_viewer_components["multi_model_probabilities"],
@@ -145,4 +152,5 @@ def app() -> None:
             split_lot=False, #temporally unused
             sort_by=sort_by,
             exclude_zero=exclude_zero,
+            top_k=max_of_combination
         )
